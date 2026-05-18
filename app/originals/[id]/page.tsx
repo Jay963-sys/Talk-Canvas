@@ -1,0 +1,88 @@
+import { ORIGINALS, getOriginal } from "@/data/originals";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+
+// Pre-render all known works at build time
+export function generateStaticParams() {
+  return ORIGINALS.map((o) => ({ id: o.id }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const work = getOriginal(id);
+  if (!work) return {};
+  return {
+    title: `${work.title} — ${work.artist} | Talk Canvas Gallery`,
+    description: work.description,
+  };
+}
+
+export default async function WorkDetail({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const work = getOriginal(id);
+  if (!work) notFound();
+
+  return (
+    <div className="fade-in max-w-7xl mx-auto px-6 md:px-10 py-12">
+      <Link
+        href="/originals"
+        className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink mb-8"
+      >
+        <ArrowLeft size={16} strokeWidth={1.5} />
+        All originals
+      </Link>
+
+      <div className="grid md:grid-cols-2 gap-8 md:gap-16">
+        <div className="bg-line">
+          <img src={work.img} alt={work.title} className="w-full block" />
+        </div>
+
+        <div className="flex flex-col">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted">
+            {work.artist} — {work.year}
+          </p>
+          <h1 className="display-italic text-4xl md:text-5xl lg:text-6xl font-normal leading-tight mt-3">
+            {work.title}
+          </h1>
+
+          <div className="mt-10 space-y-3 text-sm text-ink-soft">
+            <DetailRow label="Medium" value={work.medium} />
+            <DetailRow label="Dimensions" value={work.size} />
+            <DetailRow label="Price" value={work.price} />
+          </div>
+
+          <p className="text-[15px] leading-relaxed mt-10 text-ink-soft">
+            {work.description}
+          </p>
+
+          <div className="mt-auto pt-12 flex gap-3">
+            <button className="flex-1 py-4 bg-accent text-cream text-sm font-medium tracking-wider hover:bg-accent-dark transition-colors">
+              Enquire about this work
+            </button>
+            <button className="px-6 py-4 border border-line text-sm font-medium hover:border-ink hover:bg-ink hover:text-cream transition-colors">
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between border-b border-line pb-2">
+      <span className="text-muted">{label}</span>
+      <span className="font-medium text-ink">{value}</span>
+    </div>
+  );
+}
