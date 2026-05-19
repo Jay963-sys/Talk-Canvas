@@ -83,7 +83,8 @@ export default function CartDrawer() {
                       Custom print
                     </p>
                     <p className="text-xs text-muted mt-1">
-                      {item.frameName} frame · {item.sizeName} ({item.sizeDims})
+                      {item.frameName}
+                      {item.glass ? " · with glass" : ""} · {item.sizeLabel}
                     </p>
                     <div className="mt-auto flex items-end justify-between">
                       <p className="text-sm font-medium">

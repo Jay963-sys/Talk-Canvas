@@ -193,7 +193,8 @@ export default function CheckoutPage() {
                       Custom print
                     </p>
                     <p className="text-xs text-muted mt-1">
-                      {item.frameName} · {item.sizeName}
+                      {item.frameName}
+                      {item.glass ? " · with glass" : ""} · {item.sizeLabel}
                     </p>
                     <p className="text-sm font-medium mt-2">
                       {formatNaira(item.price)}

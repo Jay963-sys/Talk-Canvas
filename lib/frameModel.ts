@@ -3,11 +3,35 @@ import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 
 export interface FrameModelOptions {
   imageUrl: string;
-  frameColor: string; // hex
+  frameColor: string;
   artWidth: number; // meters
   artHeight: number; // meters
-  frameThickness?: number;
-  frameDepth?: number;
+  style: "regular" | "antique";
+  shape: "floating" | "box" | null;
+  glass: boolean;
+}
+
+interface FrameProfile {
+  thickness: number; // border width (frame strip cross-section, visible from front)
+  depth: number; // front-to-back dimension (visible from side)
+  artInset: number; // how far the art sits behind the front face
+}
+
+// Three distinct profiles — chunkier = more visual weight
+function getProfile(
+  style: "regular" | "antique",
+  shape: "floating" | "box" | null,
+): FrameProfile {
+  if (style === "antique") {
+    // Widest, deepest — ornate weight (geometry is simplified, real frames are carved)
+    return { thickness: 0.07, depth: 0.055, artInset: 0.02 };
+  }
+  if (shape === "box") {
+    // Medium thickness, clear box depth
+    return { thickness: 0.045, depth: 0.045, artInset: 0.015 };
+  }
+  // floating: thinnest border, shallowest
+  return { thickness: 0.025, depth: 0.018, artInset: 0 };
 }
 
 async function loadTexture(url: string): Promise<THREE.Texture> {
@@ -19,27 +43,23 @@ async function loadTexture(url: string): Promise<THREE.Texture> {
 }
 
 async function buildScene(opts: FrameModelOptions): Promise<THREE.Scene> {
-  const {
-    imageUrl,
-    frameColor,
-    artWidth,
-    artHeight,
-    frameThickness = 0.04,
-    frameDepth = 0.025,
-  } = opts;
+  const { imageUrl, frameColor, artWidth, artHeight, style, shape, glass } =
+    opts;
+  const profile = getProfile(style, shape);
 
   const scene = new THREE.Scene();
   const texture = await loadTexture(imageUrl);
   texture.colorSpace = THREE.SRGBColorSpace;
 
+  // Antique gets a hint of metallic sheen for gold/black ornate feel
   const frameMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(frameColor),
-    roughness: 0.6,
-    metalness: 0.05,
+    roughness: style === "antique" ? 0.4 : 0.6,
+    metalness: style === "antique" ? 0.25 : 0.05,
   });
 
-  const t = frameThickness;
-  const d = frameDepth;
+  const t = profile.thickness;
+  const d = profile.depth;
   const outerW = artWidth + t * 2;
   const outerH = artHeight + t * 2;
 
@@ -63,7 +83,8 @@ async function buildScene(opts: FrameModelOptions): Promise<THREE.Scene> {
   right.position.x = artWidth / 2 + t / 2;
   scene.add(right);
 
-  // Art plane (faces +Z)
+  // Art plane — position depends on profile inset
+  const artZ = d / 2 - profile.artInset;
   const artMat = new THREE.MeshStandardMaterial({
     map: texture,
     roughness: 0.5,
@@ -73,10 +94,30 @@ async function buildScene(opts: FrameModelOptions): Promise<THREE.Scene> {
     new THREE.PlaneGeometry(artWidth, artHeight),
     artMat,
   );
-  art.position.z = d / 2 + 0.001;
+  art.position.z = artZ;
   scene.add(art);
 
-  // Dark backing (faces -Z)
+  // Glass — included for box-with-glass and all antique frames
+  const hasGlass =
+    (style === "regular" && shape === "box" && glass) || style === "antique";
+  if (hasGlass) {
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.08,
+      roughness: 0.05,
+      metalness: 0.3, // subtle reflectivity hint
+    });
+    const glassPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(artWidth, artHeight),
+      glassMat,
+    );
+    // Just in front of the art, still inside the frame box
+    glassPlane.position.z = artZ + 0.003;
+    scene.add(glassPlane);
+  }
+
+  // Dark backing (back of frame)
   const backMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color("#2a2620"),
     roughness: 0.8,

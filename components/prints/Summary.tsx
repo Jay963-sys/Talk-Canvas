@@ -2,21 +2,22 @@
 
 import { useConfigurator, formatNaira } from "@/lib/store";
 import { useCart } from "@/lib/cartStore";
+import { getPrice } from "@/data/pricing";
+import { formatInches } from "@/data/sizes";
 import { ArrowLeft } from "lucide-react";
 
 const STEP_NAMES = ["Upload", "Frame", "Size", "Review"];
 
 export default function Summary() {
-  const { step, setStep, image, frame, size, reset } = useConfigurator();
+  const { step, setStep, image, frame, glass, size, reset } = useConfigurator();
   const { addItem, setOpen: setCartOpen } = useCart();
 
-  const totalPrice =
-    frame && size ? Math.round(size.basePrice * frame.priceMultiplier) : 0;
+  const totalPrice = frame && size ? (getPrice(frame, glass, size) ?? 0) : 0;
 
   const canAdvance = () => {
     if (step === 0) return !!image;
     if (step === 1) return !!frame;
-    if (step === 2) return !!size;
+    if (step === 2) return !!size && totalPrice > 0;
     return true;
   };
 
@@ -27,9 +28,9 @@ export default function Summary() {
       imagePublicId: image.publicId,
       frameId: frame.id,
       frameName: frame.name,
+      glass,
       sizeId: size.id,
-      sizeName: size.name,
-      sizeDims: size.dims,
+      sizeLabel: formatInches(size),
       price: totalPrice,
     });
     reset();
@@ -43,11 +44,11 @@ export default function Summary() {
       </p>
 
       <SummaryRow label="Design" value={image ? "Uploaded ✓" : "—"} />
-      <SummaryRow label="Frame" value={frame?.name || "—"} />
       <SummaryRow
-        label="Size"
-        value={size ? `${size.name} (${size.dims})` : "—"}
+        label="Frame"
+        value={frame ? frame.name + (glass ? " · with glass" : "") : "—"}
       />
+      <SummaryRow label="Size" value={size ? formatInches(size) : "—"} />
 
       <div className="mt-6 pt-5 border-t border-line">
         <div className="flex justify-between items-baseline">

@@ -7,9 +7,9 @@ export interface CartItem {
   imagePublicId: string;
   frameId: string;
   frameName: string;
+  glass: boolean;
   sizeId: string;
-  sizeName: string;
-  sizeDims: string;
+  sizeLabel: string;
   price: number;
   addedAt: string;
 }
@@ -48,10 +48,12 @@ export const useCart = create<CartState>()(
     }),
     {
       name: "talk-canvas-cart",
-      // Only persist items, not drawer open state
-      partialize: (state) => ({
-        items: state.items,
-      }),
+      version: 2,
+      migrate: (_persistedState, version) => {
+        if (version < 2) return { items: [] };
+        return _persistedState as { items: CartItem[] };
+      },
+      partialize: (state) => ({ items: state.items }),
     },
   ),
 );
