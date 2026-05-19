@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { ShoppingBag, Menu } from "lucide-react";
 import clsx from "clsx";
+import { useCart } from "@/lib/cartStore";
 
 const NAV = [
   { href: "/originals", label: "Originals" },
@@ -14,11 +15,18 @@ const NAV = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
-  const cartCount = 0; // wired up in step 7
+  const { items, setOpen: setCartOpen } = useCart();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const cartCount = mounted ? items.length : 0;
 
   return (
-    <header className="sticky top-0 z-50 bg-cream/90 backdrop-blur border-b border-line">
+    <header className="sticky top-0 z-30 bg-cream/90 backdrop-blur border-b border-line">
       <div className="max-w-7xl mx-auto px-6 md:px-10 py-5 flex items-center justify-between">
         <Link
           href="/"
@@ -44,7 +52,11 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <button className="relative p-2" aria-label="Cart">
+          <button
+            className="relative p-2"
+            aria-label="Open cart"
+            onClick={() => setCartOpen(true)}
+          >
             <ShoppingBag size={20} strokeWidth={1.5} />
             {cartCount > 0 && (
               <span className="absolute top-0 right-0 bg-accent text-cream text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center">

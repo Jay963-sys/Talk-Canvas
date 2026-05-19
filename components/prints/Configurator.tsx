@@ -8,12 +8,9 @@ import StepSize from "./StepSize";
 import StepReview from "./StepReview";
 import Summary from "./Summary";
 import ARModal from "./ARModal";
-import { Check } from "lucide-react";
 
 export default function Configurator() {
-  const { step, ordered, arOpen } = useConfigurator();
-
-  if (ordered) return <OrderSuccess />;
+  const { step, arOpen } = useConfigurator();
 
   return (
     <>
@@ -37,27 +34,5 @@ export default function Configurator() {
 
       {arOpen && <ARModal />}
     </>
-  );
-}
-
-function OrderSuccess() {
-  return (
-    <div className="fade-in max-w-2xl mx-auto px-6 py-32 text-center">
-      <div className="w-16 h-16 rounded-full bg-accent text-cream flex items-center justify-center mx-auto mb-8">
-        <Check size={28} strokeWidth={1.5} />
-      </div>
-      <h2 className="display text-5xl font-normal leading-tight">
-        Order received.
-        <br />
-        <span className="display-italic">Thank you.</span>
-      </h2>
-      <p className="text-base text-ink-soft mt-6 leading-relaxed">
-        You'll get a confirmation email shortly. Production typically takes 5-7
-        days, with delivery in Lagos within 10 days of order.
-      </p>
-      <p className="text-xs text-muted mt-10 italic">
-        (Prototype — no real payment processed. Paystack integration in Step 8.)
-      </p>
-    </div>
   );
 }

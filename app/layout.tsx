@@ -3,6 +3,7 @@ import { Fraunces, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CartDrawer from "@/components/cart/CartDrawer";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -32,6 +33,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <CartDrawer />
       </body>
     </html>
   );

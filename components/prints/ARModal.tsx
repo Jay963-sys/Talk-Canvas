@@ -1,19 +1,41 @@
 "use client";
 
-import { useEffect } from "react";
-import { X, Smartphone } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Loader2 } from "lucide-react";
 import { useConfigurator } from "@/lib/store";
-import FramedPreview from "./FramedPreview";
+import { generateFrameGLB } from "@/lib/frameModel";
+import { uploadModelToCloudinary } from "@/lib/upload";
+import ARViewer from "./ARViewer";
 
-const SIZE_SCALE: Record<string, number> = {
-  a4: 0.18,
-  a3: 0.26,
-  a2: 0.36,
-  a1: 0.5,
+// Print sizes converted to meters (for real-world AR scale)
+const SIZE_TO_METERS: Record<string, { w: number; h: number }> = {
+  a4: { w: 0.21, h: 0.3 },
+  a3: { w: 0.3, h: 0.42 },
+  a2: { w: 0.42, h: 0.59 },
+  a1: { w: 0.59, h: 0.84 },
 };
+
+// Frame ID -> approximate hex color for the 3D material
+const FRAME_COLORS: Record<string, string> = {
+  oak: "#a07a3f",
+  black: "#1a1612",
+  white: "#e8e1d5",
+  walnut: "#3e2917",
+};
+
+function getDownsizedUrl(originalUrl: string, maxWidth = 1200): string {
+  // Insert Cloudinary transformation params after /upload/
+  return originalUrl.replace(
+    "/upload/",
+    `/upload/w_${maxWidth},c_fit,q_auto,f_jpg/`,
+  );
+}
 
 export default function ARModal() {
   const { image, frame, size, setArOpen } = useConfigurator();
+  const [modelUrl, setModelUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState("Generating 3D model…");
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -22,8 +44,43 @@ export default function ARModal() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!image || !frame || !size) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const dims = SIZE_TO_METERS[size.id];
+        const color = FRAME_COLORS[frame.id];
+
+        setProgress("Generating 3D model…");
+        const blob = await generateFrameGLB({
+          imageUrl: getDownsizedUrl(image.url, 1200),
+          frameColor: color,
+          artWidth: dims.w,
+          artHeight: dims.h,
+        });
+
+        if (cancelled) return;
+        setProgress("Uploading…");
+        const url = await uploadModelToCloudinary(blob);
+
+        if (!cancelled) setModelUrl(url);
+      } catch (e) {
+        if (!cancelled) {
+          setError(
+            e instanceof Error ? e.message : "Failed to generate AR model",
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [image, frame, size]);
+
   if (!image || !frame || !size) return null;
-  const scale = SIZE_SCALE[size.id] || 0.3;
 
   return (
     <div
@@ -38,44 +95,35 @@ export default function ARModal() {
       </button>
 
       <div onClick={(e) => e.stopPropagation()} className="max-w-4xl w-full">
-        {/* Mock wall scene */}
-        <div
-          className="relative aspect-[4/3] overflow-hidden"
-          style={{
-            background: "linear-gradient(180deg, #E8E0D2 0%, #D4C8B4 100%)",
-          }}
-        >
-          <div
-            className="absolute bottom-0 left-0 right-0 h-[22%]"
-            style={{
-              background: "linear-gradient(180deg, #8B7355 0%, #6B5740 100%)",
-            }}
-          />
-          <div
-            className="absolute top-[28%] left-1/2 -translate-x-1/2 z-[5]"
-            style={{ width: `${scale * 100}%` }}
-          >
-            <FramedPreview
-              image={image.url}
-              frame={frame}
-              maxWidth={9999}
-            />{" "}
-          </div>
-          <div className="absolute bottom-[22%] left-[8%] w-[20%] h-[15%] bg-[#3a2f24] rounded-t-lg opacity-60" />
+        <div className="relative aspect-[4/3] bg-[#1a1814] overflow-hidden">
+          {modelUrl ? (
+            <ARViewer
+              src={modelUrl}
+              alt={`${frame.name} frame, ${size.name}`}
+            />
+          ) : error ? (
+            <div className="absolute inset-0 flex items-center justify-center text-cream/80 text-center px-6">
+              <p>{error}</p>
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-cream/80">
+              <Loader2
+                className="animate-spin mb-3"
+                size={32}
+                strokeWidth={1.5}
+              />
+              <p className="text-sm">{progress}</p>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 text-center text-cream">
           <p className="display-italic text-2xl">
-            {size.name} {frame.name} frame, shown at approximate scale
+            {size.name} {frame.name} frame
           </p>
-          <button className="mt-5 px-7 py-3.5 bg-accent text-cream text-sm font-medium tracking-wider inline-flex items-center gap-2.5">
-            <Smartphone size={16} strokeWidth={1.5} />
-            Launch camera AR (mobile)
-          </button>
-          <p className="text-[11px] text-muted mt-4 italic max-w-md mx-auto">
-            Prototype: production version uses Google's &lt;model-viewer&gt;
-            with a generated frame model. On mobile it activates the camera
-            (ARKit/ARCore) to place the frame on a real wall at true scale.
+          <p className="text-xs text-muted mt-3 max-w-md mx-auto leading-relaxed">
+            Drag to rotate. On a phone, tap the AR icon (bottom-right of the
+            viewer) to place it on a real wall at true scale.
           </p>
         </div>
       </div>

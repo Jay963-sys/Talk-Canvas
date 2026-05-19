@@ -69,3 +69,30 @@ export async function uploadToCloudinary(
     xhr.send(formData);
   });
 }
+
+export async function uploadModelToCloudinary(blob: Blob): Promise<string> {
+  const signRes = await fetch("/api/cloudinary/sign", { method: "POST" });
+  if (!signRes.ok) throw new Error("Failed to get upload signature");
+  const { timestamp, signature, folder, apiKey, cloudName } =
+    await signRes.json();
+
+  const formData = new FormData();
+  formData.append("file", blob, "frame.glb");
+  formData.append("timestamp", String(timestamp));
+  formData.append("signature", signature);
+  formData.append("api_key", apiKey);
+  formData.append("folder", folder);
+
+  // Note: /raw/upload instead of /image/upload — GLB is a non-image file
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
+    { method: "POST", body: formData },
+  );
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Cloudinary (${res.status}): ${errorText}`);
+  }
+  const data = await res.json();
+  return data.secure_url;
+}

@@ -2,6 +2,7 @@ import { ORIGINALS, getOriginal } from "@/data/originals";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import EnquireButton from "@/components/originals/EnquireButton";
 
 // Pre-render all known works at build time
 export function generateStaticParams() {
@@ -65,9 +66,14 @@ export default async function WorkDetail({
           </p>
 
           <div className="mt-auto pt-12 flex gap-3">
-            <button className="flex-1 py-4 bg-accent text-cream text-sm font-medium tracking-wider hover:bg-accent-dark transition-colors">
-              Enquire about this work
-            </button>
+            <EnquireButton
+              work={{
+                id: work.id,
+                title: work.title,
+                artist: work.artist,
+                price: work.price,
+              }}
+            />
             <button className="px-6 py-4 border border-line text-sm font-medium hover:border-ink hover:bg-ink hover:text-cream transition-colors">
               Save
             </button>

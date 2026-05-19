@@ -1,12 +1,14 @@
 "use client";
 
 import { useConfigurator, formatNaira } from "@/lib/store";
+import { useCart } from "@/lib/cartStore";
 import { ArrowLeft } from "lucide-react";
 
 const STEP_NAMES = ["Upload", "Frame", "Size", "Review"];
 
 export default function Summary() {
-  const { step, setStep, image, frame, size, setOrdered } = useConfigurator();
+  const { step, setStep, image, frame, size, reset } = useConfigurator();
+  const { addItem, setOpen: setCartOpen } = useCart();
 
   const totalPrice =
     frame && size ? Math.round(size.basePrice * frame.priceMultiplier) : 0;
@@ -16,6 +18,22 @@ export default function Summary() {
     if (step === 1) return !!frame;
     if (step === 2) return !!size;
     return true;
+  };
+
+  const handleAddToCart = () => {
+    if (!image || !frame || !size) return;
+    addItem({
+      imageUrl: image.url,
+      imagePublicId: image.publicId,
+      frameId: frame.id,
+      frameName: frame.name,
+      sizeId: size.id,
+      sizeName: size.name,
+      sizeDims: size.dims,
+      price: totalPrice,
+    });
+    reset();
+    setCartOpen(true);
   };
 
   return (
@@ -59,10 +77,10 @@ export default function Summary() {
         )}
         {step === 3 && (
           <button
-            onClick={() => setOrdered(true)}
+            onClick={handleAddToCart}
             className="py-4 bg-accent hover:bg-accent-dark text-cream text-sm font-medium tracking-wider transition-all"
           >
-            Checkout → {formatNaira(totalPrice)}
+            Add to cart → {formatNaira(totalPrice)}
           </button>
         )}
         {step > 0 && (
