@@ -1,0 +1,216 @@
+import {
+  Html,
+  Head,
+  Body,
+  Container,
+  Section,
+  Row,
+  Column,
+  Heading,
+  Text,
+  Hr,
+  Img,
+  Preview,
+} from "@react-email/components";
+import { styles, formatNaira, thumb, colors } from "../styles";
+
+interface Item {
+  imageUrl: string;
+  frameName: string;
+  glass: boolean;
+  sizeLabel: string;
+  price: number;
+}
+
+interface Props {
+  orderNumber: string;
+  customerName: string;
+  items: Item[];
+  subtotal: number;
+  shipping: number;
+  total: number;
+  deliveryMethod: "pickup" | "delivery";
+  notes?: string | null;
+  pickupAddress?: string;
+  pickupDays?: string;
+  pickupHours?: string;
+  shippingAddress?: {
+    line1: string;
+    line2?: string | null;
+    city: string;
+    state: string;
+    country: string;
+  };
+}
+
+export default function OrderConfirmation({
+  orderNumber,
+  customerName,
+  items,
+  subtotal,
+  shipping,
+  total,
+  deliveryMethod,
+  pickupAddress,
+  pickupDays,
+  pickupHours,
+  shippingAddress,
+  notes,
+}: Props) {
+  const firstName = customerName.split(" ")[0];
+
+  return (
+    <Html>
+      <Head />
+      <Preview>Your Talk Canvas Gallery order #{orderNumber}</Preview>
+      <Body style={styles.main}>
+        <Container style={styles.container}>
+          <Text style={styles.brand}>
+            Talk Canvas <span style={styles.italic}>Gallery</span>
+          </Text>
+
+          <Heading style={styles.heading}>
+            Thank you, <span style={styles.italic}>{firstName}.</span>
+          </Heading>
+
+          <Text style={styles.paragraph}>
+            We've received your order. Production typically takes 5–7 days;
+            we'll be in touch with{" "}
+            {deliveryMethod === "pickup" ? "pickup" : "delivery"} details once
+            your print is ready.
+          </Text>
+
+          <Text style={styles.orderNumber}>ORDER #{orderNumber}</Text>
+
+          <Hr style={styles.divider} />
+
+          <Text style={styles.sectionLabel}>Your order</Text>
+          {items.map((item, i) => (
+            <Section key={i} style={{ marginBottom: "16px" }}>
+              <Row>
+                <Column style={{ width: "70px", verticalAlign: "top" }}>
+                  <Img
+                    src={thumb(item.imageUrl)}
+                    style={styles.itemImage}
+                    alt=""
+                  />
+                </Column>
+                <Column style={{ verticalAlign: "top", paddingLeft: "16px" }}>
+                  <Text
+                    style={{
+                      ...styles.infoText,
+                      fontStyle: "italic",
+                      fontSize: "15px",
+                    }}
+                  >
+                    Custom print
+                  </Text>
+                  <Text style={styles.metaText}>
+                    {item.frameName}
+                    {item.glass ? " · with glass" : ""} · {item.sizeLabel}
+                  </Text>
+                </Column>
+                <Column
+                  style={{
+                    verticalAlign: "top",
+                    textAlign: "right",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <Text style={{ ...styles.infoText, fontWeight: 500 }}>
+                    {formatNaira(item.price)}
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+          ))}
+
+          <Hr style={styles.divider} />
+
+          <Row>
+            <Column>
+              <Text style={styles.metaText}>Subtotal</Text>
+            </Column>
+            <Column style={{ textAlign: "right" }}>
+              <Text style={styles.metaText}>{formatNaira(subtotal)}</Text>
+            </Column>
+          </Row>
+          <Row>
+            <Column>
+              <Text style={styles.metaText}>
+                {deliveryMethod === "pickup" ? "Pickup" : "Delivery"}
+              </Text>
+            </Column>
+            <Column style={{ textAlign: "right" }}>
+              <Text style={styles.metaText}>
+                {shipping === 0 ? "Free" : formatNaira(shipping)}
+              </Text>
+            </Column>
+          </Row>
+          <Row
+            style={{
+              borderTop: `1px solid ${colors.line}`,
+              paddingTop: "12px",
+              marginTop: "8px",
+            }}
+          >
+            <Column>
+              <Text style={{ ...styles.infoText, fontWeight: 500 }}>Total</Text>
+            </Column>
+            <Column style={{ textAlign: "right" }}>
+              <Text
+                style={{
+                  fontFamily: "Georgia, serif",
+                  fontSize: "20px",
+                  fontWeight: 500,
+                  color: colors.ink,
+                  margin: 0,
+                }}
+              >
+                {formatNaira(total)}
+              </Text>
+            </Column>
+          </Row>
+
+          {deliveryMethod === "pickup" && pickupAddress && (
+            <>
+              <Text style={styles.sectionLabel}>Pickup details</Text>
+              <Text style={styles.infoText}>{pickupAddress}</Text>
+              <Text style={styles.metaText}>
+                {pickupDays} · {pickupHours}
+              </Text>
+            </>
+          )}
+
+          {deliveryMethod === "delivery" && shippingAddress && (
+            <>
+              <Text style={styles.sectionLabel}>Delivering to</Text>
+              <Text style={styles.infoText}>{shippingAddress.line1}</Text>
+              {shippingAddress.line2 && (
+                <Text style={styles.infoText}>{shippingAddress.line2}</Text>
+              )}
+              <Text style={styles.infoText}>
+                {shippingAddress.city}, {shippingAddress.state}
+              </Text>
+              <Text style={styles.infoText}>{shippingAddress.country}</Text>
+            </>
+          )}
+          {notes && (
+            <>
+              <Text style={styles.sectionLabel}>Your notes</Text>
+              <Text style={{ ...styles.infoText, whiteSpace: "pre-wrap" }}>
+                {notes}
+              </Text>
+            </>
+          )}
+
+          <Text style={styles.footer}>
+            Talk Canvas Gallery · Lagos
+            <br />
+            Questions? Just reply to this email.
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  );
+}

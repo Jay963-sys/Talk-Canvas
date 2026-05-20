@@ -14,16 +14,20 @@ const NAV = [
 ];
 
 export default function Header() {
+  // 1. ALL hooks must be called at the absolute top
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
-  const { items, setOpen: setCartOpen } = useCart();
+  const { items, setOpen: setCartOpen } = useCart(); // ✅ Moved up
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+  }, []); // ✅ Moved up
 
   const cartCount = mounted ? items.length : 0;
+
+  // 2. NOW we can safely do our early return
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
     <header className="sticky top-0 z-30 bg-cream/90 backdrop-blur border-b border-line">
@@ -43,7 +47,7 @@ export default function Header() {
               href={item.href}
               className={clsx(
                 "relative transition-colors hover:text-ink",
-                pathname.startsWith(item.href) ? "text-ink" : "text-ink-soft",
+                pathname?.startsWith(item.href) ? "text-ink" : "text-ink-soft",
               )}
             >
               {item.label}

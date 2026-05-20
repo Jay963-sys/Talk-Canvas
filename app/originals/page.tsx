@@ -1,4 +1,4 @@
-import { ORIGINALS } from "@/data/originals";
+import { getAllOriginals } from "@/lib/db/queries/originals";
 import Link from "next/link";
 
 export const metadata = {
@@ -6,7 +6,12 @@ export const metadata = {
   description: "Hand-painted works from our represented artists.",
 };
 
-export default function OriginalsPage() {
+// Revalidate at most every 60s so admin edits show up reasonably quickly
+export const revalidate = 60;
+
+export default async function OriginalsPage() {
+  const works = await getAllOriginals();
+
   return (
     <div className="fade-in">
       <section className="max-w-7xl mx-auto px-6 md:px-10 pt-16 pb-12">
@@ -23,18 +28,17 @@ export default function OriginalsPage() {
         </p>
       </section>
 
-      {/* Masonry */}
       <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20">
         <div className="columns-1 md:columns-3 gap-6">
-          {ORIGINALS.map((work) => (
+          {works.map((work) => (
             <Link
               key={work.id}
-              href={`/originals/${work.id}`}
+              href={`/originals/${work.slug}`}
               className="block break-inside-avoid mb-8 group"
             >
               <div className="bg-line overflow-hidden">
                 <img
-                  src={work.img}
+                  src={work.imageUrl}
                   alt={work.title}
                   className="w-full block transition-transform duration-700 group-hover:scale-[1.03]"
                 />

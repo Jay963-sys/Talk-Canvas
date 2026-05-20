@@ -6,11 +6,18 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useCart } from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
+import { SHIPPING_CONFIG } from "@/data/shipping";
+
+type DeliveryMethod = "delivery" | "pickup";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, clear } = useCart();
   const [mounted, setMounted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [deliveryMethod, setDeliveryMethod] =
+    useState<DeliveryMethod>("delivery");
 
   const [form, setForm] = useState({
     name: "",
@@ -23,6 +30,7 @@ export default function CheckoutPage() {
     postalCode: "",
     country: "Nigeria",
   });
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -48,14 +56,68 @@ export default function CheckoutPage() {
   }
 
   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
-  const shipping = 5000; // flat for now — adjust in step 8
+  const shipping =
+    deliveryMethod === "pickup" ? 0 : SHIPPING_CONFIG.delivery.fee;
   const total = subtotal + shipping;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Step 8: hand off to Paystack here
-    clear();
-    router.push("/checkout/success");
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: {
+            name: form.name,
+            email: form.email,
+            phone: form.phone,
+          },
+          deliveryMethod,
+          address:
+            deliveryMethod === "delivery"
+              ? {
+                  addressLine1: form.addressLine1,
+                  addressLine2: form.addressLine2,
+                  city: form.city,
+                  state: form.state,
+                  postalCode: form.postalCode,
+                  country: form.country,
+                }
+              : null,
+          items: items.map((item) => ({
+            imageUrl: item.imageUrl,
+            imagePublicId: item.imagePublicId,
+            frameId: item.frameId,
+            frameName: item.frameName,
+            glass: item.glass,
+            sizeId: item.sizeId,
+            sizeLabel: item.sizeLabel,
+            price: item.price,
+          })),
+          subtotal,
+          shipping,
+          total,
+          notes: notes.trim() !== "" ? notes : undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Order failed");
+        setSubmitting(false);
+        return;
+      }
+
+      const { orderId } = await res.json();
+      clear();
+      router.push(`/checkout/success?id=${orderId}`);
+    } catch {
+      setError("Network error — please try again");
+      setSubmitting(false);
+    }
   };
 
   const setField =
@@ -78,6 +140,48 @@ export default function CheckoutPage() {
 
       <form onSubmit={handleSubmit} className="grid md:grid-cols-12 gap-12">
         <div className="md:col-span-7 space-y-10">
+          {/* Delivery method */}
+          <section>
+            <h2 className="display text-2xl font-normal mb-6">Delivery</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <DeliveryOption
+                selected={deliveryMethod === "delivery"}
+                onClick={() => setDeliveryMethod("delivery")}
+                title="Delivery"
+                description="Door-to-door"
+                fee={formatNaira(SHIPPING_CONFIG.delivery.fee)}
+              />
+              <DeliveryOption
+                selected={deliveryMethod === "pickup"}
+                onClick={() => setDeliveryMethod("pickup")}
+                title="Showroom pickup"
+                description="On set days"
+                fee="Free"
+              />
+            </div>
+
+            {deliveryMethod === "pickup" && (
+              <div className="mt-4 p-5 bg-paper border border-line">
+                <p className="text-xs uppercase tracking-[0.15em] text-muted mb-2">
+                  Pickup location
+                </p>
+                <p className="text-sm leading-relaxed">
+                  {SHIPPING_CONFIG.pickup.address}
+                </p>
+                <p className="text-xs text-ink-soft mt-2">
+                  {SHIPPING_CONFIG.pickup.days} · {SHIPPING_CONFIG.pickup.hours}
+                </p>
+              </div>
+            )}
+
+            {deliveryMethod === "delivery" && (
+              <p className="text-xs text-muted mt-3 leading-relaxed">
+                {SHIPPING_CONFIG.delivery.description}
+              </p>
+            )}
+          </section>
+
+          {/* Contact */}
           <section>
             <h2 className="display text-2xl font-normal mb-6">Contact</h2>
             <div className="space-y-4">
@@ -109,66 +213,86 @@ export default function CheckoutPage() {
             </div>
           </section>
 
+          {/* Shipping address — only when delivering */}
+          {deliveryMethod === "delivery" && (
+            <section>
+              <h2 className="display text-2xl font-normal mb-6">
+                Shipping address
+              </h2>
+              <div className="space-y-4">
+                <Field
+                  label="Address"
+                  name="addressLine1"
+                  value={form.addressLine1}
+                  onChange={setField("addressLine1")}
+                  required
+                />
+                <Field
+                  label="Apartment, suite, etc. (optional)"
+                  name="addressLine2"
+                  value={form.addressLine2}
+                  onChange={setField("addressLine2")}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <Field
+                    label="City"
+                    name="city"
+                    value={form.city}
+                    onChange={setField("city")}
+                    required
+                  />
+                  <Field
+                    label="State"
+                    name="state"
+                    value={form.state}
+                    onChange={setField("state")}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field
+                    label="Postal code"
+                    name="postalCode"
+                    value={form.postalCode}
+                    onChange={setField("postalCode")}
+                  />
+                  <Field
+                    label="Country"
+                    name="country"
+                    value={form.country}
+                    onChange={setField("country")}
+                    required
+                  />
+                </div>
+              </div>
+            </section>
+          )}
           <section>
-            <h2 className="display text-2xl font-normal mb-6">
-              Shipping address
+            <h2 className="text-xs uppercase tracking-[0.15em] text-muted mb-4">
+              Order notes{" "}
+              <span className="normal-case tracking-normal text-muted">
+                (optional)
+              </span>
             </h2>
-            <div className="space-y-4">
-              <Field
-                label="Address"
-                name="addressLine1"
-                value={form.addressLine1}
-                onChange={setField("addressLine1")}
-                required
-              />
-              <Field
-                label="Apartment, suite, etc. (optional)"
-                name="addressLine2"
-                value={form.addressLine2}
-                onChange={setField("addressLine2")}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <Field
-                  label="City"
-                  name="city"
-                  value={form.city}
-                  onChange={setField("city")}
-                  required
-                />
-                <Field
-                  label="State"
-                  name="state"
-                  value={form.state}
-                  onChange={setField("state")}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Field
-                  label="Postal code"
-                  name="postalCode"
-                  value={form.postalCode}
-                  onChange={setField("postalCode")}
-                />
-                <Field
-                  label="Country"
-                  name="country"
-                  value={form.country}
-                  onChange={setField("country")}
-                  required
-                />
-              </div>
-            </div>
+            <textarea
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              maxLength={1000}
+              placeholder="Anything we should know — gift wrapping, occasion, special instructions..."
+              className="w-full px-4 py-3 border border-line bg-cream focus:border-ink outline-none resize-none"
+            />
           </section>
-
           <button
             type="submit"
-            className="w-full py-5 bg-accent hover:bg-accent-dark text-cream text-sm font-medium tracking-wider transition-colors"
+            disabled={submitting}
+            className="w-full py-5 bg-accent hover:bg-accent-dark text-cream text-sm font-medium tracking-wider transition-colors disabled:opacity-60"
           >
-            Pay {formatNaira(total)}
+            {submitting ? "Placing order…" : `Pay ${formatNaira(total)}`}
           </button>
+          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
           <p className="text-xs text-muted text-center italic">
-            Prototype — Paystack integration comes in step 8.
+            Order saves to database. Paystack hooks in next.
           </p>
         </div>
 
@@ -206,7 +330,10 @@ export default function CheckoutPage() {
 
             <div className="border-t border-line pt-4 space-y-2">
               <SummaryLine label="Subtotal" value={formatNaira(subtotal)} />
-              <SummaryLine label="Shipping" value={formatNaira(shipping)} />
+              <SummaryLine
+                label={deliveryMethod === "pickup" ? "Pickup" : "Delivery"}
+                value={shipping === 0 ? "Free" : formatNaira(shipping)}
+              />
             </div>
             <div className="border-t border-line mt-4 pt-4 flex justify-between items-baseline">
               <span className="text-sm text-muted">Total</span>
@@ -218,6 +345,47 @@ export default function CheckoutPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+function DeliveryOption({
+  selected,
+  onClick,
+  title,
+  description,
+  fee,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  title: string;
+  description: string;
+  fee: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`p-4 border-[1.5px] text-left transition-all ${
+        selected
+          ? "border-ink bg-paper"
+          : "border-line hover:border-ink-soft bg-cream"
+      }`}
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          className={`w-4 h-4 rounded-full border mt-1 shrink-0 flex items-center justify-center ${
+            selected ? "border-ink" : "border-muted"
+          }`}
+        >
+          {selected && <span className="w-2 h-2 rounded-full bg-ink" />}
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-medium">{title}</p>
+          <p className="text-xs text-muted mt-0.5">{description}</p>
+        </div>
+      </div>
+      <p className="text-sm font-medium mt-2 ml-6">{fee}</p>
+    </button>
   );
 }
 

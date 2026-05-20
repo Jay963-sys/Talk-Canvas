@@ -21,10 +21,16 @@ export function validateFile(file: File): string | null {
 
 export async function uploadToCloudinary(
   file: File,
-  onProgress?: (percent: number) => void,
+  options?: {
+    onProgress?: (percent: number) => void;
+    signEndpoint?: string;
+  },
 ): Promise<UploadResult> {
+  const signEndpoint = options?.signEndpoint ?? "/api/cloudinary/sign";
+  const onProgress = options?.onProgress;
+
   // 1. Get signed params from our server
-  const signRes = await fetch("/api/cloudinary/sign", { method: "POST" });
+  const signRes = await fetch(signEndpoint, { method: "POST" });
   if (!signRes.ok) throw new Error("Failed to get upload signature");
   const { timestamp, signature, folder, apiKey, cloudName } =
     await signRes.json();

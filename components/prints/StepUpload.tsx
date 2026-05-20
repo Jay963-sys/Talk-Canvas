@@ -27,7 +27,9 @@ export default function StepUpload() {
     setProgress(0);
 
     try {
-      const result = await uploadToCloudinary(file, setProgress);
+      const result = await uploadToCloudinary(file, {
+        onProgress: setProgress,
+      });
       setImage({
         url: result.url,
         publicId: result.publicId,

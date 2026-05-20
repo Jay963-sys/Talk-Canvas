@@ -1,12 +1,12 @@
 import Link from "next/link";
-import type { Original } from "@/data/originals";
+import type { Original } from "@/lib/db/schema";
 
 export default function WorkCard({ work }: { work: Original }) {
   return (
-    <Link href={`/originals/${work.id}`} className="block group">
+    <Link href={`/originals/${work.slug}`} className="block group">
       <div className="bg-line overflow-hidden">
         <img
-          src={work.img}
+          src={work.imageUrl}
           alt={work.title}
           className="w-full block transition-transform duration-700 group-hover:scale-[1.03]"
         />

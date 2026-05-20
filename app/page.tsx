@@ -2,9 +2,13 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { ORIGINALS } from "@/data/originals";
 import WorkCard from "@/components/WorkCard";
+import { getAllOriginals } from "@/lib/db/queries/originals";
 
-export default function Home() {
-  const featured = ORIGINALS.slice(0, 4);
+export const revalidate = 60;
+
+export default async function Home() {
+  const all = await getAllOriginals();
+  const featured = all.slice(0, 4);
 
   return (
     <div className="fade-in">

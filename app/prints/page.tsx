@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import Configurator from "@/components/prints/Configurator";
 
 export const metadata = {
@@ -23,6 +25,29 @@ export default function PrintsPage() {
       </section>
 
       <Configurator />
+
+      <section className="border-t border-line bg-paper">
+        <div className="max-w-4xl mx-auto px-6 md:px-10 py-20 text-center">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted">
+            Custom work
+          </p>
+          <h2 className="display text-3xl md:text-4xl font-normal mt-3 leading-tight">
+            Need a <span className="display-italic">custom size</span> or
+            special request?
+          </h2>
+          <p className="text-ink-soft mt-4 max-w-lg mx-auto leading-relaxed">
+            For sizes or styles outside our standard catalog, a member of our
+            team will work with you to bring your vision to life.
+          </p>
+          <Link
+            href="/prints/custom"
+            className="inline-flex items-center gap-2 mt-8 px-8 py-4 border border-ink text-ink uppercase text-xs tracking-[0.15em] hover:bg-ink hover:text-cream transition-colors"
+          >
+            Request a custom order
+            <ArrowRight size={14} strokeWidth={1.5} />
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

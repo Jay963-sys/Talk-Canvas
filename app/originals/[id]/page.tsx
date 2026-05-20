@@ -1,12 +1,14 @@
-import { ORIGINALS, getOriginal } from "@/data/originals";
+import { getAllOriginals, getOriginalBySlug } from "@/lib/db/queries/originals";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import EnquireButton from "@/components/originals/EnquireButton";
 
-// Pre-render all known works at build time
-export function generateStaticParams() {
-  return ORIGINALS.map((o) => ({ id: o.id }));
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const all = await getAllOriginals();
+  return all.map((o) => ({ id: o.slug }));
 }
 
 export async function generateMetadata({
@@ -15,7 +17,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const work = getOriginal(id);
+  const work = await getOriginalBySlug(id);
   if (!work) return {};
   return {
     title: `${work.title} — ${work.artist} | Talk Canvas Gallery`,
@@ -29,7 +31,7 @@ export default async function WorkDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const work = getOriginal(id);
+  const work = await getOriginalBySlug(id);
   if (!work) notFound();
 
   return (
@@ -44,7 +46,7 @@ export default async function WorkDetail({
 
       <div className="grid md:grid-cols-2 gap-8 md:gap-16">
         <div className="bg-line">
-          <img src={work.img} alt={work.title} className="w-full block" />
+          <img src={work.imageUrl} alt={work.title} className="w-full block" />
         </div>
 
         <div className="flex flex-col">
@@ -68,7 +70,7 @@ export default async function WorkDetail({
           <div className="mt-auto pt-12 flex gap-3">
             <EnquireButton
               work={{
-                id: work.id,
+                id: work.slug,
                 title: work.title,
                 artist: work.artist,
                 price: work.price,

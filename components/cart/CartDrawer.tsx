@@ -5,10 +5,13 @@ import Link from "next/link";
 import { X, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
+import { usePathname } from "next/navigation";
 
 export default function CartDrawer() {
+  // 1. ALL hooks go at the absolute top
   const { items, isOpen, setOpen, removeItem } = useCart();
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
@@ -21,8 +24,11 @@ export default function CartDrawer() {
     };
   }, [isOpen]);
 
+  // 2. NOW we do all our conditional returns
   if (!mounted) return null;
+  if (pathname?.startsWith("/admin")) return null;
 
+  // 3. Compute values and render
   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
 
   return (
