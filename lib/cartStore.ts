@@ -34,7 +34,10 @@ export const useCart = create<CartState>()(
             ...state.items,
             {
               ...item,
-              id: crypto.randomUUID(),
+              id:
+                typeof crypto !== "undefined" && crypto.randomUUID
+                  ? crypto.randomUUID()
+                  : `cart_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
               addedAt: new Date().toISOString(),
             },
           ],

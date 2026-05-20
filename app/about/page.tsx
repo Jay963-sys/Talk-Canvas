@@ -35,7 +35,12 @@ export default function AboutPage() {
         <InfoBlock label="Contact">
           hello@talkcanvas.gallery
           <br />
-          +234 800 000 0000
+          <a
+            href="tel:+2348000000000"
+            className="hover:text-accent transition-colors"
+          >
+            +234 800 000 0000
+          </a>{" "}
         </InfoBlock>
         <InfoBlock label="Follow">@talkcanvasgallery</InfoBlock>
       </div>

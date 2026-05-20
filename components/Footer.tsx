@@ -23,6 +23,12 @@ export default function Footer() {
           <Link href="/originals">Originals</Link>
           <Link href="/prints">Prints</Link>
           <Link href="/about">About</Link>
+          <Link
+            href="/contact"
+            className="text-ink-soft hover:text-ink transition-colors"
+          >
+            Contact
+          </Link>
         </div>
       </div>
     </footer>
