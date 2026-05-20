@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { ShoppingBag, Menu, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import clsx from "clsx";
 import { useCart } from "@/lib/cartStore";
 
@@ -16,18 +16,34 @@ const NAV = [
 ];
 
 // Animation variants for the stagger effect
-const menuVars = {
+const menuVars: Variants = {
   initial: { opacity: 0 },
   animate: {
     opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
   },
-  exit: { opacity: 0, transition: { duration: 0.3 } },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.3 },
+  },
 };
 
-const linkVars = {
-  initial: { y: 20, opacity: 0 },
-  animate: { y: 0, opacity: 1, transition: { ease: "easeOut", duration: 0.4 } },
+const linkVars: Variants = {
+  initial: {
+    y: 20,
+    opacity: 0,
+  },
+  animate: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      ease: "easeOut",
+      duration: 0.4,
+    },
+  },
 };
 
 export default function Header() {
