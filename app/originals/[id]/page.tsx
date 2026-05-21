@@ -76,9 +76,6 @@ export default async function WorkDetail({
                 price: work.price,
               }}
             />
-            <button className="px-6 py-4 border border-line text-sm font-medium hover:border-ink hover:bg-ink hover:text-cream transition-colors">
-              Save
-            </button>
           </div>
         </div>
       </div>

@@ -9,20 +9,20 @@ export const CONTACT = {
   email: "hello@talkcanvasgallery.com",
 
   // TODO: swap with real phone number
-  phone: "+234 800 000 0000",
+  phone: "+234 915 532 8133",
 
   whatsapp: {
     // For wa.me URL — country code + number, NO + or spaces (e.g. "2348012345678")
     // TODO: swap with real WhatsApp number
-    number: "2348000000000",
+    number: "2349155328133",
     // Human-readable display
     // TODO: swap with real number formatted nicely
-    display: "+234 800 000 0000",
+    display: "+234 915 532 8133",
   },
 
   instagram: {
     // TODO: swap with real handle
-    handle: "@talkcanvasgallery",
-    url: "https://instagram.com/talkcanvasgallery",
+    handle: "@talk_canvas",
+    url: "https://instagram.com/talk_canvas",
   },
 };

@@ -4,9 +4,10 @@
 export const SHIPPING_CONFIG = {
   pickup: {
     // TODO: confirm with client
-    address: "12 Akin Adesola Street, Victoria Island, Lagos",
-    days: "Tuesdays – Saturdays",
-    hours: "11am – 6pm",
+    address:
+      "5, Abeke Animashaun Street, Lekki phase 1, opp Ichie Kris Onyekwuje Street, Lekki, Lagos, Nigeria 105102  ",
+    days: "Mondays – Saturdays",
+    hours: "10am – 6pm",
   },
   delivery: {
     // TODO: confirm with client — currently a flat fee placeholder.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image"; // Added next/image
 import { ArrowUpRight } from "lucide-react";
 import { ORIGINALS } from "@/data/originals";
 import WorkCard from "@/components/WorkCard";
@@ -16,9 +17,6 @@ export default async function Home() {
       <section className="max-w-7xl mx-auto px-6 md:px-10 pt-16 md:pt-28 pb-20 md:pb-32">
         <div className="grid md:grid-cols-12 gap-8 items-end">
           <div className="md:col-span-8">
-            <p className="text-xs uppercase tracking-[0.15em] text-muted mb-6">
-              Est. Lagos — Contemporary works & fine-art prints
-            </p>
             <h1 className="display font-normal leading-[0.95] text-5xl sm:text-7xl md:text-8xl lg:text-[8rem]">
               A space for
               <br />
@@ -43,14 +41,16 @@ export default async function Home() {
             label="01 / Gallery"
             title="Originals"
             description="Hand-painted, one-of-one works from our roster of represented artists. Available for acquisition or enquiry."
-            img="https://picsum.photos/seed/originals/900/1100"
+            // Update this path to match your exact file name in the public folder
+            img="/home/4.jpg"
           />
           <PillarCard
             href="/prints"
             label="02 / Editions"
             title="Prints"
             description="Upload your own design, choose a frame and size, and preview it on your wall in AR before you buy."
-            img="https://picsum.photos/seed/prints/900/1100"
+            // Update this path to match your exact file name in the public folder
+            img="/home/1.jpg"
             accent
           />
         </div>
@@ -105,11 +105,13 @@ function PillarCard({
       <h3 className="display text-5xl md:text-6xl font-normal mt-3 leading-none">
         {title}
       </h3>
-      <div className="flex-1 mt-6 overflow-hidden">
-        <img
+      {/* Added 'relative' to this wrapper so Next/Image can fill it properly */}
+      <div className="flex-1 mt-6 overflow-hidden relative">
+        <Image
           src={img}
-          alt=""
-          className={`w-full h-full object-cover ${accent ? "brightness-90 saturate-75" : ""}`}
+          alt={title}
+          fill
+          className={`object-cover ${accent ? "brightness-90 saturate-75" : ""}`}
         />
       </div>
       <div className="flex items-end justify-between mt-6">

@@ -118,18 +118,110 @@ async function buildScene(opts: FrameModelOptions): Promise<THREE.Scene> {
   }
 
   // Dark backing (back of frame)
-  const backMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color("#2a2620"),
-    roughness: 0.8,
-  });
-  const back = new THREE.Mesh(
-    new THREE.PlaneGeometry(artWidth, artHeight),
-    backMat,
-  );
-  back.position.z = -d / 2 - 0.001;
-  back.rotation.y = Math.PI;
-  scene.add(back);
+  // Canvas wrap — Talk Canvas paints onto stretched canvas, never board.
+  // The back shows white canvas + visible wooden stretcher bars,
+  // the way you'd see a real gallery-wrap canvas from behind.
 
+  const canvasWrapDepth = 0.038; // 1.5" gallery wrap standard
+  const barWidth = 0.02; // ~0.75" stretcher bars
+  const canvasBackZ = artZ - canvasWrapDepth;
+  const stretcherZ = canvasBackZ + barWidth / 2;
+
+  const woodMat = new THREE.MeshStandardMaterial({
+    color: 0xd0ac78, // light natural pine
+    roughness: 0.85,
+    metalness: 0.05,
+  });
+
+  const canvasBackMat = new THREE.MeshStandardMaterial({
+    color: 0xf2eee5, // warm off-white (raw canvas back)
+    roughness: 0.95,
+    metalness: 0,
+  });
+
+  // Back canvas plane — flipped to face backward
+  const canvasBack = new THREE.Mesh(
+    new THREE.PlaneGeometry(artWidth, artHeight),
+    canvasBackMat,
+  );
+  canvasBack.position.z = canvasBackZ;
+  canvasBack.rotation.y = Math.PI;
+  scene.add(canvasBack);
+
+  // Outer stretcher bars
+  const stretcherTop = new THREE.Mesh(
+    new THREE.BoxGeometry(artWidth, barWidth, barWidth),
+    woodMat,
+  );
+  stretcherTop.position.set(0, artHeight / 2 - barWidth / 2, stretcherZ);
+  scene.add(stretcherTop);
+
+  const stretcherBottom = new THREE.Mesh(
+    new THREE.BoxGeometry(artWidth, barWidth, barWidth),
+    woodMat,
+  );
+  stretcherBottom.position.set(0, -artHeight / 2 + barWidth / 2, stretcherZ);
+  scene.add(stretcherBottom);
+
+  const stretcherLeft = new THREE.Mesh(
+    new THREE.BoxGeometry(barWidth, artHeight, barWidth),
+    woodMat,
+  );
+  stretcherLeft.position.set(-artWidth / 2 + barWidth / 2, 0, stretcherZ);
+  scene.add(stretcherLeft);
+
+  const stretcherRight = new THREE.Mesh(
+    new THREE.BoxGeometry(barWidth, artHeight, barWidth),
+    woodMat,
+  );
+  stretcherRight.position.set(artWidth / 2 - barWidth / 2, 0, stretcherZ);
+  scene.add(stretcherRight);
+
+  // Horizontal cross brace across the middle
+  const crossBrace = new THREE.Mesh(
+    new THREE.BoxGeometry(artWidth - 2 * barWidth, barWidth, barWidth),
+    woodMat,
+  );
+  crossBrace.position.set(0, 0, stretcherZ);
+  scene.add(crossBrace);
+
+  // Four corner diagonal braces — the distinctive 45° cuts at each corner
+  const diagLength = Math.min(artWidth, artHeight) * 0.14;
+  const diagSide = barWidth * 0.7;
+  const diagInset = barWidth + (diagLength / 2) * 0.7;
+
+  const corners: Array<{ x: number; y: number; rot: number }> = [
+    {
+      x: -artWidth / 2 + diagInset,
+      y: artHeight / 2 - diagInset,
+      rot: -Math.PI / 4,
+    },
+    {
+      x: artWidth / 2 - diagInset,
+      y: artHeight / 2 - diagInset,
+      rot: Math.PI / 4,
+    },
+    {
+      x: -artWidth / 2 + diagInset,
+      y: -artHeight / 2 + diagInset,
+      rot: Math.PI / 4,
+    },
+    {
+      x: artWidth / 2 - diagInset,
+      y: -artHeight / 2 + diagInset,
+      rot: -Math.PI / 4,
+    },
+  ];
+
+  for (const c of corners) {
+    const diag = new THREE.Mesh(
+      new THREE.BoxGeometry(diagLength, diagSide, diagSide),
+      woodMat,
+    );
+    diag.position.set(c.x, c.y, stretcherZ);
+    diag.rotation.z = c.rot;
+    scene.add(diag);
+  }
   return scene;
 }
 

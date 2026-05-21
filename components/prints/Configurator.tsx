@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useConfigurator } from "@/lib/store";
 import Stepper from "./Stepper";
 import StepUpload from "./StepUpload";
@@ -11,9 +12,19 @@ import ARModal from "./ARModal";
 
 export default function Configurator() {
   const { step, arOpen } = useConfigurator();
+  const topRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to the top of the configurator whenever the step changes
+  useEffect(() => {
+    if (topRef.current) {
+      topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [step]);
 
   return (
-    <>
+    // Added a wrapper div with the ref and a scroll-margin
+    // to prevent it from hiding under a fixed navbar if you have one
+    <div ref={topRef} className="scroll-mt-24">
       <section className="max-w-7xl mx-auto px-6 md:px-10 pb-8">
         <Stepper />
       </section>
@@ -33,6 +44,6 @@ export default function Configurator() {
       </section>
 
       {arOpen && <ARModal />}
-    </>
+    </div>
   );
 }
