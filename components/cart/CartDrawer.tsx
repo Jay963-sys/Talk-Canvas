@@ -8,7 +8,6 @@ import { formatNaira } from "@/lib/store";
 import { usePathname } from "next/navigation";
 
 export default function CartDrawer() {
-  // 1. ALL hooks go at the absolute top
   const { items, isOpen, setOpen, removeItem } = useCart();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
@@ -24,11 +23,9 @@ export default function CartDrawer() {
     };
   }, [isOpen]);
 
-  // 2. NOW we do all our conditional returns
   if (!mounted) return null;
   if (pathname?.startsWith("/admin")) return null;
 
-  // 3. Compute values and render
   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
 
   return (
@@ -63,15 +60,24 @@ export default function CartDrawer() {
                 Your cart is empty.
               </p>
               <p className="text-sm text-ink-soft">
-                Head to the prints section to make one.
+                Explore original works or design a custom print.
               </p>
-              <Link
-                href="/prints"
-                onClick={() => setOpen(false)}
-                className="inline-block mt-6 px-6 py-3 bg-accent text-cream text-sm font-medium tracking-wider hover:bg-accent-dark transition-colors"
-              >
-                Make a print
-              </Link>
+              <div className="flex flex-col gap-2 mt-6">
+                <Link
+                  href="/originals"
+                  onClick={() => setOpen(false)}
+                  className="inline-block px-6 py-3 bg-accent text-cream text-sm font-medium tracking-wider hover:bg-accent-dark transition-colors"
+                >
+                  Browse originals
+                </Link>
+                <Link
+                  href="/prints"
+                  onClick={() => setOpen(false)}
+                  className="inline-block px-6 py-3 border border-ink text-ink text-sm font-medium tracking-wider hover:bg-ink hover:text-cream transition-colors"
+                >
+                  Make a print
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-6">
@@ -85,13 +91,29 @@ export default function CartDrawer() {
                     />
                   </div>
                   <div className="flex-1 flex flex-col">
-                    <p className="display-italic text-lg leading-tight">
-                      Custom print
-                    </p>
-                    <p className="text-xs text-muted mt-1">
-                      {item.frameName}
-                      {item.glass ? " · with glass" : ""} · {item.sizeLabel}
-                    </p>
+                    {item.type === "original" ? (
+                      <>
+                        <p className="display-italic text-lg leading-tight">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-muted mt-1">
+                          {item.artist} · {item.year}
+                        </p>
+                        <p className="text-xs text-muted mt-0.5">
+                          {item.frameName} · {item.sizeLabel}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="display-italic text-lg leading-tight">
+                          Custom print
+                        </p>
+                        <p className="text-xs text-muted mt-1">
+                          {item.frameName}
+                          {item.glass ? " · with glass" : ""} · {item.sizeLabel}
+                        </p>
+                      </>
+                    )}
                     <div className="mt-auto flex items-end justify-between">
                       <p className="text-sm font-medium">
                         {formatNaira(item.price)}

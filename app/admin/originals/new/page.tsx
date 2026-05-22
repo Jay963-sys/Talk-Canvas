@@ -20,7 +20,7 @@ export default function NewOriginalPage() {
         Add an original
       </h1>
 
-      <OriginalForm mode="create" />
+      <OriginalForm />
     </div>
   );
 }

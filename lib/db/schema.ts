@@ -4,6 +4,7 @@ import {
   varchar,
   text,
   integer,
+  real,
   boolean,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -15,11 +16,27 @@ export const originals = pgTable("originals", {
   artist: varchar("artist", { length: 255 }).notNull(),
   year: integer("year").notNull(),
   medium: varchar("medium", { length: 255 }).notNull(),
-  size: varchar("size", { length: 100 }).notNull(),
-  price: varchar("price", { length: 100 }).notNull(),
+
+  // Structured dimensions (in inches) for AR + display
+  widthInches: real("width_inches").notNull(),
+  heightInches: real("height_inches").notNull(),
+
+  // NGN as integer
+  price: integer("price").notNull(),
+
   imageUrl: text("image_url").notNull(),
   imagePublicId: varchar("image_public_id", { length: 255 }),
   description: text("description").notNull(),
+
+  // Frame info (each original is sold as displayed with a specific frame)
+  frameStyle: varchar("frame_style", { length: 20 }).notNull(), // "regular" | "antique"
+  frameShape: varchar("frame_shape", { length: 20 }), // "floating" | "box" — null for antique
+  frameColor: varchar("frame_color", { length: 20 }).notNull(), // "black" | "brown" | "gold" | "white"
+  glass: boolean("glass").default(false).notNull(),
+
+  // One-of-one sold tracking
+  soldAt: timestamp("sold_at"),
+
   displayOrder: integer("display_order").default(0).notNull(),
   isVisible: boolean("is_visible").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -53,14 +70,30 @@ export const orderItems = pgTable("order_items", {
   orderId: integer("order_id")
     .notNull()
     .references(() => orders.id, { onDelete: "cascade" }),
+
+  // Discriminator: "print" | "original"
+  type: varchar("type", { length: 20 }).default("print").notNull(),
+
+  // Universal
   imageUrl: text("image_url").notNull(),
   imagePublicId: varchar("image_public_id", { length: 255 }),
-  frameId: varchar("frame_id", { length: 100 }).notNull(),
+  price: integer("price").notNull(),
+
+  // Frame info — both types have a frame
   frameName: varchar("frame_name", { length: 255 }).notNull(),
   glass: boolean("glass").default(false).notNull(),
-  sizeId: varchar("size_id", { length: 50 }).notNull(),
   sizeLabel: varchar("size_label", { length: 100 }).notNull(),
-  price: integer("price").notNull(),
+
+  // Print-only (nullable)
+  frameId: varchar("frame_id", { length: 100 }),
+  sizeId: varchar("size_id", { length: 50 }),
+
+  // Original-only (nullable). originalId is a soft FK — we keep the order
+  // record intact even if the original is later deleted.
+  originalId: integer("original_id"),
+  title: varchar("title", { length: 255 }),
+  artist: varchar("artist", { length: 255 }),
+  year: integer("year"),
 });
 
 export type Order = typeof orders.$inferSelect;
@@ -68,7 +101,7 @@ export type NewOrder = typeof orders.$inferInsert;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type NewOrderItem = typeof orderItems.$inferInsert;
 
-// For admin login — populated in 9b
+// For admin login
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),

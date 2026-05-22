@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
 import EnquiryNotification from "@/lib/email/templates/EnquiryNotification";
 import { getOriginalBySlug } from "@/lib/db/queries/originals";
+import { formatNaira } from "@/lib/store"; // ← Don't forget to import this!
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +19,9 @@ export async function POST(req: NextRequest) {
     // Look up the work for richer email content
     const work = await getOriginalBySlug(workId);
     const artist = work?.artist || "Unknown";
-    const price = work?.price || "—";
+
+    // Format the integer price into Naira, or fallback to an em dash
+    const priceDisplay = work?.price ? formatNaira(Number(work.price)) : "—";
 
     const galleryEmail = process.env.GALLERY_EMAIL;
     if (galleryEmail) {
@@ -29,7 +32,7 @@ export async function POST(req: NextRequest) {
           react: EnquiryNotification({
             workTitle,
             workArtist: artist,
-            workPrice: price,
+            workPrice: priceDisplay, // ← Passes the formatted string to the email
             customerName: name,
             customerEmail: email,
             customerPhone: phone,

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Plus, Pencil, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { getAllOriginalsForAdmin } from "@/lib/db/queries/originals";
 import DeleteButton from "@/components/admin/DeleteButton";
 import VisibilityToggle from "@/components/admin/VisibilityToggle";
+import { formatNaira } from "@/lib/store";
 
 export default async function AdminDashboard() {
   const originals = await getAllOriginalsForAdmin();
@@ -52,11 +53,18 @@ export default async function AdminDashboard() {
                 />
               </div>
               <div className="min-w-0">
-                <p className="display-italic text-lg leading-tight truncate">
-                  {o.title}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="display-italic text-lg leading-tight truncate">
+                    {o.title}
+                  </p>
+                  {o.soldAt && (
+                    <span className="px-1.5 py-0.5 text-[10px] uppercase tracking-wider bg-ink/85 text-cream shrink-0">
+                      Sold
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted mt-1">
-                  {o.artist} · {o.year} · {o.price}
+                  {o.artist} · {o.year} · {formatNaira(o.price)}
                 </p>
                 <p className="text-[11px] text-muted mt-1 font-mono">
                   /{o.slug}

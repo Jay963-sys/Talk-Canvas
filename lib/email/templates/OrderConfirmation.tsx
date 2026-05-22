@@ -15,13 +15,16 @@ import {
 import { styles, formatNaira, thumb, colors } from "../styles";
 
 interface Item {
+  type?: "print" | "original";
   imageUrl: string;
   frameName: string;
   glass: boolean;
   sizeLabel: string;
   price: number;
+  title?: string | null;
+  artist?: string | null;
+  year?: number | null;
 }
-
 interface Props {
   orderNumber: string;
   customerName: string;
@@ -77,7 +80,7 @@ export default function OrderConfirmation({
             We've received your order. Production typically takes 5–7 days;
             we'll be in touch with{" "}
             {deliveryMethod === "pickup" ? "pickup" : "delivery"} details once
-            your print is ready.
+            your order is ready.
           </Text>
 
           <Text style={styles.orderNumber}>ORDER #{orderNumber}</Text>
@@ -96,19 +99,42 @@ export default function OrderConfirmation({
                   />
                 </Column>
                 <Column style={{ verticalAlign: "top", paddingLeft: "16px" }}>
-                  <Text
-                    style={{
-                      ...styles.infoText,
-                      fontStyle: "italic",
-                      fontSize: "15px",
-                    }}
-                  >
-                    Custom print
-                  </Text>
-                  <Text style={styles.metaText}>
-                    {item.frameName}
-                    {item.glass ? " · with glass" : ""} · {item.sizeLabel}
-                  </Text>
+                  {item.type === "original" ? (
+                    <>
+                      <Text
+                        style={{
+                          ...styles.infoText,
+                          fontStyle: "italic",
+                          fontSize: "15px",
+                        }}
+                      >
+                        {item.title}
+                      </Text>
+                      <Text style={styles.metaText}>
+                        {item.artist}
+                        {item.year ? ` · ${item.year}` : ""}
+                      </Text>
+                      <Text style={styles.metaText}>
+                        {item.frameName} · {item.sizeLabel}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text
+                        style={{
+                          ...styles.infoText,
+                          fontStyle: "italic",
+                          fontSize: "15px",
+                        }}
+                      >
+                        Custom print
+                      </Text>
+                      <Text style={styles.metaText}>
+                        {item.frameName}
+                        {item.glass ? " · with glass" : ""} · {item.sizeLabel}
+                      </Text>
+                    </>
+                  )}
                 </Column>
                 <Column
                   style={{

@@ -13,20 +13,29 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
 
-    // Basic validation
+    // Updated validation matching new Drizzle schema
     const required = [
       "slug",
       "title",
       "artist",
       "year",
       "medium",
-      "size",
+      "widthInches",
+      "heightInches",
       "price",
       "imageUrl",
       "description",
+      "frameStyle",
+      "frameColor",
     ];
+
     for (const field of required) {
-      if (!data[field]) {
+      // Use a stricter check so 0 (valid price) doesn't fail, but null/undefined/empty string does
+      if (
+        data[field] === undefined ||
+        data[field] === null ||
+        data[field] === ""
+      ) {
         return NextResponse.json(
           { error: `Missing field: ${field}` },
           { status: 400 },
@@ -40,17 +49,28 @@ export async function POST(req: NextRequest) {
       artist: data.artist,
       year: Number(data.year),
       medium: data.medium,
-      size: data.size,
-      price: data.price,
+      widthInches: Number(data.widthInches),
+      heightInches: Number(data.heightInches),
+      price: Number(data.price),
       imageUrl: data.imageUrl,
       imagePublicId: data.imagePublicId,
       description: data.description,
-      displayOrder: data.displayOrder ?? 0,
+
+      // New Frame Fields
+      frameStyle: data.frameStyle,
+      frameShape: data.frameShape, // Can be null
+      frameColor: data.frameColor,
+      glass: Boolean(data.glass),
+
+      // Status Fields
+      soldAt: data.soldAt ? new Date(data.soldAt) : null,
+      displayOrder: Number(data.displayOrder) || 0,
       isVisible: data.isVisible ?? true,
     });
 
     revalidatePath("/originals");
     revalidatePath("/");
+    revalidatePath("/admin");
 
     return NextResponse.json(created, { status: 201 });
   } catch (err: unknown) {

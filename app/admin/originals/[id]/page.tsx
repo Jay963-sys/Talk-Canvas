@@ -33,7 +33,8 @@ export default async function EditOriginalPage({
         {original.title}
       </h1>
 
-      <OriginalForm mode="edit" initialData={original} />
+      {/* FIXED: Passing the single 'original' prop expected by the component */}
+      <OriginalForm original={original} />
     </div>
   );
 }

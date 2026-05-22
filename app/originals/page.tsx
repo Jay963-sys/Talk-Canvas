@@ -1,5 +1,6 @@
 import { getAllOriginals } from "@/lib/db/queries/originals";
 import Link from "next/link";
+import { formatNaira } from "@/lib/store";
 
 export const metadata = {
   title: "Originals — Talk Canvas Gallery",
@@ -53,7 +54,7 @@ export default async function OriginalsPage() {
                   </p>
                 </div>
                 <p className="text-xs text-ink-soft font-medium whitespace-nowrap pt-1">
-                  {work.price}
+                  {formatNaira(work.price)}
                 </p>
               </div>
             </Link>

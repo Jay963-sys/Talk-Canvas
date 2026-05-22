@@ -36,15 +36,34 @@ export async function PATCH(
       ...(data.artist !== undefined && { artist: data.artist }),
       ...(data.year !== undefined && { year: Number(data.year) }),
       ...(data.medium !== undefined && { medium: data.medium }),
-      ...(data.size !== undefined && { size: data.size }),
-      ...(data.price !== undefined && { price: data.price }),
+
+      // Dimensions
+      ...(data.widthInches !== undefined && {
+        widthInches: Number(data.widthInches),
+      }),
+      ...(data.heightInches !== undefined && {
+        heightInches: Number(data.heightInches),
+      }),
+
+      ...(data.price !== undefined && { price: Number(data.price) }),
       ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
       ...(data.imagePublicId !== undefined && {
         imagePublicId: data.imagePublicId,
       }),
       ...(data.description !== undefined && { description: data.description }),
+
+      // Frame Info
+      ...(data.frameStyle !== undefined && { frameStyle: data.frameStyle }),
+      ...(data.frameShape !== undefined && { frameShape: data.frameShape }),
+      ...(data.frameColor !== undefined && { frameColor: data.frameColor }),
+      ...(data.glass !== undefined && { glass: Boolean(data.glass) }),
+
+      // Status
+      ...(data.soldAt !== undefined && {
+        soldAt: data.soldAt ? new Date(data.soldAt) : null,
+      }),
       ...(data.displayOrder !== undefined && {
-        displayOrder: data.displayOrder,
+        displayOrder: Number(data.displayOrder),
       }),
       ...(data.isVisible !== undefined && { isVisible: data.isVisible }),
     });
@@ -55,6 +74,8 @@ export async function PATCH(
       revalidatePath(`/originals/${data.slug}`);
     }
     revalidatePath("/");
+    revalidatePath("/admin");
+    revalidatePath(`/admin/originals/${numId}`);
 
     return NextResponse.json(updated);
   } catch (err: unknown) {
@@ -93,6 +114,8 @@ export async function DELETE(
       revalidatePath("/originals");
       revalidatePath(`/originals/${existing.slug}`);
       revalidatePath("/");
+      revalidatePath("/admin");
+      revalidatePath(`/admin/originals/${numId}`);
     }
     return NextResponse.json({ ok: true });
   } catch (err) {

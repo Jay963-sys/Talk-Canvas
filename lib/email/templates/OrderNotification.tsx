@@ -15,11 +15,15 @@ import {
 import { styles, formatNaira, thumb, colors } from "../styles";
 
 interface Item {
+  type?: "print" | "original";
   imageUrl: string;
   frameName: string;
   glass: boolean;
   sizeLabel: string;
   price: number;
+  title?: string | null;
+  artist?: string | null;
+  year?: number | null;
 }
 
 interface Props {
@@ -94,13 +98,30 @@ export default function OrderNotification({
                   />
                 </Column>
                 <Column style={{ verticalAlign: "top", paddingLeft: "16px" }}>
-                  <Text style={{ ...styles.infoText, fontStyle: "italic" }}>
-                    Custom print
-                  </Text>
-                  <Text style={styles.metaText}>
-                    {item.frameName}
-                    {item.glass ? " · with glass" : ""} · {item.sizeLabel}
-                  </Text>
+                  {item.type === "original" ? (
+                    <>
+                      <Text style={{ ...styles.infoText, fontStyle: "italic" }}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.metaText}>
+                        {item.artist}
+                        {item.year ? ` · ${item.year}` : ""}
+                      </Text>
+                      <Text style={styles.metaText}>
+                        {item.frameName} · {item.sizeLabel}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={{ ...styles.infoText, fontStyle: "italic" }}>
+                        Custom print
+                      </Text>
+                      <Text style={styles.metaText}>
+                        {item.frameName}
+                        {item.glass ? " · with glass" : ""} · {item.sizeLabel}
+                      </Text>
+                    </>
+                  )}
                 </Column>
                 <Column
                   style={{

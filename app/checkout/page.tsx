@@ -43,7 +43,7 @@ export default function CheckoutPage() {
       <div className="max-w-2xl mx-auto px-6 py-32 text-center">
         <p className="display-italic text-3xl mb-4">Your cart is empty.</p>
         <p className="text-sm text-ink-soft mb-8">
-          Make a print to get started.
+          Explore originals or design a print to get started.{" "}
         </p>
         <Link
           href="/prints"
@@ -87,16 +87,33 @@ export default function CheckoutPage() {
                   country: form.country,
                 }
               : null,
-          items: items.map((item) => ({
-            imageUrl: item.imageUrl,
-            imagePublicId: item.imagePublicId,
-            frameId: item.frameId,
-            frameName: item.frameName,
-            glass: item.glass,
-            sizeId: item.sizeId,
-            sizeLabel: item.sizeLabel,
-            price: item.price,
-          })),
+          items: items.map((item) =>
+            item.type === "original"
+              ? {
+                  type: "original" as const,
+                  originalId: item.originalId,
+                  imageUrl: item.imageUrl,
+                  imagePublicId: item.imagePublicId,
+                  frameName: item.frameName,
+                  glass: item.glass,
+                  sizeLabel: item.sizeLabel,
+                  title: item.title,
+                  artist: item.artist,
+                  year: item.year,
+                  price: item.price,
+                }
+              : {
+                  type: "print" as const,
+                  imageUrl: item.imageUrl,
+                  imagePublicId: item.imagePublicId,
+                  frameId: item.frameId,
+                  frameName: item.frameName,
+                  glass: item.glass,
+                  sizeId: item.sizeId,
+                  sizeLabel: item.sizeLabel,
+                  price: item.price,
+                },
+          ),
           subtotal,
           shipping,
           total,
@@ -313,13 +330,29 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div className="flex-1">
-                    <p className="display-italic text-base leading-tight">
-                      Custom print
-                    </p>
-                    <p className="text-xs text-muted mt-1">
-                      {item.frameName}
-                      {item.glass ? " · with glass" : ""} · {item.sizeLabel}
-                    </p>
+                    {item.type === "original" ? (
+                      <>
+                        <p className="display-italic text-base leading-tight">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-muted mt-1">
+                          {item.artist} · {item.year}
+                        </p>
+                        <p className="text-xs text-muted mt-0.5">
+                          {item.frameName} · {item.sizeLabel}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="display-italic text-base leading-tight">
+                          Custom print
+                        </p>
+                        <p className="text-xs text-muted mt-1">
+                          {item.frameName}
+                          {item.glass ? " · with glass" : ""} · {item.sizeLabel}
+                        </p>
+                      </>
+                    )}
                     <p className="text-sm font-medium mt-2">
                       {formatNaira(item.price)}
                     </p>
