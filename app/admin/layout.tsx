@@ -1,5 +1,7 @@
 import Link from "next/link";
 import AdminNav from "@/components/admin/AdminNav";
+// Import your non-blocking session check
+import { getSession } from "@/lib/auth-server";
 
 export const dynamic = "force-dynamic";
 
@@ -7,11 +9,15 @@ export const metadata = {
   title: "Admin — Talk Canvas Gallery",
 };
 
-export default function AdminLayout({
+// 1. Make the layout async
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // 2. Fetch the session (returns null/false if not logged in)
+  const session = await getSession();
+
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-line bg-paper">
@@ -20,7 +26,9 @@ export default function AdminLayout({
             Talk Canvas{" "}
             <span className="display-italic text-accent">Admin</span>
           </Link>
-          <AdminNav />
+
+          {/* 3. Conditionally render the nav */}
+          {session && <AdminNav />}
         </div>
       </header>
       <main>{children}</main>

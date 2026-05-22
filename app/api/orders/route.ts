@@ -8,7 +8,10 @@ import { sendEmail } from "@/lib/email";
 import OrderConfirmation from "@/lib/email/templates/OrderConfirmation";
 import OrderNotification from "@/lib/email/templates/OrderNotification";
 import { SHIPPING_CONFIG } from "@/data/shipping";
-import type { Original } from "@/lib/db/schema";
+import type { Original, NewOrderItem } from "@/lib/db/schema";
+import { getFrame } from "@/data/frames";
+import { getSize, formatInches } from "@/data/sizes";
+import { getPrice } from "@/data/pricing";
 
 interface PrintItemInput {
   type?: "print";
@@ -33,7 +36,7 @@ interface OriginalItemInput {
   title: string;
   artist: string;
   year: number;
-  price: number; // ignored — recomputed from DB
+  price: number;
 }
 
 type OrderItemInput = PrintItemInput | OriginalItemInput;
@@ -59,7 +62,7 @@ interface OrderBody {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as OrderBody;
-    const { customer, deliveryMethod, address, items, shipping } = body;
+    const { customer, deliveryMethod, address, items } = body;
     const notes =
       typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null;
 
@@ -90,9 +93,6 @@ export async function POST(req: NextRequest) {
     }
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "No items in order" }, { status: 400 });
-    }
-    if (typeof shipping !== "number" || shipping < 0) {
-      return NextResponse.json({ error: "Invalid shipping" }, { status: 400 });
     }
 
     // ── Validate originals against the DB ──────────────────────────
@@ -127,11 +127,15 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Build item rows with server-trusted prices ─────────────────
-    const itemRows = items.map((item) => {
+    // ── Build item rows with server-trusted prices ─────────────────
+    // Prices for BOTH types come from the server, never the client.
+    const itemRows: Omit<NewOrderItem, "id" | "orderId">[] = [];
+
+    for (const item of items) {
       if (item.type === "original") {
         const dbOrig = originalsMap.get(item.originalId)!;
-        return {
-          type: "original" as const,
+        itemRows.push({
+          type: "original",
           imageUrl: dbOrig.imageUrl,
           imagePublicId: dbOrig.imagePublicId ?? null,
           price: dbOrig.price, // DB price, not client
@@ -144,27 +148,61 @@ export async function POST(req: NextRequest) {
           title: dbOrig.title,
           artist: dbOrig.artist,
           year: dbOrig.year,
-        };
+        });
+        continue;
       }
-      return {
-        type: "print" as const,
+
+      // print — recompute from the pricing tables (the same source the
+      // configurator uses), so a tampered client price is overwritten and
+      // legitimate orders still match exactly.
+      const frame = getFrame(item.frameId);
+      const size = getSize(item.sizeId);
+      if (!frame || !size) {
+        return NextResponse.json(
+          { error: "Invalid print configuration in your cart." },
+          { status: 400 },
+        );
+      }
+
+      // Glass is dictated by the frame, not the client:
+      // antique always includes glass, box is optional, floating never has it.
+      const effectiveGlass =
+        frame.style === "antique"
+          ? true
+          : frame.shape === "box"
+            ? (item.glass ?? false)
+            : false;
+
+      const price = getPrice(frame, effectiveGlass, size);
+      if (price === null) {
+        return NextResponse.json(
+          { error: "That size isn't available for the selected frame." },
+          { status: 400 },
+        );
+      }
+
+      itemRows.push({
+        type: "print",
         imageUrl: item.imageUrl,
         imagePublicId: item.imagePublicId ?? null,
-        price: item.price,
+        price, // server-computed — client price ignored
         frameName: item.frameName,
-        glass: item.glass ?? false,
-        sizeLabel: item.sizeLabel,
+        glass: effectiveGlass,
+        sizeLabel: formatInches(size),
         frameId: item.frameId,
         sizeId: item.sizeId,
         originalId: null,
         title: null,
         artist: null,
         year: null,
-      };
-    });
+      });
+    }
 
     const computedSubtotal = itemRows.reduce((sum, i) => sum + i.price, 0);
-    const computedTotal = computedSubtotal + shipping;
+    // Shipping is server-authoritative — derived from delivery method, never the client
+    const computedShipping =
+      deliveryMethod === "pickup" ? 0 : SHIPPING_CONFIG.delivery.fee;
+    const computedTotal = computedSubtotal + computedShipping;
 
     const order = await createOrder(
       {
@@ -184,7 +222,7 @@ export async function POST(req: NextRequest) {
           deliveryMethod === "delivery" ? (address!.postalCode ?? null) : null,
         country: deliveryMethod === "delivery" ? address!.country : null,
         subtotal: computedSubtotal,
-        shipping,
+        shipping: computedShipping,
         total: computedTotal,
         notes,
         status: "pending",
