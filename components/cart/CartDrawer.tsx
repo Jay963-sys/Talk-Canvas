@@ -38,11 +38,12 @@ export default function CartDrawer() {
       />
 
       <aside
-        className={`fixed top-0 right-0 h-full w-full sm:w-[440px] bg-cream z-50 flex flex-col transition-transform duration-300 ${
+        // 🚨 FIX 1: Changed h-full to h-[100dvh] for mobile browsers
+        className={`fixed top-0 right-0 h-[100dvh] w-full sm:w-[440px] bg-cream z-50 flex flex-col transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-line">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-line shrink-0">
           <div className="flex items-center gap-3">
             <ShoppingBag size={18} strokeWidth={1.5} />
             <h2 className="display text-xl">Your cart</h2>
@@ -53,7 +54,8 @@ export default function CartDrawer() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        {/* 🚨 FIX 2 & 3: Added overscroll-contain and custom-scrollbar */}
+        <div className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar px-6 py-6">
           {items.length === 0 ? (
             <div className="text-center py-16">
               <p className="display-italic text-2xl mb-3">
@@ -134,7 +136,8 @@ export default function CartDrawer() {
         </div>
 
         {items.length > 0 && (
-          <div className="px-6 py-5 border-t border-line">
+          // 🚨 Optional: added shrink-0 to ensure the footer never squishes
+          <div className="px-6 py-5 border-t border-line shrink-0">
             <div className="flex justify-between items-baseline mb-1">
               <span className="text-xs text-muted">Subtotal</span>
               <span className="display text-2xl font-medium">

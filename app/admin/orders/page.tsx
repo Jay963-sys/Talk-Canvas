@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAllOrdersWithItems } from "@/lib/db/queries/orders";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 import { formatNaira } from "@/lib/store";
+import Image from "next/image";
 
 function formatDateTime(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
@@ -46,12 +47,15 @@ export default async function OrdersPage() {
                 href={`/admin/orders/${order.id}`}
                 className="grid grid-cols-[60px_1fr_140px_auto_auto] gap-6 items-center py-4 border-b border-line hover:bg-paper transition-colors"
               >
-                <div className="w-15 aspect-[4/5] bg-line overflow-hidden">
+                <div className="w-[60px] relative aspect-[4/5] bg-line overflow-hidden">
+                  {" "}
                   {firstItem && (
-                    <img
+                    <Image
                       src={firstItem.imageUrl}
-                      alt=""
-                      className="w-full h-full object-cover"
+                      alt="Order thumbnail"
+                      fill // Fills the aspect-[4/5] container
+                      sizes="60px" // Tells Next.js to serve the absolute smallest version
+                      className="object-cover"
                     />
                   )}
                 </div>
@@ -79,6 +83,13 @@ export default async function OrdersPage() {
                 </div>
                 <div className="text-base font-medium whitespace-nowrap">
                   {formatNaira(order.total)}
+                </div>
+                <div className="text-[10px] uppercase tracking-wider mt-1">
+                  {order.paymentStatus === "paid" ? (
+                    <span className="text-green-600">Paid</span>
+                  ) : (
+                    <span className="text-red-500">Unpaid</span>
+                  )}
                 </div>
                 <div>
                   <OrderStatusBadge status={order.status} />

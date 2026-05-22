@@ -111,6 +111,7 @@ function PillarCard({
           src={img}
           alt={title}
           fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className={`object-cover ${accent ? "brightness-90 saturate-75" : ""}`}
         />
       </div>

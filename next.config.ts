@@ -6,6 +6,16 @@ const nextConfig: NextConfig = {
     "eleven-impart-goofy.ngrok-free.dev",
     "172.16.78.177",
   ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        port: "",
+        pathname: "/**",
+      },
+    ],
+  },
   /* config options here */
 };
 

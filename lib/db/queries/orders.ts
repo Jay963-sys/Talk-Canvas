@@ -7,7 +7,7 @@ import {
   type NewOrder,
   type NewOrderItem,
 } from "../schema";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and, ne } from "drizzle-orm";
 import { type OrderStatus } from "../../constants";
 
 /**
@@ -64,7 +64,10 @@ export interface OrderWithItems extends Order {
  * orphan order. For the gallery's volume, acceptable; revisit if it grows.
  */
 export async function createOrder(
-  order: Omit<NewOrder, "id" | "createdAt" | "updatedAt">,
+  order: Omit<
+    NewOrder,
+    "id" | "createdAt" | "updatedAt" | "notes?: string | null;"
+  >,
   items: Omit<NewOrderItem, "id" | "orderId">[],
 ): Promise<OrderWithItems> {
   const [createdOrder] = await db.insert(orders).values(order).returning();
@@ -95,6 +98,42 @@ export async function getOrderById(
   return { ...order, items };
 }
 
+export async function getOrderByReference(
+  reference: string,
+): Promise<OrderWithItems | undefined> {
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.paymentReference, reference))
+    .limit(1);
+  if (!order) return undefined;
+  const items = await db
+    .select()
+    .from(orderItems)
+    .where(eq(orderItems.orderId, order.id));
+  return { ...order, items };
+}
+
+/**
+ * Atomically flip to paid only if not already paid. Returns the order if
+ * THIS call made the transition, else undefined — the idempotency guard so
+ * concurrent webhook + callback fulfill exactly once.
+ */
+export async function markOrderPaidByReference(
+  reference: string,
+): Promise<Order | undefined> {
+  const [updated] = await db
+    .update(orders)
+    .set({ paymentStatus: "paid", updatedAt: new Date() })
+    .where(
+      and(
+        eq(orders.paymentReference, reference),
+        ne(orders.paymentStatus, "paid"),
+      ),
+    )
+    .returning();
+  return updated;
+}
 export async function getAllOrders(): Promise<Order[]> {
   return await db.select().from(orders).orderBy(desc(orders.createdAt));
 }

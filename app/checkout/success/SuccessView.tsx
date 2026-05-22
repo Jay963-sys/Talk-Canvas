@@ -3,10 +3,16 @@
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { useEffect } from "react";
+import { useCart } from "@/lib/cartStore";
 
 export default function SuccessView() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("id");
+  const clearCart = useCart((s) => s.clear);
+  useEffect(() => {
+    clearCart();
+  }, [clearCart]);
 
   return (
     <div className="fade-in max-w-2xl mx-auto px-6 py-32 text-center">

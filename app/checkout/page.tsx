@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { useCart } from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
 import { SHIPPING_CONFIG } from "@/data/shipping";
+import Image from "next/image";
 
 type DeliveryMethod = "delivery" | "pickup";
 
@@ -31,6 +32,16 @@ export default function CheckoutPage() {
     country: "Nigeria",
   });
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("payment");
+    if (p === "failed")
+      setError("Payment wasn't completed — you can try again.");
+    else if (p === "error" || p === "missing_ref")
+      setError(
+        "We couldn't confirm your payment. If you were charged, contact us and we'll sort it immediately.",
+      );
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -128,9 +139,13 @@ export default function CheckoutPage() {
         return;
       }
 
-      const { orderId } = await res.json();
+      const data = await res.json();
+      if (data.authorizationUrl) {
+        window.location.href = data.authorizationUrl;
+        return;
+      }
       clear();
-      router.push(`/checkout/success?id=${orderId}`);
+      router.push(`/checkout/success?id=${data.orderId}`);
     } catch {
       setError("Network error — please try again");
       setSubmitting(false);
@@ -322,11 +337,13 @@ export default function CheckoutPage() {
             <div className="space-y-5 mb-6">
               {items.map((item) => (
                 <div key={item.id} className="flex gap-4">
-                  <div className="w-16 h-20 bg-line shrink-0 overflow-hidden">
-                    <img
+                  <div className="w-[60px] relative aspect-[4/5] bg-line overflow-hidden">
+                    {" "}
+                    <Image
                       src={item.imageUrl}
                       alt=""
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   </div>
                   <div className="flex-1">

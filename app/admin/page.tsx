@@ -4,6 +4,7 @@ import { getAllOriginalsForAdmin } from "@/lib/db/queries/originals";
 import DeleteButton from "@/components/admin/DeleteButton";
 import VisibilityToggle from "@/components/admin/VisibilityToggle";
 import { formatNaira } from "@/lib/store";
+import Image from "next/image";
 
 export default async function AdminDashboard() {
   const originals = await getAllOriginalsForAdmin();
@@ -45,12 +46,9 @@ export default async function AdminDashboard() {
               key={o.id}
               className="grid grid-cols-[80px_1fr_auto_auto] gap-6 items-center py-4 border-b border-line"
             >
-              <div className="aspect-[4/5] bg-line overflow-hidden">
-                <img
-                  src={o.imageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+              <div className="w-[60px] relative aspect-[4/5] bg-line overflow-hidden">
+                {" "}
+                <Image src={o.imageUrl} alt="" fill className="object-cover" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">

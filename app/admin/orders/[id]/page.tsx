@@ -5,6 +5,7 @@ import { getOrderById } from "@/lib/db/queries/orders";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 import OrderStatusSelect from "@/components/admin/OrderStatusSelect";
 import { formatNaira } from "@/lib/store";
+import Image from "next/image";
 
 function formatDateTime(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
@@ -67,11 +68,14 @@ export default async function OrderDetailPage({
                   key={item.id}
                   className="flex gap-4 py-4 border-b border-line"
                 >
-                  <div className="w-20 aspect-[4/5] bg-line overflow-hidden shrink-0">
-                    <img
+                  <div className="w-[60px] relative aspect-[4/5] bg-line overflow-hidden">
+                    {" "}
+                    <Image
                       src={item.imageUrl}
-                      alt=""
-                      className="w-full h-full object-cover"
+                      alt="Order thumbnail"
+                      fill // Fills the aspect-[4/5] container
+                      sizes="60px" // Tells Next.js to serve the absolute smallest version
+                      className="object-cover"
                     />
                   </div>
                   <div className="flex-1">
