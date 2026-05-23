@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/admin";
 
@@ -32,8 +31,7 @@ export default function LoginForm() {
         return;
       }
 
-      router.push(from);
-      router.refresh();
+      window.location.href = from;
     } catch {
       setError("Network error — try again");
       setLoading(false);
