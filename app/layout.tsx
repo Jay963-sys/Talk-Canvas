@@ -18,8 +18,35 @@ const instrument = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Talk Canvas Gallery",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+  ),
+  title: {
+    template: "%s | Talk Canvas Gallery",
+    default: "Talk Canvas Gallery",
+  },
   description: "Contemporary works & fine-art prints from Lagos.",
+  openGraph: {
+    title: "Talk Canvas Gallery",
+    description: "Contemporary works & fine-art prints from Lagos.",
+    url: "/",
+    siteName: "Talk Canvas Gallery",
+    locale: "en_NG",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Talk Canvas Gallery",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Talk Canvas Gallery",
+    description: "Contemporary works & fine-art prints from Lagos.",
+  },
 };
 
 export default function RootLayout({

@@ -79,10 +79,20 @@ export default async function OrderDetailPage({
                     />
                   </div>
                   <div className="flex-1">
-                    <p className="display-italic text-lg">Custom print</p>
+                    {item.type === "original" ? (
+                      <>
+                        <p className="display-italic text-lg">{item.title}</p>
+                        <p className="text-xs text-muted mt-1">
+                          {item.artist} {item.year ? `· ${item.year}` : ""} ·
+                          Original
+                        </p>
+                      </>
+                    ) : (
+                      <p className="display-italic text-lg">Custom print</p>
+                    )}
+
                     <p className="text-xs text-muted mt-1">
-                      {item.frameName}
-                      {item.glass ? " · with glass" : ""}
+                      {item.frameName} {item.glass ? " · with glass" : ""}
                     </p>
                     <p className="text-xs text-muted mt-0.5">
                       {item.sizeLabel}
@@ -137,6 +147,28 @@ export default async function OrderDetailPage({
               Status
             </h2>
             <OrderStatusSelect id={order.id} currentStatus={order.status} />
+          </section>
+
+          {/* Payment Information */}
+          <section>
+            <h2 className="text-xs uppercase tracking-[0.15em] text-muted mb-3">
+              Payment
+            </h2>
+            <div className="flex items-center gap-2">
+              {order.paymentStatus === "paid" ? (
+                <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+              ) : (
+                <span className="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+              )}
+              <span className="text-sm capitalize">
+                {order.paymentStatus || "Unpaid"}
+              </span>
+            </div>
+            {order.paymentReference && (
+              <p className="text-xs text-muted mt-2 font-mono break-all">
+                Ref: {order.paymentReference}
+              </p>
+            )}
           </section>
 
           {/* Customer */}

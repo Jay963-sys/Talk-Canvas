@@ -1,12 +1,25 @@
 import Link from "next/link";
 import Image from "next/image"; // Added next/image
 import { ArrowUpRight } from "lucide-react";
-import { ORIGINALS } from "@/data/originals";
 import WorkCard from "@/components/WorkCard";
-import { getAllOriginals } from "@/lib/db/queries/originals";
+import { getAllOriginals, getOriginalBySlug } from "@/lib/db/queries/originals";
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 export const revalidate = 60;
 
+export const metadata: Metadata = {
+  // Overrides the template to just be the exact string you want
+  title: "Talk Canvas Gallery | Contemporary Art in Lagos",
+  description:
+    "Discover curated contemporary works and custom fine-art prints from emerging African artists.",
+  openGraph: {
+    title: "Talk Canvas Gallery | Contemporary Art in Lagos",
+    description:
+      "Discover curated contemporary works and custom fine-art prints from emerging African artists.",
+    url: "/",
+  },
+};
 export default async function Home() {
   const all = await getAllOriginals();
   const featured = all.slice(0, 4);

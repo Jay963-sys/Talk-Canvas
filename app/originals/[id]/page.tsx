@@ -5,6 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import OriginalActions from "@/components/originals/OriginalActions";
 import { originalSizeLabel, originalFrameLabel } from "@/lib/originalDisplay";
 import { formatNaira } from "@/lib/store";
+import Image from "next/image";
+import { Metadata } from "next";
 
 export const revalidate = 60;
 
@@ -17,13 +19,34 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
-}) {
+}): Promise<Metadata> {
   const { id } = await params;
   const work = await getOriginalBySlug(id);
-  if (!work) return {};
+
+  if (!work) return { title: "Artwork Not Found" };
+
   return {
-    title: `${work.title} — ${work.artist} | Talk Canvas Gallery`,
+    title: `${work.title} — ${work.artist}`, // The layout template will append " | Talk Canvas Gallery"
     description: work.description,
+    openGraph: {
+      title: `${work.title} | ${work.artist}`,
+      description: `Original ${work.medium}, ${work.year}.`,
+      images: [
+        {
+          url: work.imageUrl, // Pulls the real Cloudinary image!
+          width: 800,
+          height: 1000,
+          alt: work.title,
+        },
+      ],
+      type: "article", // Better for individual products than "website"
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: work.title,
+      description: `Original ${work.medium} by ${work.artist}.`,
+      images: [work.imageUrl],
+    },
   };
 }
 
@@ -47,8 +70,15 @@ export default async function WorkDetail({
       </Link>
 
       <div className="grid md:grid-cols-2 gap-8 md:gap-16">
-        <div className="bg-line">
-          <img src={work.imageUrl} alt={work.title} className="w-full block" />
+        <div className="relative w-full aspect-[4/5] bg-line overflow-hidden">
+          <Image
+            src={work.imageUrl}
+            alt={work.title}
+            fill
+            priority // Tells Next.js to load this immediately, not lazily
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover"
+          />
         </div>
 
         <div className="flex flex-col">

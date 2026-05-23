@@ -323,9 +323,6 @@ export default function CheckoutPage() {
             {submitting ? "Placing order…" : `Pay ${formatNaira(total)}`}
           </button>
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-          <p className="text-xs text-muted text-center italic">
-            Order saves to database. Paystack hooks in next.
-          </p>
         </div>
 
         <div className="md:col-span-5">
