@@ -42,7 +42,9 @@ async function loadTexture(url: string): Promise<THREE.Texture> {
   });
 }
 
-async function buildScene(opts: FrameModelOptions): Promise<THREE.Scene> {
+export async function buildScene(
+  opts: FrameModelOptions,
+): Promise<THREE.Scene> {
   const { imageUrl, frameColor, artWidth, artHeight, style, shape, glass } =
     opts;
   const profile = getProfile(style, shape);

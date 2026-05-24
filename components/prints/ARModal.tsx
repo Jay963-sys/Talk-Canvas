@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { useConfigurator } from "@/lib/store";
 import { generateFrameGLB } from "@/lib/frameModel";
-import { uploadModelToCloudinary } from "@/lib/upload";
+import { generateFrameUSDZ } from "@/lib/frameUSDZ";
+import { uploadModelToCloudinary, uploadUSDZToCloudinary } from "@/lib/upload";
 import { formatInches } from "@/data/sizes";
 import ARViewer from "./ARViewer";
 
@@ -18,6 +19,7 @@ function getDownsizedUrl(originalUrl: string, maxWidth = 1200): string {
 export default function ARModal() {
   const { image, frame, glass, size, setArOpen } = useConfigurator();
   const [modelUrl, setModelUrl] = useState<string | null>(null);
+  const [iosUrl, setIosUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState("Generating 3D model…");
 
@@ -36,9 +38,7 @@ export default function ARModal() {
       try {
         // size.cm gives real-world centimeters — convert to meters for AR
         const dims = { w: size.cm.w / 100, h: size.cm.h / 100 };
-
-        setProgress("Generating 3D model…");
-        const blob = await generateFrameGLB({
+        const opts = {
           imageUrl: getDownsizedUrl(image.url, 1200),
           frameColor: frame.swatchColor,
           artWidth: dims.w,
@@ -46,13 +46,30 @@ export default function ARModal() {
           style: frame.style,
           shape: frame.shape,
           glass,
-        });
+        };
 
+        // --- GLB first: this powers Android (WebXR/Scene Viewer) + the preview.
+        // We surface it ASAP so Android users never wait on iOS-only work.
+        setProgress("Generating 3D model…");
+        const glb = await generateFrameGLB(opts);
         if (cancelled) return;
-        setProgress("Uploading…");
-        const url = await uploadModelToCloudinary(blob);
 
-        if (!cancelled) setModelUrl(url);
+        setProgress("Uploading…");
+        const glbUrl = await uploadModelToCloudinary(glb);
+        if (cancelled) return;
+        setModelUrl(glbUrl);
+
+        // --- USDZ next: iOS-only, best-effort. If anything here fails we just
+        // leave iosSrc unset and model-viewer auto-generates a (floor) USDZ —
+        // Android is already live and unaffected.
+        try {
+          const usdz = await generateFrameUSDZ(opts);
+          if (cancelled) return;
+          const usdzUrl = await uploadUSDZToCloudinary(usdz);
+          if (!cancelled) setIosUrl(usdzUrl);
+        } catch (iosErr) {
+          console.warn("USDZ generation failed, falling back to auto:", iosErr);
+        }
       } catch (e) {
         if (!cancelled) {
           setError(
@@ -65,7 +82,7 @@ export default function ARModal() {
     return () => {
       cancelled = true;
     };
-  }, [image, frame, size]);
+  }, [image, frame, size, glass]);
 
   if (!image || !frame || !size) return null;
 
@@ -88,6 +105,7 @@ export default function ARModal() {
           {modelUrl ? (
             <ARViewer
               src={modelUrl}
+              iosSrc={iosUrl ?? undefined}
               alt={`${frame.name}${glassNote}, ${formatInches(size)}`}
             />
           ) : error ? (
@@ -113,7 +131,8 @@ export default function ARModal() {
           </p>
           <p className="text-xs text-muted mt-3 max-w-md mx-auto leading-relaxed">
             Drag to rotate. On a phone, tap the AR icon (bottom-right of the
-            viewer) to place it on a real wall at true scale.
+            viewer), point at your wall, then tap to place. Walk toward or away
+            and it scales to true size, just like the real piece.
           </p>
         </div>
       </div>

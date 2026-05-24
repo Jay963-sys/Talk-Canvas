@@ -89,7 +89,6 @@ export async function uploadModelToCloudinary(blob: Blob): Promise<string> {
   formData.append("api_key", apiKey);
   formData.append("folder", folder);
 
-  // Note: /raw/upload instead of /image/upload — GLB is a non-image file
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
     { method: "POST", body: formData },
@@ -101,4 +100,35 @@ export async function uploadModelToCloudinary(blob: Blob): Promise<string> {
   }
   const data = await res.json();
   return data.secure_url;
+}
+
+export async function uploadUSDZToCloudinary(blob: Blob): Promise<string> {
+  const signRes = await fetch("/api/cloudinary/sign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ext: "usdz" }),
+  });
+  if (!signRes.ok) throw new Error("Failed to get upload signature");
+
+  const { timestamp, signature, folder, publicId, apiKey, cloudName } =
+    await signRes.json();
+
+  const formData = new FormData();
+  formData.append("file", blob, "frame.usdz");
+  formData.append("timestamp", String(timestamp));
+  formData.append("signature", signature);
+  formData.append("api_key", apiKey);
+  formData.append("folder", folder);
+  formData.append("public_id", publicId);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
+    { method: "POST", body: formData },
+  );
+
+  if (!res.ok) {
+    throw new Error(`Cloudinary (${res.status}): ${await res.text()}`);
+  }
+  const data = await res.json();
+  return data.secure_url as string; // ...folder/frame-...usdz
 }

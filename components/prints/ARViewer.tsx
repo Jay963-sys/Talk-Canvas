@@ -4,21 +4,24 @@ import { useEffect } from "react";
 
 interface Props {
   src: string;
+  iosSrc?: string;
   alt?: string;
 }
 
-export default function ARViewer({ src, alt }: Props) {
+export default function ARViewer({ src, iosSrc, alt }: Props) {
   useEffect(() => {
-    // Dynamic import — model-viewer is heavy and SSR-incompatible
     import("@google/model-viewer");
   }, []);
 
   return (
     <model-viewer
       src={src}
+      ios-src={iosSrc}
       alt={alt}
       ar
       ar-modes="webxr scene-viewer quick-look"
+      ar-placement="wall"
+      ar-scale="fixed"
       camera-controls
       auto-rotate
       shadow-intensity="1"
