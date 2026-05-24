@@ -19,7 +19,7 @@ export default function ARViewer({ src, iosSrc, alt }: Props) {
       ios-src={iosSrc}
       alt={alt}
       ar
-      ar-modes="webxr scene-viewer quick-look"
+      ar-modes="scene-viewer webxr quick-look"
       ar-placement="wall"
       ar-scale="fixed"
       camera-controls
