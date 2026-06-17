@@ -11,7 +11,7 @@ import Summary from "./Summary";
 import ARModal from "./ARModal";
 
 export default function Configurator() {
-  const { step, arOpen } = useConfigurator();
+  const { step, arOpen, image, setStep } = useConfigurator();
   const topRef = useRef<HTMLDivElement>(null);
 
   // Scroll to the top of the configurator whenever the step changes
@@ -20,6 +20,10 @@ export default function Configurator() {
       topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [step]);
+
+  useEffect(() => {
+    if (step > 0 && !image) setStep(0);
+  }, [step, image, setStep]);
 
   return (
     // Added a wrapper div with the ref and a scroll-margin

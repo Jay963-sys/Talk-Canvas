@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import { Upload, Loader2, AlertCircle } from "lucide-react";
 import { useConfigurator } from "@/lib/store";
 import { uploadToCloudinary, validateFile } from "@/lib/upload";
+import { downscaleImage } from "@/lib/image";
+import ArchivePickerModal, { ArchiveItem } from "./ArchivePickerModal";
 
 export default function StepUpload() {
   const { image, setImage } = useConfigurator();
@@ -11,6 +13,7 @@ export default function StepUpload() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File | undefined) => {
@@ -27,7 +30,13 @@ export default function StepUpload() {
     setProgress(0);
 
     try {
-      const result = await uploadToCloudinary(file, {
+      // Optimize before upload: cap at 4000px on the long edge at q0.9. This
+      // keeps files under Cloudinary's per-image limit (and the 25MP transform
+      // cap) while staying sharp at standard print sizes. Re-encoding also
+      // applies EXIF orientation, so phone photos don't upload sideways.
+      const optimized = await downscaleImage(file, 4000, 0.9);
+
+      const result = await uploadToCloudinary(optimized, {
         onProgress: setProgress,
       });
       setImage({
@@ -45,6 +54,20 @@ export default function StepUpload() {
     }
   };
 
+  // An archive design slots into the same image state an upload would fill —
+  // already a Cloudinary asset, so no upload step needed. The user then
+  // continues to Frame via the usual Continue button.
+  const handleArchiveSelect = (item: ArchiveItem) => {
+    setError(null);
+    setImage({
+      url: item.imageUrl,
+      publicId: item.imagePublicId,
+      width: item.width,
+      height: item.height,
+    });
+    setPickerOpen(false);
+  };
+
   const borderColor = dragging
     ? "border-accent bg-paper"
     : error
@@ -55,7 +78,8 @@ export default function StepUpload() {
     <div className="slide-up">
       <h2 className="display text-3xl font-normal mb-2">Upload your design</h2>
       <p className="text-sm text-ink-soft mb-6">
-        JPG or PNG, minimum 300dpi at intended print size. Maximum 25MB.
+        JPG or PNG, up to 25MB. For the sharpest print, upload the
+        highest-resolution file you have — we optimize it automatically.
       </p>
 
       <div
@@ -94,7 +118,7 @@ export default function StepUpload() {
           <>
             <img
               src={image.url}
-              alt="Uploaded"
+              alt="Selected"
               className="max-h-80 max-w-full object-contain"
             />
             <p className="text-xs text-muted mt-5">
@@ -136,6 +160,33 @@ export default function StepUpload() {
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
       </div>
+
+      {/* Archive alternative */}
+      <div className="flex items-center gap-4 mt-6 mb-4">
+        <div className="flex-1 h-px bg-line" />
+        <span className="text-xs uppercase tracking-[0.15em] text-muted">
+          or
+        </span>
+        <div className="flex-1 h-px bg-line" />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setPickerOpen(true)}
+        disabled={uploading}
+        className="w-full border-[1.5px] border-line py-4 text-sm tracking-wide hover:border-ink transition-colors disabled:opacity-50"
+      >
+        {image
+          ? "Choose a different design from our archive"
+          : "Choose from our archive"}
+      </button>
+
+      {pickerOpen && (
+        <ArchivePickerModal
+          onSelect={handleArchiveSelect}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

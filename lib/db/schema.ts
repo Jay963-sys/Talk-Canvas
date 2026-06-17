@@ -116,3 +116,34 @@ export const users = pgTable("users", {
 
 export type Original = typeof originals.$inferSelect;
 export type NewOriginal = typeof originals.$inferInsert;
+
+// ── ARCHIVE PRINTS ──────────────────────────────────────────────
+// Growing, low-metadata collection. The image *is* the product; frame,
+// size, and price come from the configurator at selection, like an upload.
+export const archivePrints = pgTable("archive_prints", {
+  id: serial("id").primaryKey(),
+  imageUrl: text("image_url").notNull(),
+  imagePublicId: varchar("image_public_id", { length: 255 }).notNull(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  isVisible: boolean("is_visible").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ArchivePrint = typeof archivePrints.$inferSelect;
+export type NewArchivePrint = typeof archivePrints.$inferInsert;
+
+// ── AR MODEL CACHE ──────────────────────────────────────────────
+// Generated frame models keyed by image + frame + size + glass, so repeated
+// AR views of the same piece reuse one upload instead of regenerating.
+export const arModels = pgTable("ar_models", {
+  id: serial("id").primaryKey(),
+  cacheKey: varchar("cache_key", { length: 512 }).notNull().unique(),
+  glbUrl: text("glb_url").notNull(),
+  usdzUrl: text("usdz_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ArModel = typeof arModels.$inferSelect;

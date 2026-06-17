@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { generateFrameGLB } from "@/lib/frameModel";
-import { uploadModelToCloudinary } from "@/lib/upload";
+import { generateFrameUSDZ } from "@/lib/frameUSDZ";
+import { uploadModelToCloudinary, uploadUSDZToCloudinary } from "@/lib/upload";
 import { originalFrameSwatch, originalSizeLabel } from "@/lib/originalDisplay";
+import { USE_CUSTOM_USDZ } from "@/lib/arConfig";
 import ARViewer from "@/components/prints/ARViewer";
 import type { Original } from "@/lib/db/schema";
 
@@ -20,8 +22,9 @@ export default function OriginalARModal({
   onClose: () => void;
 }) {
   const [modelUrl, setModelUrl] = useState<string | null>(null);
+  const [iosUrl, setIosUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState("Generating 3D model…");
+  const [progress, setProgress] = useState("Preparing your preview…");
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -32,10 +35,10 @@ export default function OriginalARModal({
 
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
       try {
-        setProgress("Generating 3D model…");
-        const blob = await generateFrameGLB({
+        const opts = {
           imageUrl: getDownsizedUrl(original.imageUrl, 1200),
           frameColor: originalFrameSwatch(original),
           artWidth: (original.widthInches * 2.54) / 100, // inches → meters
@@ -43,12 +46,71 @@ export default function OriginalARModal({
           style: original.frameStyle as "regular" | "antique",
           shape: original.frameShape as "floating" | "box" | null,
           glass: original.glass,
-        });
+        };
 
+        // Namespaced with the original id (one-of-one), plus the frame-
+        // determining fields so an admin edit invalidates the cache.
+        const cacheKey = [
+          `orig-${original.id}`,
+          original.frameStyle,
+          original.frameShape ?? "none",
+          originalFrameSwatch(original),
+          original.widthInches,
+          original.heightInches,
+          original.glass ? "g" : "n",
+        ].join("|");
+
+        // --- 1. Cache lookup
+        try {
+          const res = await fetch(
+            `/api/ar-model?key=${encodeURIComponent(cacheKey)}`,
+          );
+          if (res.ok) {
+            const cached = await res.json();
+            if (cached?.glbUrl) {
+              if (cancelled) return;
+              setModelUrl(cached.glbUrl);
+              if (USE_CUSTOM_USDZ && cached.usdzUrl) setIosUrl(cached.usdzUrl);
+              return;
+            }
+          }
+        } catch {}
+
+        // --- 2. GLB (Android + in-page preview)
+        setProgress("Generating 3D model…");
+        const glb = await generateFrameGLB(opts);
         if (cancelled) return;
+
         setProgress("Uploading…");
-        const url = await uploadModelToCloudinary(blob);
-        if (!cancelled) setModelUrl(url);
+        const glbUrl = await uploadModelToCloudinary(glb);
+        if (cancelled) return;
+        setModelUrl(glbUrl);
+
+        // --- 3. Custom wall-anchored USDZ (best-effort). On failure we leave
+        // iosUrl unset and iOS falls back to model-viewer's floor USDZ.
+        let usdzUrl: string | null = null;
+        if (USE_CUSTOM_USDZ) {
+          try {
+            const usdz = await generateFrameUSDZ(opts);
+            if (cancelled) return;
+            usdzUrl = await uploadUSDZToCloudinary(usdz);
+            if (!cancelled) setIosUrl(usdzUrl);
+          } catch (usdzErr) {
+            console.warn(
+              "Custom USDZ failed; falling back to model-viewer's auto USDZ:",
+              usdzErr,
+            );
+          }
+        }
+
+        // --- 4. Write-through cache
+        if (!cancelled && glbUrl) {
+          fetch("/api/ar-model", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cacheKey, glbUrl, usdzUrl }),
+          }).catch(() => {});
+        }
       } catch (e) {
         if (!cancelled) {
           setError(
@@ -57,6 +119,7 @@ export default function OriginalARModal({
         }
       }
     })();
+
     return () => {
       cancelled = true;
     };
@@ -79,7 +142,11 @@ export default function OriginalARModal({
       <div onClick={(e) => e.stopPropagation()} className="max-w-4xl w-full">
         <div className="relative aspect-[4/3] bg-[#1a1814] overflow-hidden">
           {modelUrl ? (
-            <ARViewer src={modelUrl} alt={`${original.title}, ${sizeLabel}`} />
+            <ARViewer
+              src={modelUrl}
+              iosSrc={iosUrl ?? undefined}
+              alt={`${original.title}, ${sizeLabel}`}
+            />
           ) : error ? (
             <div className="absolute inset-0 flex items-center justify-center text-cream/80 text-center px-6">
               <p>{error}</p>

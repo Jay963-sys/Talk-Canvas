@@ -82,6 +82,12 @@ export default function Footer() {
                 Prints
               </Link>
               <Link
+                href="/prints/archive"
+                className="hover:text-accent transition-colors w-fit"
+              >
+                Print Archive
+              </Link>
+              <Link
                 href="/about"
                 className="hover:text-accent transition-colors w-fit"
               >

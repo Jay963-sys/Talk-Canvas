@@ -5,7 +5,7 @@ import Configurator from "@/components/prints/Configurator";
 export const metadata = {
   title: "Prints — Talk Canvas Gallery",
   description:
-    "Upload your design, choose a frame, and preview it on your wall in AR.",
+    "Upload your design or choose one from our archive, pick a frame, and preview it on your wall in AR.",
 };
 
 export default function PrintsPage() {
@@ -19,9 +19,31 @@ export default function PrintsPage() {
           Print your work.
         </h1>
         <p className="text-[17px] text-ink-soft max-w-2xl mt-6 leading-relaxed">
-          Upload a design, choose your frame and size, and preview it on your
-          wall before checkout. Archival paper, gallery-grade framing.
+          Upload a design or choose one from our archive, then pick your frame
+          and size and preview it on your wall before checkout. Archival paper,
+          gallery-grade framing.
         </p>
+      </section>
+
+      {/* Archive entry — for visitors without a design of their own */}
+      <section className="max-w-7xl mx-auto px-6 md:px-10 pb-10">
+        <Link
+          href="/prints/archive"
+          className="group flex items-center justify-between gap-4 border border-line bg-paper px-6 py-5 hover:border-ink transition-colors"
+        >
+          <p className="text-[15px] text-ink-soft">
+            <span className="text-ink">Don&apos;t have a design?</span> Browse
+            our archive of ready-to-frame prints.
+          </p>
+          <span className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-ink shrink-0">
+            Browse
+            <ArrowRight
+              size={14}
+              strokeWidth={1.5}
+              className="transition-transform group-hover:translate-x-0.5"
+            />
+          </span>
+        </Link>
       </section>
 
       <Configurator />

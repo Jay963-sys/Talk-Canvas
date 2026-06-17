@@ -37,11 +37,15 @@ function getProfile(
 async function loadTexture(url: string): Promise<THREE.Texture> {
   const loader = new THREE.TextureLoader();
   loader.setCrossOrigin("anonymous");
+
+  if (url.startsWith("http") && !url.startsWith("blob:")) {
+    loader.setCrossOrigin("anonymous");
+  }
+
   return new Promise((resolve, reject) => {
     loader.load(url, resolve, undefined, reject);
   });
 }
-
 export async function buildScene(
   opts: FrameModelOptions,
 ): Promise<THREE.Scene> {

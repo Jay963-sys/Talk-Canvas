@@ -1,82 +1,55 @@
 // lib/frameUSDZ.ts
 //
-// Generates the iOS (AR Quick Look) version of the frame as a USDZ, reusing the
-// exact same scene that frameModel.ts builds for the GLB — so scale, frame, and
-// artwork match perfectly across platforms.
+// Generates the iOS (AR Quick Look) USDZ from the same scene frameModel.ts
+// builds for the GLB. Three USDZExporter / Quick Look quirks are handled:
 //
-// Three's USDZExporter has no option for AR Quick Look surface anchoring, so we
-// inject Apple's Preliminary_AnchoringAPI schema into the generated .usda after
-// export. This makes Quick Look anchor the canvas to a WALL (vertical surface)
-// instead of defaulting to the floor.
+// 1. Wall anchoring + 64-byte zip alignment — via the exporter's own `ar` /
+//    `includeAnchoringProperties` options (no fflate re-zip).
 //
-// Requires: `npm i fflate`  (and three r150+ for parseAsync)
+// 2. Stale matrices — buildScene positions meshes with `.position`, which only
+//    updates `mesh.matrix` after `updateMatrixWorld()`. GLTFExporter does this
+//    internally; USDZExporter reads `object.matrix` directly, so without the
+//    flush every mesh sits at the origin and the frame collapses into a cross.
+//
+// 3. Wall orientation — Quick Look's vertical anchoring tips the model so its
+//    +Y (up) becomes the wall's outward normal. Our painting faces +Z and
+//    stands up in +Y, so it would tip "bottom-to-wall, face skyward" (a flap).
+//    We re-parent everything under a group rotated -90 degrees about X so the
+//    face ends up pointing out of the wall and the top stays up.
+//
+// Requires three r150+.
 
 import { USDZExporter } from "three/examples/jsm/exporters/USDZExporter.js";
-import { unzipSync, zipSync, strToU8, strFromU8 } from "fflate";
+import { Group } from "three";
 import { buildScene, type FrameModelOptions } from "./frameModel";
-
-const ANCHOR_TOKENS =
-  `    uniform token preliminary:anchoring:type = "plane"\n` +
-  `    uniform token preliminary:planeAnchoring:alignment = "vertical"\n`;
-
-/**
- * Rewrites the USDZ's root prim to anchor to a vertical surface.
- * On ANY problem it returns the original archive untouched, so the worst case
- * is iOS falling back to floor placement + drag-to-wall (still true scale).
- */
-function injectWallAnchoring(usdz: Uint8Array): Uint8Array {
-  try {
-    const files = unzipSync(usdz);
-
-    const usdaName = Object.keys(files).find((n) => n.endsWith(".usda"));
-    if (!usdaName) return usdz;
-
-    let usda = strFromU8(files[usdaName]);
-
-    const defaultPrim = usda.match(/defaultPrim\s*=\s*"([^"]+)"/)?.[1];
-    if (!defaultPrim) return usdz;
-
-    // Match the root prim opening, optionally with an existing (...) metadata block.
-    const primOpen = new RegExp(
-      `def Xform "${defaultPrim}"\\s*(\\([\\s\\S]*?\\))?\\s*\\{`,
-    );
-    const m = usda.match(primOpen);
-    if (!m) return usdz;
-
-    let replacement: string;
-    if (m[1]) {
-      // Existing metadata block — add the apiSchema inside it.
-      const meta = m[1].replace(
-        /\)\s*$/,
-        `    prepend apiSchemas = ["Preliminary_AnchoringAPI"]\n)`,
-      );
-      replacement = `def Xform "${defaultPrim}" ${meta}\n{\n${ANCHOR_TOKENS}`;
-    } else {
-      replacement =
-        `def Xform "${defaultPrim}" (\n` +
-        `    prepend apiSchemas = ["Preliminary_AnchoringAPI"]\n` +
-        `)\n{\n${ANCHOR_TOKENS}`;
-    }
-
-    usda = usda.replace(primOpen, replacement);
-    files[usdaName] = strToU8(usda);
-
-    // USDZ entries MUST be stored uncompressed (level 0), including textures.
-    return zipSync(files, { level: 0 });
-  } catch {
-    return usdz; // never block the AR flow on this
-  }
-}
 
 export async function generateFrameUSDZ(
   opts: FrameModelOptions,
 ): Promise<Blob> {
   const scene = await buildScene(opts);
+
+  // Orient for wall hanging. If it ever shows up upside-down on a device,
+  // flip this single value to +Math.PI / 2.
+  const wrapper = new Group();
+  wrapper.rotation.x = -Math.PI / 2;
+  for (const child of [...scene.children]) wrapper.add(child);
+  scene.add(wrapper);
+
+  // USDZExporter reads object.matrix but never updates it — flush positions
+  // and the wrapper rotation into the matrices before exporting.
+  scene.updateMatrixWorld(true);
+
   const exporter = new USDZExporter();
-  const out = (await exporter.parseAsync(scene)) as Uint8Array;
-  const anchored = injectWallAnchoring(out);
-  // Correct MIME so Quick Look opens it as AR rather than downloading it.
-  return new Blob([anchored as unknown as BlobPart], {
+  const out = await exporter.parseAsync(scene, {
+    ar: {
+      anchoring: { type: "plane" },
+      planeAnchoring: { alignment: "vertical" },
+    },
+    includeAnchoringProperties: true,
+    quickLookCompatible: true,
+  });
+
+  return new Blob([out as unknown as BlobPart], {
     type: "model/vnd.usdz+zip",
   });
 }

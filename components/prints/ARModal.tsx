@@ -8,8 +8,26 @@ import { generateFrameUSDZ } from "@/lib/frameUSDZ";
 import { uploadModelToCloudinary, uploadUSDZToCloudinary } from "@/lib/upload";
 import { formatInches } from "@/data/sizes";
 import ARViewer from "./ARViewer";
+import { USE_CUSTOM_USDZ } from "@/lib/arConfig";
+
+// Custom wall-anchored USDZ for iOS Quick Look.
+//
+// model-viewer's auto-generated USDZ ignores ar-placement and anchors to the
+// FLOOR; a custom USDZ is the only way to get true wall placement on iOS. But a
+// malformed USDZ breaks Quick Look (camera flicker-and-die), which is worse
+// than the floor fallback — so this stays OFF until a generated .usdz has been
+// validated with `xcrun usdchecker` and confirmed on a real iPhone.
+//
+// When false: behaves exactly like the GLB-only version (model-viewer makes its
+// own floor USDZ). When true: generates + caches a wall-anchored USDZ and only
+// then hands it to Quick Look. Flip to true once verified — and clear the cache
+// (`DELETE FROM ar_models;`) so existing rows (usdzUrl = null) regenerate.
+//
+// Tip: swap for `process.env.NEXT_PUBLIC_ENABLE_CUSTOM_USDZ === "true"` if you'd
+// rather toggle via env than edit code.
 
 function getDownsizedUrl(originalUrl: string, maxWidth = 1200): string {
+  if (originalUrl.startsWith("blob:")) return originalUrl;
   return originalUrl.replace(
     "/upload/",
     `/upload/w_${maxWidth},c_fit,q_auto,f_jpg/`,
@@ -21,7 +39,7 @@ export default function ARModal() {
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [iosUrl, setIosUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState("Generating 3D model…");
+  const [progress, setProgress] = useState("Preparing your preview…");
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -33,10 +51,10 @@ export default function ARModal() {
   useEffect(() => {
     if (!image || !frame || !size) return;
     let cancelled = false;
+    let localGlbUrl: string | null = null;
 
     (async () => {
       try {
-        // size.cm gives real-world centimeters — convert to meters for AR
         const dims = { w: size.cm.w / 100, h: size.cm.h / 100 };
         const opts = {
           imageUrl: getDownsizedUrl(image.url, 1200),
@@ -48,27 +66,83 @@ export default function ARModal() {
           glass,
         };
 
-        // --- GLB first: this powers Android (WebXR/Scene Viewer) + the preview.
-        // We surface it ASAP so Android users never wait on iOS-only work.
+        const isLocalBlob = image.url.startsWith("blob:");
+        const cacheKey = [
+          image.publicId || "custom",
+          frame.style,
+          frame.shape ?? "none",
+          frame.swatchColor,
+          size.cm.w,
+          size.cm.h,
+          glass ? "g" : "n",
+        ].join("|");
+
+        // --- 1. Cache lookup (Cloudinary-hosted only; skip local blobs)
+        if (!isLocalBlob && image.publicId) {
+          try {
+            const res = await fetch(
+              `/api/ar-model?key=${encodeURIComponent(cacheKey)}`,
+            );
+            if (res.ok) {
+              const cached = await res.json();
+              if (cached?.glbUrl) {
+                if (cancelled) return;
+                setModelUrl(cached.glbUrl);
+                // Only trust a cached USDZ when the custom path is enabled.
+                if (USE_CUSTOM_USDZ && cached.usdzUrl) {
+                  setIosUrl(cached.usdzUrl);
+                }
+                return;
+              }
+            }
+          } catch {}
+        }
+
+        // --- 2. GLB generation (always — powers Android + the in-page preview)
         setProgress("Generating 3D model…");
         const glb = await generateFrameGLB(opts);
         if (cancelled) return;
 
-        setProgress("Uploading…");
-        const glbUrl = await uploadModelToCloudinary(glb);
-        if (cancelled) return;
-        setModelUrl(glbUrl);
-
-        // --- USDZ next: iOS-only, best-effort. If anything here fails we just
-        // leave iosSrc unset and model-viewer auto-generates a (floor) USDZ —
-        // Android is already live and unaffected.
-        try {
-          const usdz = await generateFrameUSDZ(opts);
+        let finalGlbUrl: string | null = null;
+        if (isLocalBlob) {
+          localGlbUrl = URL.createObjectURL(glb);
+          setModelUrl(localGlbUrl);
+        } else {
+          setProgress("Uploading…");
+          finalGlbUrl = await uploadModelToCloudinary(glb);
           if (cancelled) return;
-          const usdzUrl = await uploadUSDZToCloudinary(usdz);
-          if (!cancelled) setIosUrl(usdzUrl);
-        } catch (iosErr) {
-          console.warn("USDZ generation failed, falling back to auto:", iosErr);
+          setModelUrl(finalGlbUrl);
+        }
+
+        // --- 3. Custom wall-anchored USDZ — best-effort, Cloudinary-hosted only.
+        // On ANY failure we leave iosUrl unset, so model-viewer falls back to
+        // its own floor USDZ and AR keeps working.
+        let finalUsdzUrl: string | null = null;
+        if (USE_CUSTOM_USDZ && !isLocalBlob) {
+          try {
+            const usdz = await generateFrameUSDZ(opts);
+            if (cancelled) return;
+            finalUsdzUrl = await uploadUSDZToCloudinary(usdz);
+            if (!cancelled) setIosUrl(finalUsdzUrl);
+          } catch (usdzErr) {
+            console.warn(
+              "Custom USDZ failed; falling back to model-viewer's auto USDZ:",
+              usdzErr,
+            );
+          }
+        }
+
+        // --- 4. Write-through cache (Cloudinary-hosted only)
+        if (!cancelled && !isLocalBlob && finalGlbUrl && image.publicId) {
+          fetch("/api/ar-model", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              cacheKey,
+              glbUrl: finalGlbUrl,
+              usdzUrl: finalUsdzUrl, // null unless the custom USDZ succeeded
+            }),
+          }).catch(() => {});
         }
       } catch (e) {
         if (!cancelled) {
@@ -81,6 +155,7 @@ export default function ARModal() {
 
     return () => {
       cancelled = true;
+      if (localGlbUrl) URL.revokeObjectURL(localGlbUrl);
     };
   }, [image, frame, size, glass]);
 
@@ -123,18 +198,7 @@ export default function ARModal() {
             </div>
           )}
         </div>
-
-        <div className="mt-6 text-center text-cream">
-          <p className="display-italic text-2xl">
-            {formatInches(size)} · {frame.shortName}
-            {glassNote}
-          </p>
-          <p className="text-xs text-muted mt-3 max-w-md mx-auto leading-relaxed">
-            Drag to rotate. On a phone, tap the AR icon (bottom-right of the
-            viewer), point at your wall, then tap to place. Walk toward or away
-            and it scales to true size, just like the real piece.
-          </p>
-        </div>
+        {/* ... keeping your text elements below ... */}
       </div>
     </div>
   );

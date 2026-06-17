@@ -47,8 +47,14 @@ export default async function AdminDashboard() {
               className="grid grid-cols-[80px_1fr_auto_auto] gap-6 items-center py-4 border-b border-line"
             >
               <div className="w-[60px] relative aspect-[4/5] bg-line overflow-hidden">
-                {" "}
-                <Image src={o.imageUrl} alt="" fill className="object-cover" />
+                {/* Fixed Image Tag */}
+                <Image
+                  src={o.imageUrl}
+                  alt={o.title}
+                  fill
+                  sizes="60px"
+                  className="object-cover"
+                />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">

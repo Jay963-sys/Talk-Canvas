@@ -20,7 +20,7 @@ export function validateFile(file: File): string | null {
 }
 
 export async function uploadToCloudinary(
-  file: File,
+  file: File | Blob,
   options?: {
     onProgress?: (percent: number) => void;
     signEndpoint?: string;
@@ -32,6 +32,7 @@ export async function uploadToCloudinary(
   // 1. Get signed params from our server
   const signRes = await fetch(signEndpoint, { method: "POST" });
   if (!signRes.ok) throw new Error("Failed to get upload signature");
+
   const { timestamp, signature, folder, apiKey, cloudName } =
     await signRes.json();
 
@@ -67,7 +68,17 @@ export async function uploadToCloudinary(
           bytes: data.bytes,
         });
       } else {
-        reject(new Error("Upload failed"));
+        // Surface Cloudinary's actual reason instead of a generic failure —
+        // e.g. "File size too large. Got 13107200. Maximum is 10485760."
+        let message = "Upload failed. Please try again.";
+        try {
+          const body = JSON.parse(xhr.responseText);
+          if (body?.error?.message) message = body.error.message;
+        } catch {
+          const hdr = xhr.getResponseHeader("X-Cld-Error");
+          if (hdr) message = hdr;
+        }
+        reject(new Error(message));
       }
     };
 
