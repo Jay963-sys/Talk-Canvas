@@ -88,9 +88,18 @@ export async function uploadToCloudinary(
 }
 
 export async function uploadModelToCloudinary(blob: Blob): Promise<string> {
-  const signRes = await fetch("/api/cloudinary/sign", { method: "POST" });
+  // Request a .glb public_id (same pattern as USDZ). Android's Scene Viewer
+  // identifies the model by file extension, so the delivered URL MUST end in
+  // .glb — without it, Scene Viewer opens, fails to load, and closes to a
+  // blank page. (The in-page WebGL viewer doesn't care, which masks this.)
+  const signRes = await fetch("/api/cloudinary/sign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ext: "glb" }),
+  });
   if (!signRes.ok) throw new Error("Failed to get upload signature");
-  const { timestamp, signature, folder, apiKey, cloudName } =
+
+  const { timestamp, signature, folder, publicId, apiKey, cloudName } =
     await signRes.json();
 
   const formData = new FormData();
@@ -99,6 +108,7 @@ export async function uploadModelToCloudinary(blob: Blob): Promise<string> {
   formData.append("signature", signature);
   formData.append("api_key", apiKey);
   formData.append("folder", folder);
+  formData.append("public_id", publicId);
 
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
