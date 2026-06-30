@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getArchivePage } from "@/lib/db/queries/archivePrints";
+import {
+  getArchivePage,
+  getArchiveCollections,
+} from "@/lib/db/queries/archivePrints";
 import ArchiveGrid, { type ArchiveItem } from "@/components/prints/ArchiveGrid";
+import Testimonials from "@/components/Testimonials";
 
 export const metadata = {
   title: "Archive — Talk Canvas Gallery",
@@ -11,25 +15,26 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ArchivePage() {
-  const { items, nextCursor } = await getArchivePage();
+interface Props {
+  searchParams: Promise<{ collection?: string }>;
+}
 
-  // Pass only what the grid needs — keeps client props lean and serialisable.
-  const initialItems: ArchiveItem[] = items.map(
-    (i: {
-      id: any;
-      imageUrl: any;
-      imagePublicId: any;
-      width: any;
-      height: any;
-    }) => ({
-      id: i.id,
-      imageUrl: i.imageUrl,
-      imagePublicId: i.imagePublicId,
-      width: i.width,
-      height: i.height,
-    }),
-  );
+export default async function ArchivePage({ searchParams }: Props) {
+  const { collection } = await searchParams;
+
+  const [{ items, nextCursor }, collections] = await Promise.all([
+    getArchivePage(undefined, undefined, collection),
+    getArchiveCollections(),
+  ]);
+
+  const initialItems: ArchiveItem[] = items.map((i) => ({
+    id: i.id,
+    imageUrl: i.imageUrl,
+    imagePublicId: i.imagePublicId,
+    width: i.width,
+    height: i.height,
+    collection: i.collection,
+  }));
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-10 py-16">
@@ -41,7 +46,7 @@ export default async function ArchivePage() {
         Back to prints
       </Link>
 
-      <div className="mb-12">
+      <div className="mb-10">
         <p className="text-xs uppercase tracking-[0.15em] text-muted">
           The collection
         </p>
@@ -54,7 +59,53 @@ export default async function ArchivePage() {
         </p>
       </div>
 
-      <ArchiveGrid initialItems={initialItems} initialCursor={nextCursor} />
+      {/* Materials note */}
+      <div className="border border-line p-6 md:p-8 mb-12 max-w-2xl">
+        <p className="text-[15px] text-ink-soft leading-relaxed">
+          Every print in the archive is reproduced on archival-grade paper and
+          finished in the frame style and size you choose — the same materials
+          and process used for custom uploads.
+        </p>
+      </div>
+
+      {collections.length > 0 && (
+        <div className="flex flex-wrap gap-x-6 gap-y-2 mb-10 border-b border-line pb-4">
+          <Link
+            href="/prints/archive"
+            className={`text-sm pb-1 ${
+              !collection
+                ? "text-ink border-b border-accent"
+                : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            All
+          </Link>
+          {collections.map((c) => (
+            <Link
+              key={c}
+              href={`/prints/archive?collection=${encodeURIComponent(c)}`}
+              className={`text-sm pb-1 ${
+                collection === c
+                  ? "text-ink border-b border-accent"
+                  : "text-ink-soft hover:text-ink"
+              }`}
+            >
+              {c}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <ArchiveGrid
+        key={collection ?? "all"}
+        initialItems={initialItems}
+        initialCursor={nextCursor}
+        collection={collection}
+      />
+
+      <div className="mt-24 -mx-6 md:-mx-10">
+        <Testimonials title="On pieces from the archive" />
+      </div>
     </div>
   );
 }

@@ -1,9 +1,22 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight } from "lucide-react";
+import {
+  ArrowUpRight,
+  Upload,
+  Frame as FrameIcon,
+  Eye,
+  PackageCheck,
+} from "lucide-react";
 import WorkCard from "@/components/WorkCard";
 import Reveal from "@/components/Reveal";
+import Testimonials from "@/components/Testimonials";
+import RoomGallery from "@/components/prints/RoomGallery";
+import RotatingGrid from "@/components/RotatingGrid";
 import { getAllOriginals } from "@/lib/db/queries/originals";
+import {
+  getArchivePage,
+  getArchiveCollections,
+} from "@/lib/db/queries/archivePrints";
 import { Metadata } from "next";
 
 export const revalidate = 60;
@@ -20,13 +33,57 @@ export const metadata: Metadata = {
   },
 };
 
+function thumb(url: string, width = 500): string {
+  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
+}
+
+const HOW_IT_WORKS = [
+  {
+    icon: Upload,
+    title: "Choose a piece",
+    description:
+      "Upload your own design or pick one from our archive — no design experience needed.",
+  },
+  {
+    icon: FrameIcon,
+    title: "Pick frame & size",
+    description:
+      "Choose the frame style, colour, and dimensions that fit your space.",
+  },
+  {
+    icon: Eye,
+    title: "Preview in AR",
+    description:
+      "See it on your actual wall, true to scale, before you commit to buy.",
+  },
+  {
+    icon: PackageCheck,
+    title: "Framed & delivered",
+    description: "Arrives ready to hang — no separate framing required.",
+  },
+];
+
 export default async function Home() {
-  const all = await getAllOriginals();
-  const featured = all.slice(0, 4);
+  const [all, archivePreview, collections] = await Promise.all([
+    getAllOriginals(),
+    getArchivePage(undefined, 16),
+    getArchiveCollections(),
+  ]);
+
+  const featuredPool = all.slice(0, 12);
+  const archiveItems = archivePreview.items;
+
+  const collectionTiles = await Promise.all(
+    collections.map(async (name) => {
+      const page = await getArchivePage(undefined, 1, name);
+      return { name, item: page.items[0] ?? null };
+    }),
+  );
+
+  const artists = Array.from(new Set(all.map((w) => w.artist))).slice(0, 8);
 
   return (
     <div className="fade-in">
-      {/* Fine-print film grain over the whole page */}
       <div className="grain" aria-hidden="true" />
 
       {/* Hero */}
@@ -60,7 +117,6 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Editorial rule + metadata */}
         <div
           className="reveal-up flex items-center gap-5 mt-12 md:mt-16"
           style={{ animationDelay: "520ms" }}
@@ -98,40 +154,158 @@ export default async function Home() {
         </section>
       </Reveal>
 
-      {/* Archive — the alternative to uploading your own */}
-      <Reveal>
-        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20 md:pb-32">
-          <Link
-            href="/prints/archive"
-            className="group flex flex-col sm:flex-row sm:items-center justify-between gap-6 border border-line p-8 md:p-10 hover:border-ink transition-colors"
-          >
-            <div>
-              <p className="text-xs uppercase tracking-[0.15em] text-muted">
-                No design of your own?
-              </p>
-              <h3 className="display text-2xl md:text-3xl font-normal mt-2">
-                Browse the <span className="display-italic">archive</span>
-              </h3>
-              <p className="text-[15px] text-ink-soft mt-2 max-w-lg leading-relaxed">
-                A growing collection of our own designs, ready to frame. Pick
-                one, choose a size, and preview it on your wall.
-              </p>
+      {/* Archive preview */}
+      {archiveItems.length > 0 && (
+        <Reveal>
+          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-16 md:pb-20">
+            <div className="flex items-baseline justify-between mb-8">
+              <div>
+                <p className="text-xs uppercase tracking-[0.15em] text-muted">
+                  No design of your own?
+                </p>
+                <h2 className="display text-3xl md:text-4xl font-normal mt-2">
+                  From the <span className="display-italic">archive</span>
+                </h2>
+              </div>
+              <Link
+                href="/prints/archive"
+                className="flex items-center gap-2 text-sm text-ink-soft hover:text-ink shrink-0"
+              >
+                View the archive <ArrowUpRight size={16} strokeWidth={1.5} />
+              </Link>
             </div>
-            <span className="flex items-center gap-2 text-sm text-ink shrink-0">
-              View the archive
-              <ArrowUpRight
-                size={18}
-                strokeWidth={1.5}
-                className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-              />
-            </span>
-          </Link>
+
+            <RotatingGrid
+              slotCount={4}
+              items={archiveItems.map((item, i) => (
+                <Link
+                  key={item.imageUrl || i}
+                  href="/prints/archive"
+                  className="group block overflow-hidden bg-paper"
+                  style={{ aspectRatio: `${item.width} / ${item.height}` }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={thumb(item.imageUrl)}
+                    alt=""
+                    loading="lazy"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  />
+                </Link>
+              ))}
+            />
+          </section>
+        </Reveal>
+      )}
+
+      {/* Browse by collection */}
+      {collectionTiles.some((c) => c.item) && (
+        <Reveal>
+          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20 md:pb-28">
+            <h2 className="display text-3xl md:text-4xl font-normal mb-8">
+              Browse by <span className="display-italic">collection</span>
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {collectionTiles
+                .filter((c) => c.item)
+                .map(({ name, item }) => (
+                  <Link
+                    key={name}
+                    href={`/prints/archive?collection=${encodeURIComponent(name)}`}
+                    className="group block"
+                  >
+                    <div
+                      className="overflow-hidden bg-paper mb-3"
+                      style={{ aspectRatio: "4 / 3" }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={thumb(item!.imageUrl, 600)}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                      />
+                    </div>
+                    <span className="flex items-center gap-1.5 text-sm text-ink group-hover:text-accent transition-colors">
+                      {name}
+                      <ArrowUpRight size={14} strokeWidth={1.5} />
+                    </span>
+                  </Link>
+                ))}
+            </div>
+          </section>
+        </Reveal>
+      )}
+
+      {/* See it in your space */}
+      <Reveal>
+        <RoomGallery
+          eyebrow="From archive to home"
+          title={
+            <>
+              What it looks like once it's{" "}
+              <span className="display-italic">actually hung</span>.
+            </>
+          }
+        />
+      </Reveal>
+
+      {/* How it works */}
+      <Reveal>
+        <section className="bg-paper border-y border-line">
+          <div className="max-w-7xl mx-auto px-6 md:px-10 py-20 md:py-28">
+            <p className="text-xs uppercase tracking-[0.15em] text-muted mb-3">
+              How prints work
+            </p>
+            <h2 className="display text-3xl md:text-4xl font-normal mb-14 max-w-lg leading-[1.1]">
+              From archive to your wall, in four steps.
+            </h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+              {HOW_IT_WORKS.map((step, i) => (
+                <div
+                  key={step.title}
+                  className="lg:border-l lg:border-line lg:pl-6 first:lg:border-l-0 first:lg:pl-0"
+                >
+                  <span className="font-mono text-[11px] text-muted">
+                    0{i + 1}
+                  </span>
+                  <step.icon
+                    size={22}
+                    strokeWidth={1.5}
+                    className="text-accent mt-3 mb-4"
+                  />
+                  <h3 className="display-italic text-xl mb-2">{step.title}</h3>
+                  <p className="text-[15px] text-ink-soft leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </Reveal>
+
+      {/* Philosophy pull-quote */}
+      <Reveal>
+        <section className="max-w-4xl mx-auto px-6 md:px-10 py-20 md:py-28 text-center">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted mb-6">
+            Why we do this
+          </p>
+          <p className="display text-2xl md:text-4xl leading-[1.3] md:leading-[1.25]">
+            We believe a piece of art should mean something before it matches
+            your sofa.{" "}
+            <span className="display-italic">
+              Every work here is chosen, not generated
+            </span>{" "}
+            — painted by hand, printed with care, and shown to you exactly as it
+            will hang.
+          </p>
         </section>
       </Reveal>
 
       {/* Currently on view */}
       <Reveal>
-        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20 md:pb-32">
+        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20 md:pb-28">
           <div className="flex items-baseline justify-between mb-10">
             <h2 className="display text-3xl md:text-4xl lg:text-5xl font-normal">
               Currently on view
@@ -143,12 +317,47 @@ export default async function Home() {
               See all works <ArrowUpRight size={16} strokeWidth={1.5} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-            {featured.map((work) => (
-              <WorkCard key={work.id} work={work} />
+          <RotatingGrid
+            slotCount={4}
+            className="grid grid-cols-2 md:grid-cols-4 gap-5"
+            items={featuredPool.map((work, i) => (
+              <WorkCard key={work.id || i} work={work} />
             ))}
-          </div>
+          />
         </section>
+      </Reveal>
+
+      {/* Represented artists */}
+      {artists.length > 0 && (
+        <Reveal>
+          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20 md:pb-32">
+            <p className="text-xs uppercase tracking-[0.15em] text-muted mb-6">
+              Painters in the collection
+            </p>
+            <div className="flex flex-wrap gap-x-3 gap-y-3">
+              {artists.map((name, i) => (
+                <span key={name} className="flex items-center">
+                  <Link
+                    href="/originals"
+                    className="display-italic text-2xl md:text-3xl text-ink-soft hover:text-ink transition-colors"
+                  >
+                    {name}
+                  </Link>
+                  {i < artists.length - 1 && (
+                    <span className="text-line text-2xl md:text-3xl ml-3">
+                      ·
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </section>
+        </Reveal>
+      )}
+
+      {/* Testimonials */}
+      <Reveal>
+        <Testimonials title="What collectors are saying" />
       </Reveal>
     </div>
   );

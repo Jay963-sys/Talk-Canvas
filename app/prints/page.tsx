@@ -1,6 +1,15 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  Upload,
+  Frame as FrameIcon,
+  Eye,
+  PackageCheck,
+} from "lucide-react";
 import Configurator from "@/components/prints/Configurator";
+import RoomGallery from "@/components/prints/RoomGallery";
+import Testimonials from "@/components/Testimonials";
+import { getArchivePage } from "@/lib/db/queries/archivePrints";
 
 export const metadata = {
   title: "Prints — Talk Canvas Gallery",
@@ -8,7 +17,41 @@ export const metadata = {
     "Upload your design or choose one from our archive, pick a frame, and preview it on your wall in AR.",
 };
 
-export default function PrintsPage() {
+export const revalidate = 60;
+
+function thumb(url: string, width = 500): string {
+  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
+}
+
+const STEPS = [
+  {
+    icon: Upload,
+    title: "Choose a piece",
+    description:
+      "Upload your own design or pick one from our archive — no design experience needed.",
+  },
+  {
+    icon: FrameIcon,
+    title: "Pick frame & size",
+    description:
+      "Choose the frame style, colour, and dimensions that fit your space.",
+  },
+  {
+    icon: Eye,
+    title: "Preview in AR",
+    description:
+      "See it on your actual wall, true to scale, before you commit to buy.",
+  },
+  {
+    icon: PackageCheck,
+    title: "Framed & delivered",
+    description: "Arrives ready to hang — no separate framing required.",
+  },
+];
+
+export default async function PrintsPage() {
+  const { items: archivePreview } = await getArchivePage(undefined, 4);
+
   return (
     <div className="fade-in">
       <section className="max-w-7xl mx-auto px-6 md:px-10 pt-16 pb-8">
@@ -46,9 +89,70 @@ export default function PrintsPage() {
         </Link>
       </section>
 
+      {/* Archive preview strip */}
+      {archivePreview.length > 0 && (
+        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {archivePreview.map((item) => (
+              <Link
+                key={item.id}
+                href="/prints/archive"
+                className="group block overflow-hidden bg-paper"
+                style={{ aspectRatio: `${item.width} / ${item.height}` }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={thumb(item.imageUrl)}
+                  alt=""
+                  loading="lazy"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <Configurator />
 
-      <section className="border-t border-line bg-paper">
+      {/* See it in your space */}
+      <RoomGallery />
+
+      {/* How it works */}
+      <section className="bg-paper border-y border-line">
+        <div className="max-w-7xl mx-auto px-6 md:px-10 py-20 md:py-24">
+          <p className="text-xs uppercase tracking-[0.15em] text-muted mb-3">
+            The process
+          </p>
+          <h2 className="display text-3xl md:text-4xl font-normal mb-14 max-w-lg leading-[1.1]">
+            From archive to your wall, in four steps.
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+            {STEPS.map((step, i) => (
+              <div
+                key={step.title}
+                className="lg:border-l lg:border-line lg:pl-6 first:lg:border-l-0 first:lg:pl-0"
+              >
+                <span className="font-mono text-[11px] text-muted">
+                  0{i + 1}
+                </span>
+                <step.icon
+                  size={22}
+                  strokeWidth={1.5}
+                  className="text-accent mt-3 mb-4"
+                />
+                <h3 className="display-italic text-xl mb-2">{step.title}</h3>
+                <p className="text-[15px] text-ink-soft leading-relaxed">
+                  {step.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Custom order CTA */}
+      <section className="border-b border-line">
         <div className="max-w-4xl mx-auto px-6 md:px-10 py-20 text-center">
           <p className="text-xs uppercase tracking-[0.15em] text-muted">
             Custom work
@@ -70,6 +174,8 @@ export default function PrintsPage() {
           </Link>
         </div>
       </section>
+
+      <Testimonials title="On the wall" />
     </div>
   );
 }

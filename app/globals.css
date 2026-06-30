@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  /* Colors */
-  --color-cream: #f4efe7;
-  --color-paper: #faf6ef;
-  --color-ink: #1a1814;
-  --color-ink-soft: #4a4540;
-  --color-muted: #8b847b;
-  --color-accent: #9b4a2c;
-  --color-accent-dark: #7a3820;
-  --color-line: #d9d1c2;
+  /* Colors - Updated for minimalist e-commerce */
+  --color-cream: #ffffff; /* Was #f4efe7 - Now stark white for the primary canvas */
+  --color-paper: #f9f9f6; /* Was #faf6ef - Soft off-white for alternating sections */
+  --color-ink: #111111; /* Sharper, deeper black for high contrast */
+  --color-ink-soft: #555555; /* Modern, clean gray for secondary text */
+  --color-muted: #888888;
+  --color-accent: #000000; /* Minimalist sites usually use solid black/dark grey for accents */
+  --color-accent-dark: #333333;
+  --color-line: #eeeeee; /* Extremely subtle borders if needed */
 
   /* Fonts (set via next/font in layout.tsx) */
   --font-display: var(--font-fraunces), Georgia, serif;
@@ -21,30 +21,30 @@ body {
   background-color: var(--color-cream);
   color: var(--color-ink);
   font-family: var(--font-body);
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em; /* Slightly tighter for a modern, digital feel */
   -webkit-font-smoothing: antialiased;
 }
 
-/* Display type helpers — Fraunces with its variable axes */
+/* Display type helpers — Sharpened Fraunces */
 .display {
   font-family: var(--font-display);
   font-optical-sizing: auto;
   font-variation-settings:
-    "SOFT" 50,
-    "WONK" 0;
-  letter-spacing: -0.02em;
+    "SOFT" 0,
+    /* Removed softness for a sharper, more precise gallery look */ "WONK" 0;
+  letter-spacing: -0.01em;
 }
 
 .display-italic {
   font-family: var(--font-display);
   font-style: italic;
   font-variation-settings:
-    "SOFT" 100,
+    "SOFT" 0,
     "WONK" 1;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
 }
 
-/* Animations */
+/* Animations - Retained for a premium user experience */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -84,17 +84,6 @@ body {
 .reveal-up {
   opacity: 0;
   animation: revealUp 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-/* Fine-print film grain — monochrome, barely-there texture */
-.grain {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-  opacity: 0.4;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
 }
 
 @media (prefers-reduced-motion: reduce) {

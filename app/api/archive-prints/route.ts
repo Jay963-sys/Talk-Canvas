@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
   }
 
-  const page = await getArchivePage(cursor);
+  const collection = req.nextUrl.searchParams.get("collection") ?? undefined;
+
+  const page = await getArchivePage(cursor, undefined, collection);
   return NextResponse.json(page);
 }

@@ -9,7 +9,6 @@ export default async function AdminArchivePage() {
   const items = await getAllArchivePrints();
 
   return (
-    // Added container bounds and padding here
     <div className="w-full max-w-7xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -44,6 +43,7 @@ export default async function AdminArchivePage() {
                 id: item.id,
                 imageUrl: item.imageUrl,
                 isVisible: item.isVisible,
+                collection: item.collection,
               }}
             />
           ))}

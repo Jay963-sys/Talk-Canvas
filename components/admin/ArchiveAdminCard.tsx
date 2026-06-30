@@ -3,9 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Trash2, Loader2 } from "lucide-react";
+import { ARCHIVE_COLLECTIONS } from "@/data/collections";
 
 interface Props {
-  item: { id: number; imageUrl: string; isVisible: boolean };
+  item: {
+    id: number;
+    imageUrl: string;
+    isVisible: boolean;
+    collection?: string | null;
+  };
 }
 
 function thumb(url: string, width = 400): string {
@@ -15,6 +21,7 @@ function thumb(url: string, width = 400): string {
 export default function ArchiveAdminCard({ item }: Props) {
   const router = useRouter();
   const [visible, setVisible] = useState(item.isVisible);
+  const [collection, setCollection] = useState(item.collection ?? "");
   const [busy, setBusy] = useState(false);
 
   const toggle = async () => {
@@ -26,6 +33,24 @@ export default function ArchiveAdminCard({ item }: Props) {
         body: JSON.stringify({ isVisible: !visible }),
       });
       if (res.ok) setVisible(!visible);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changeCollection = async (next: string) => {
+    const prev = collection;
+    setCollection(next); // optimistic
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/archive-prints/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collection: next || null }),
+      });
+      if (!res.ok) setCollection(prev); // revert on failure
+    } catch {
+      setCollection(prev);
     } finally {
       setBusy(false);
     }
@@ -81,6 +106,26 @@ export default function ArchiveAdminCard({ item }: Props) {
         >
           <Trash2 size={16} />
         </button>
+      </div>
+
+      {/* Collection select — always visible (not hover-only), pinned bottom */}
+      <div
+        className="absolute bottom-0 inset-x-0 p-1.5 bg-gradient-to-t from-black/70 to-transparent"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <select
+          value={collection}
+          onChange={(e) => changeCollection(e.target.value)}
+          disabled={busy}
+          className="w-full text-[11px] bg-cream/90 border-0 px-1.5 py-1 disabled:opacity-60"
+        >
+          <option value="">Uncategorized</option>
+          {ARCHIVE_COLLECTIONS.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </div>
 
       {!visible && (

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { archivePrints } from "@/lib/db/schema";
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, lt, isNotNull } from "drizzle-orm";
 
 const PAGE_SIZE = 24;
 
@@ -11,21 +11,21 @@ export interface ArchivePage {
 
 /**
  * Public grid feed — visible only, newest first, cursor-paginated by id.
- * Cursor is the id of the last item already seen; we fetch ids below it.
+ * Optionally scoped to a single collection.
  */
 export async function getArchivePage(
   cursor?: number,
   pageSize = PAGE_SIZE,
+  collection?: string,
 ): Promise<ArchivePage> {
-  const where = cursor
-    ? and(eq(archivePrints.isVisible, true), lt(archivePrints.id, cursor))
-    : eq(archivePrints.isVisible, true);
+  const conditions = [eq(archivePrints.isVisible, true)];
+  if (cursor) conditions.push(lt(archivePrints.id, cursor));
+  if (collection) conditions.push(eq(archivePrints.collection, collection));
 
-  // Fetch one extra to know whether another page exists.
   const rows = await db
     .select()
     .from(archivePrints)
-    .where(where)
+    .where(and(...conditions))
     .orderBy(desc(archivePrints.id))
     .limit(pageSize + 1);
 
@@ -34,6 +34,20 @@ export async function getArchivePage(
   const nextCursor = hasMore ? items[items.length - 1].id : null;
 
   return { items, nextCursor };
+}
+
+/** Distinct collection names currently in use, for building the filter UI. */
+export async function getArchiveCollections(): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ collection: archivePrints.collection })
+    .from(archivePrints)
+    .where(
+      and(
+        eq(archivePrints.isVisible, true),
+        isNotNull(archivePrints.collection),
+      ),
+    );
+  return rows.map((r) => r.collection as string).sort();
 }
 
 export async function getArchivePrint(id: number) {
@@ -55,6 +69,7 @@ export async function createArchivePrint(input: {
   imagePublicId: string;
   width: number;
   height: number;
+  collection?: string;
 }) {
   const [row] = await db.insert(archivePrints).values(input).returning();
   return row;
@@ -71,4 +86,16 @@ export async function setArchiveVisibility(id: number, isVisible: boolean) {
 
 export async function deleteArchivePrint(id: number) {
   await db.delete(archivePrints).where(eq(archivePrints.id, id));
+}
+
+export async function setArchiveCollection(
+  id: number,
+  collection: string | null,
+) {
+  const [row] = await db
+    .update(archivePrints)
+    .set({ collection, updatedAt: new Date() })
+    .where(eq(archivePrints.id, id))
+    .returning();
+  return row ?? null;
 }

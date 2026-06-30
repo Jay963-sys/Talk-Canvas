@@ -10,26 +10,41 @@ export interface ArchiveItem {
   imagePublicId: string;
   width: number;
   height: number;
+  collection?: string | null;
 }
 
 interface Props {
   initialItems: ArchiveItem[];
   initialCursor: number | null;
+  collection?: string;
 }
 
-export default function ArchiveGrid({ initialItems, initialCursor }: Props) {
+export default function ArchiveGrid({
+  initialItems,
+  initialCursor,
+  collection,
+}: Props) {
   const [items, setItems] = useState<ArchiveItem[]>(initialItems);
   const [cursor, setCursor] = useState<number | null>(initialCursor);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
 
+  // Reset the grid whenever the selected collection changes.
+  useEffect(() => {
+    setItems(initialItems);
+    setCursor(initialCursor);
+    setError(null);
+  }, [initialItems, initialCursor]);
+
   const loadMore = useCallback(async () => {
     if (loading || cursor === null) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/archive-prints?cursor=${cursor}`);
+      const params = new URLSearchParams({ cursor: String(cursor) });
+      if (collection) params.set("collection", collection);
+      const res = await fetch(`/api/archive-prints?${params.toString()}`);
       if (!res.ok) throw new Error("Couldn't load more pieces");
       const data: { items: ArchiveItem[]; nextCursor: number | null } =
         await res.json();
@@ -40,9 +55,8 @@ export default function ArchiveGrid({ initialItems, initialCursor }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [cursor, loading]);
+  }, [cursor, loading, collection]);
 
-  // Prefetch the next page ~800px before the sentinel scrolls into view.
   useEffect(() => {
     const node = sentinel.current;
     if (!node || cursor === null) return;

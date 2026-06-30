@@ -22,13 +22,14 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const { imageUrl, imagePublicId, width, height } = body ?? {};
+  const { imageUrl, imagePublicId, width, height, collection } = body ?? {};
 
   if (
     typeof imageUrl !== "string" ||
     typeof imagePublicId !== "string" ||
     typeof width !== "number" ||
-    typeof height !== "number"
+    typeof height !== "number" ||
+    (collection !== undefined && typeof collection !== "string")
   ) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     imagePublicId,
     width,
     height,
+    collection: collection || undefined,
   });
   return NextResponse.json(row, { status: 201 });
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Upload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/upload";
 import { downscaleImage } from "@/lib/image";
+import { ARCHIVE_COLLECTIONS } from "@/data/collections";
 
 type Status =
   | "pending"
@@ -22,10 +23,6 @@ interface Job {
   error?: string;
 }
 
-// Permissive pre-check: archive images get downscaled before upload, so we
-// don't enforce the strict 25MB/JPEG-only rule used on the customer print
-// flow (that lives in lib/upload.ts and stays untouched). We only reject
-// non-images and absurdly large files that aren't worth even decoding.
 function preCheck(file: File): string | null {
   if (!file.type.startsWith("image/")) return "Not an image file";
   if (file.size > 100 * 1024 * 1024) return "Over 100MB — too large to process";
@@ -36,6 +33,7 @@ export default function ArchiveUploader() {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
+  const [collection, setCollection] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const addFiles = (fileList: FileList | null) => {
@@ -60,22 +58,18 @@ export default function ArchiveUploader() {
 
   const uploadAll = async () => {
     setBusy(true);
-    // Sequential keeps Cloudinary + DB load gentle and progress legible.
     for (let i = 0; i < jobs.length; i++) {
       if (jobs[i].status === "done" || jobs[i].status === "error") continue;
       try {
-        // 1. Shrink the original down to a web-sized JPEG.
         update(i, { status: "optimizing", progress: 0 });
         const optimized = await downscaleImage(jobs[i].file);
 
-        // 2. Upload the lightweight version.
         update(i, { status: "uploading", progress: 0 });
         const result = await uploadToCloudinary(optimized, {
           signEndpoint: "/api/admin/cloudinary/sign",
           onProgress: (p) => update(i, { progress: p }),
         });
 
-        // 3. Persist the row.
         update(i, { status: "saving" });
         const res = await fetch("/api/admin/archive-prints", {
           method: "POST",
@@ -85,6 +79,7 @@ export default function ArchiveUploader() {
             imagePublicId: result.publicId,
             width: result.width,
             height: result.height,
+            collection: collection || undefined,
           }),
         });
         if (!res.ok) throw new Error("Couldn't save this image");
@@ -108,6 +103,25 @@ export default function ArchiveUploader() {
 
   return (
     <div>
+      <div className="mb-6">
+        <label className="text-xs uppercase tracking-[0.1em] text-muted block mb-2">
+          Collection (applies to this batch)
+        </label>
+        <select
+          value={collection}
+          onChange={(e) => setCollection(e.target.value)}
+          disabled={busy}
+          className="border border-line bg-paper px-3 py-2 text-sm w-full sm:w-64"
+        >
+          <option value="">Uncategorized</option>
+          {ARCHIVE_COLLECTIONS.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div
         onClick={() => !busy && fileRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}

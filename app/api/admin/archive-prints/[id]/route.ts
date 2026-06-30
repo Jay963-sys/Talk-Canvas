@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   setArchiveVisibility,
+  setArchiveCollection,
   deleteArchivePrint,
 } from "@/lib/db/queries/archivePrints";
 // ⚠️ AUTH: align with app/api/admin/originals/[id]/route.ts.
@@ -22,14 +23,27 @@ export async function PATCH(
   }
 
   const body = await req.json().catch(() => null);
-  if (typeof body?.isVisible !== "boolean") {
+  const hasVisibility = typeof body?.isVisible === "boolean";
+  const hasCollection =
+    body &&
+    "collection" in body &&
+    (body.collection === null || typeof body.collection === "string");
+
+  if (!hasVisibility && !hasCollection) {
     return NextResponse.json(
-      { error: "isVisible (boolean) required" },
+      { error: "isVisible (boolean) or collection (string | null) required" },
       { status: 400 },
     );
   }
 
-  const row = await setArchiveVisibility(numId, body.isVisible);
+  let row;
+  if (hasVisibility) {
+    row = await setArchiveVisibility(numId, body.isVisible);
+  }
+  if (hasCollection) {
+    row = await setArchiveCollection(numId, body.collection);
+  }
+
   if (!row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

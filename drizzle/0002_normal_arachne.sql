@@ -1,0 +1,1 @@
+ALTER TABLE "archive_prints" ADD COLUMN "collection" varchar(100);

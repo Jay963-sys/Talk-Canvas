@@ -126,6 +126,7 @@ export const archivePrints = pgTable("archive_prints", {
   imagePublicId: varchar("image_public_id", { length: 255 }).notNull(),
   width: integer("width").notNull(),
   height: integer("height").notNull(),
+  collection: varchar("collection", { length: 100 }),
   displayOrder: integer("display_order").default(0).notNull(),
   isVisible: boolean("is_visible").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
