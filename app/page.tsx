@@ -275,10 +275,10 @@ export default async function Home() {
         </section>
       </Reveal>
 
-      {/* Testimonials */}
+      {/* Testimonials 
       <Reveal>
         <Testimonials title="What collectors are saying" />
-      </Reveal>
+      </Reveal> */}
     </div>
   );
 }
