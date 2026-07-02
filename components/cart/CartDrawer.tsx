@@ -30,99 +30,109 @@ export default function CartDrawer() {
 
   return (
     <>
+      {/* Overlay */}
       <div
         onClick={() => setOpen(false)}
-        className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-ink/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       />
 
+      {/* Drawer */}
       <aside
-        // 🚨 FIX 1: Changed h-full to h-[100dvh] for mobile browsers
-        className={`fixed top-0 right-0 h-[100dvh] w-full sm:w-[440px] bg-cream z-50 flex flex-col transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-[100dvh] w-full sm:w-[440px] bg-cream z-50 flex flex-col transition-transform duration-300 shadow-2xl ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-line shrink-0">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-6 border-b border-line shrink-0">
           <div className="flex items-center gap-3">
-            <ShoppingBag size={18} strokeWidth={1.5} />
-            <h2 className="display text-xl">Your cart</h2>
-            <span className="text-sm text-muted">({items.length})</span>
+            <ShoppingBag size={18} strokeWidth={1.5} className="text-ink" />
+            <h2 className="display text-2xl font-normal text-ink">Your Cart</h2>
+            <span className="text-[13px] text-ink-soft">({items.length})</span>
           </div>
-          <button onClick={() => setOpen(false)} aria-label="Close cart">
+          <button
+            onClick={() => setOpen(false)}
+            aria-label="Close cart"
+            className="text-ink hover:text-ink-soft transition-colors p-1 -mr-1"
+          >
             <X size={22} strokeWidth={1.5} />
           </button>
         </div>
 
-        {/* 🚨 FIX 2 & 3: Added overscroll-contain and custom-scrollbar */}
-        <div className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar px-6 py-6">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar px-6 py-8">
           {items.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="display-italic text-2xl mb-3">
+            <div className="flex flex-col items-center justify-center h-full text-center pb-12">
+              <p className="display text-3xl mb-4 text-ink">
                 Your cart is empty.
               </p>
-              <p className="text-sm text-ink-soft">
+              <p className="text-[14px] text-ink-soft mb-8">
                 Explore original works or design a custom print.
               </p>
-              <div className="flex flex-col gap-2 mt-6">
+              <div className="flex flex-col w-full max-w-[240px] gap-3">
                 <Link
                   href="/originals"
                   onClick={() => setOpen(false)}
-                  className="inline-block px-6 py-3 bg-accent text-cream text-sm font-medium tracking-wider hover:bg-accent-dark transition-colors"
+                  className="w-full py-3.5 bg-ink text-cream text-[11px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
                 >
-                  Browse originals
+                  Shop Originals
                 </Link>
                 <Link
                   href="/prints"
                   onClick={() => setOpen(false)}
-                  className="inline-block px-6 py-3 border border-ink text-ink text-sm font-medium tracking-wider hover:bg-ink hover:text-cream transition-colors"
+                  className="w-full py-3.5 border border-line bg-transparent text-ink text-[11px] uppercase tracking-widest font-medium hover:border-ink transition-colors"
                 >
-                  Make a print
+                  Gallery Walls
                 </Link>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-8">
               {items.map((item) => (
-                <div key={item.id} className="flex gap-4">
-                  <div className="w-20 h-24 bg-line shrink-0 overflow-hidden">
+                <div key={item.id} className="flex gap-5">
+                  {/* Strict 4/5 Aspect Ratio for Cart Images */}
+                  <div className="w-[75px] relative aspect-[4/5] bg-paper shrink-0 rounded-sm overflow-hidden border border-line/40">
                     <img
                       src={item.imageUrl}
                       alt=""
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   </div>
-                  <div className="flex-1 flex flex-col">
+                  <div className="flex-1 flex flex-col py-0.5">
                     {item.type === "original" ? (
                       <>
-                        <p className="display-italic text-lg leading-tight">
+                        <p className="display text-[15px] leading-tight text-ink mb-1">
                           {item.title}
                         </p>
-                        <p className="text-xs text-muted mt-1">
+                        <p className="text-[12px] text-ink-soft">
                           {item.artist} · {item.year}
                         </p>
-                        <p className="text-xs text-muted mt-0.5">
+                        <p className="text-[12px] text-ink-soft mt-0.5">
                           {item.frameName} · {item.sizeLabel}
                         </p>
                       </>
                     ) : (
                       <>
-                        <p className="display-italic text-lg leading-tight">
-                          Custom print
+                        <p className="display text-[15px] leading-tight text-ink mb-1">
+                          Custom Print
                         </p>
-                        <p className="text-xs text-muted mt-1">
+                        <p className="text-[12px] text-ink-soft">
                           {item.frameName}
-                          {item.glass ? " · with glass" : ""} · {item.sizeLabel}
+                          {item.glass ? " · Glass" : ""}
+                        </p>
+                        <p className="text-[12px] text-ink-soft mt-0.5">
+                          {item.sizeLabel}
                         </p>
                       </>
                     )}
-                    <div className="mt-auto flex items-end justify-between">
-                      <p className="text-sm font-medium">
+                    <div className="mt-auto flex items-end justify-between pt-3">
+                      <p className="text-[13px] font-medium text-ink">
                         {formatNaira(item.price)}
                       </p>
                       <button
                         onClick={() => removeItem(item.id)}
-                        className="text-xs text-muted hover:text-ink flex items-center gap-1"
+                        className="text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink flex items-center gap-1.5 transition-colors"
                       >
                         <Trash2 size={12} strokeWidth={1.5} />
                         Remove
@@ -135,24 +145,26 @@ export default function CartDrawer() {
           )}
         </div>
 
+        {/* Footer */}
         {items.length > 0 && (
-          // 🚨 Optional: added shrink-0 to ensure the footer never squishes
-          <div className="px-6 py-5 border-t border-line shrink-0">
-            <div className="flex justify-between items-baseline mb-1">
-              <span className="text-xs text-muted">Subtotal</span>
-              <span className="display text-2xl font-medium">
+          <div className="px-6 py-6 border-t border-line shrink-0 bg-cream">
+            <div className="flex justify-between items-end mb-2">
+              <span className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold">
+                Subtotal
+              </span>
+              <span className="display text-3xl font-medium text-ink leading-none">
                 {formatNaira(subtotal)}
               </span>
             </div>
-            <p className="text-[11px] text-muted">
-              Shipping calculated at checkout
+            <p className="text-[12px] text-ink-soft mb-6">
+              Shipping calculated at checkout.
             </p>
             <Link
               href="/checkout"
               onClick={() => setOpen(false)}
-              className="mt-4 block w-full py-4 bg-accent text-cream text-sm font-medium tracking-wider text-center hover:bg-accent-dark transition-colors"
+              className="block w-full py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium text-center hover:bg-ink-soft transition-colors"
             >
-              Proceed to checkout
+              Proceed to Checkout
             </Link>
           </div>
         )}

@@ -30,12 +30,7 @@ export default function StepUpload() {
     setProgress(0);
 
     try {
-      // Optimize before upload: cap at 4000px on the long edge at q0.9. This
-      // keeps files under Cloudinary's per-image limit (and the 25MP transform
-      // cap) while staying sharp at standard print sizes. Re-encoding also
-      // applies EXIF orientation, so phone photos don't upload sideways.
       const optimized = await downscaleImage(file, 4000, 0.9);
-
       const result = await uploadToCloudinary(optimized, {
         onProgress: setProgress,
       });
@@ -54,9 +49,6 @@ export default function StepUpload() {
     }
   };
 
-  // An archive design slots into the same image state an upload would fill —
-  // already a Cloudinary asset, so no upload step needed. The user then
-  // continues to Frame via the usual Continue button.
   const handleArchiveSelect = (item: ArchiveItem) => {
     setError(null);
     setImage({
@@ -69,15 +61,15 @@ export default function StepUpload() {
   };
 
   const borderColor = dragging
-    ? "border-accent bg-paper"
+    ? "border-ink bg-paper"
     : error
-      ? "border-red-400"
-      : "border-line";
+      ? "border-red-400 bg-red-50/30"
+      : "border-line/60 bg-paper";
 
   return (
-    <div className="slide-up">
-      <h2 className="display text-3xl font-normal mb-2">Upload your design</h2>
-      <p className="text-sm text-ink-soft mb-6">
+    <div className="fade-in">
+      <h2 className="display text-3xl font-normal mb-3">Upload your design</h2>
+      <p className="text-[14px] text-ink-soft mb-8 max-w-xl">
         JPG or PNG, up to 25MB. For the sharpest print, upload the
         highest-resolution file you have — we optimize it automatically.
       </p>
@@ -94,61 +86,63 @@ export default function StepUpload() {
           if (!uploading) handleFile(e.dataTransfer.files[0]);
         }}
         onClick={() => !uploading && fileRef.current?.click()}
-        className={`border-[1.5px] border-dashed p-12 text-center min-h-[400px] flex flex-col items-center justify-center transition-all ${
-          uploading ? "cursor-wait" : "cursor-pointer"
+        className={`border text-center rounded-2xl min-h-[400px] flex flex-col items-center justify-center transition-all ${
+          uploading ? "cursor-wait" : "cursor-pointer hover:border-ink/50"
         } ${borderColor}`}
       >
         {uploading ? (
           <>
             <Loader2
-              size={32}
-              className="animate-spin text-accent mb-5"
+              size={28}
+              className="animate-spin text-ink mb-5"
               strokeWidth={1.5}
             />
-            <p className="display-italic text-2xl">Uploading…</p>
-            <div className="mt-5 w-64 h-1 bg-line overflow-hidden">
+            <p className="display text-xl text-ink">Uploading…</p>
+            <div className="mt-6 w-64 h-1 bg-line overflow-hidden rounded-full">
               <div
-                className="h-full bg-accent transition-all"
+                className="h-full bg-ink transition-all"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-muted mt-2">{progress}%</p>
+            <p className="text-[12px] uppercase tracking-widest text-ink-soft font-medium mt-4">
+              {progress}%
+            </p>
           </>
         ) : image ? (
           <>
             <img
               src={image.url}
               alt="Selected"
-              className="max-h-80 max-w-full object-contain"
+              className="max-h-80 max-w-full object-contain p-6"
             />
-            <p className="text-xs text-muted mt-5">
+            <p className="text-[12px] text-ink-soft mt-2">
               {image.width} × {image.height} px — Click to replace
             </p>
           </>
         ) : (
           <>
             <div
-              className={`w-14 h-14 rounded-full flex items-center justify-center mb-5 ${
-                error ? "bg-red-50" : "bg-paper"
+              className={`w-14 h-14 rounded-full flex items-center justify-center mb-5 transition-colors ${
+                error ? "bg-red-100" : "bg-cream"
               }`}
             >
               {error ? (
                 <AlertCircle
-                  size={22}
+                  size={20}
                   className="text-red-600"
                   strokeWidth={1.5}
                 />
               ) : (
-                <Upload size={22} strokeWidth={1.5} />
+                <Upload size={20} className="text-ink" strokeWidth={1.5} />
               )}
             </div>
-            <p className="display-italic text-2xl">
+            <p className="display text-2xl text-ink mb-1">
               {error ? "Something went wrong" : "Drop your file here"}
             </p>
             <p
-              className={`text-xs mt-2 ${error ? "text-red-600" : "text-muted"}`}
+              className={`text-[14px] ${error ? "text-red-600" : "text-ink-soft"}`}
             >
-              {error || "or click to browse"}
+              {error || "or click to browse your files"}
             </p>
           </>
         )}
@@ -161,20 +155,19 @@ export default function StepUpload() {
         />
       </div>
 
-      {/* Archive alternative */}
-      <div className="flex items-center gap-4 mt-6 mb-4">
-        <div className="flex-1 h-px bg-line" />
-        <span className="text-xs uppercase tracking-[0.15em] text-muted">
+      <div className="flex items-center gap-4 my-8">
+        <div className="flex-1 h-px bg-line/60" />
+        <span className="text-[10px] uppercase tracking-widest text-ink-soft font-semibold">
           or
         </span>
-        <div className="flex-1 h-px bg-line" />
+        <div className="flex-1 h-px bg-line/60" />
       </div>
 
       <button
         type="button"
         onClick={() => setPickerOpen(true)}
         disabled={uploading}
-        className="w-full border-[1.5px] border-line py-4 text-sm tracking-wide hover:border-ink transition-colors disabled:opacity-50"
+        className="w-full border border-line py-4 text-[12px] uppercase tracking-widest font-medium hover:border-ink transition-colors disabled:opacity-50"
       >
         {image
           ? "Choose a different design from our archive"

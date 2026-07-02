@@ -26,22 +26,26 @@ export default function Configurator() {
   }, [step, image, setStep]);
 
   return (
-    // Added a wrapper div with the ref and a scroll-margin
-    // to prevent it from hiding under a fixed navbar if you have one
-    <div ref={topRef} className="scroll-mt-24">
-      <section className="max-w-7xl mx-auto px-6 md:px-10 pb-8">
+    <div ref={topRef} className="scroll-mt-32">
+      {/* Stepper Section */}
+      <section className="max-w-7xl mx-auto px-6 md:px-10 pb-12">
         <Stepper />
       </section>
 
+      {/* Main Studio Area */}
       <section className="max-w-7xl mx-auto px-6 md:px-10 pb-12">
-        <div className="grid md:grid-cols-12 gap-10">
-          <div className="md:col-span-8">
+        {/* Matched the gap-12 lg:gap-20 spacing from the Checkout page */}
+        <div className="grid md:grid-cols-12 gap-12 lg:gap-20 items-start">
+          {/* Active Step Area */}
+          <div className="md:col-span-7 lg:col-span-8">
             {step === 0 && <StepUpload />}
             {step === 1 && <StepFrame />}
             {step === 2 && <StepSize />}
             {step === 3 && <StepReview />}
           </div>
-          <div className="md:col-span-4">
+
+          {/* Summary Area - Made sticky so it stays visible as users scroll through options */}
+          <div className="md:col-span-5 lg:col-span-4 sticky top-[120px]">
             <Summary />
           </div>
         </div>

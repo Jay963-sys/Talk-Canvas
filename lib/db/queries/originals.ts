@@ -2,6 +2,7 @@ import { db } from "../index";
 import { originals, type Original, type NewOriginal } from "../schema";
 import { eq, asc, desc } from "drizzle-orm";
 import { inArray, isNull, isNotNull } from "drizzle-orm";
+import { ilike, or } from "drizzle-orm";
 
 /**
  * Used to validate cart items at checkout — fetch all referenced originals
@@ -105,4 +106,26 @@ export async function updateOriginal(
 
 export async function deleteOriginal(id: number): Promise<void> {
   await db.delete(originals).where(eq(originals.id, id));
+}
+
+export async function searchOriginals(query: string) {
+  // Wrap the query in % wildcards so it matches text anywhere in the string
+  const searchTerm = `%${query}%`;
+
+  return (
+    db
+      .select()
+      .from(originals)
+      .where(
+        or(
+          ilike(originals.title, searchTerm),
+          ilike(originals.artist, searchTerm),
+          ilike(originals.medium, searchTerm),
+          ilike(originals.description, searchTerm),
+          ilike(originals.slug, searchTerm),
+        ),
+      )
+      // Optional: Add a limit so a vague search doesn't return thousands of rows
+      .limit(50)
+  );
 }

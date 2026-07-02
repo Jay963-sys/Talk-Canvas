@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Mail, Phone } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 function Instagram({
   size = 24,
@@ -16,7 +16,7 @@ function Instagram({
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
       {...props}
@@ -37,122 +37,173 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-line mt-10 bg-background">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 py-12 lg:py-16">
-        {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
-          {/* Brand & Address */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            <div>
-              <p className="display text-2xl font-medium tracking-tight">
-                Talk Canvas{" "}
-                <span className="display-italic text-accent">Gallery</span>
-              </p>
-              <p className="text-sm text-muted mt-2 max-w-sm leading-relaxed">
-                Connecting audiences with premium prints and original
-                hand-painted works.
-              </p>
-            </div>
+    <footer className="bg-paper pt-16 md:pt-24 border-t border-line">
+      <div className="max-w-7xl mx-auto px-6 md:px-10">
+        {/* Newsletter Section - A staple of e-commerce minimalism */}
+        <div className="flex flex-col items-center text-center pb-16 md:pb-24 border-b border-line">
+          <h2 className="display text-2xl md:text-3xl mb-4">
+            Join the gallery list
+          </h2>
+          <p className="text-[14px] text-ink-soft mb-8 max-w-md">
+            Sign up to receive updates on new arrivals, exclusive releases, and
+            gallery events.
+          </p>
+          <form
+            className="flex w-full max-w-md border-b border-ink/30 pb-2 relative"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <input
+              type="email"
+              placeholder="Enter your email address"
+              className="w-full bg-transparent text-sm text-ink placeholder:text-ink-soft focus:outline-none"
+              required
+            />
+            <button
+              type="submit"
+              className="text-ink hover:text-ink-soft transition-colors absolute right-0"
+              aria-label="Subscribe"
+            >
+              <ArrowRight size={18} strokeWidth={1.5} />
+            </button>
+          </form>
+        </div>
 
-            <address className="not-italic text-sm text-muted leading-relaxed">
-              <strong className="text-ink font-medium">Lagos Gallery</strong>
-              <br />
-              5, Abeke Animashaun Street,
-              <br />
-              Lekki Phase 1, Opp. Ichie Kris Onyekwuje Street,
-              <br />
-              Lagos, Nigeria 105102
-            </address>
+        {/* Main Footer Links - Evenly spaced 4-column layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 py-16">
+          {/* Col 1: Brand & Bio */}
+          <div className="flex flex-col gap-6">
+            <Link
+              href="/"
+              className="display text-2xl tracking-tight text-ink hover:opacity-80 transition-opacity w-fit"
+            >
+              Talk Canvas
+            </Link>
+            <p className="text-[13px] text-ink-soft leading-relaxed max-w-xs">
+              Connecting audiences with premium prints and original hand-painted
+              works. Designed in our studio, inspired by the world.
+            </p>
           </div>
 
-          {/* Quick Links */}
-          <div className="flex flex-col gap-4">
-            <h3 className="text-sm font-semibold text-ink">Explore</h3>
-            <nav className="flex flex-col gap-3 text-sm text-ink-soft">
+          {/* Col 2: Shop */}
+          <div className="flex flex-col gap-5">
+            <h3 className="text-[11px] uppercase tracking-widest text-ink font-semibold">
+              Shop
+            </h3>
+            <nav className="flex flex-col gap-3 text-[13px] text-ink-soft">
               <Link
                 href="/originals"
-                className="hover:text-accent transition-colors w-fit"
+                className="hover:text-ink transition-colors w-fit"
               >
                 Originals
               </Link>
               <Link
                 href="/prints"
-                className="hover:text-accent transition-colors w-fit"
+                className="hover:text-ink transition-colors w-fit"
               >
-                Prints
+                Gallery Wall
               </Link>
               <Link
                 href="/prints/archive"
-                className="hover:text-accent transition-colors w-fit"
+                className="hover:text-ink transition-colors w-fit"
               >
                 Print Archive
               </Link>
               <Link
-                href="/about"
-                className="hover:text-accent transition-colors w-fit"
+                href="/search"
+                className="hover:text-ink transition-colors w-fit"
               >
-                About the Gallery
+                Search
               </Link>
             </nav>
           </div>
 
-          {/* Contact Links */}
-          <div className="flex flex-col gap-4">
-            <h3 className="text-sm font-semibold text-ink">Get in Touch</h3>
-            <nav className="flex flex-col gap-3 text-sm text-ink-soft">
+          {/* Col 3: Support (Added to fill out the retail vibe) */}
+          <div className="flex flex-col gap-5">
+            <h3 className="text-[11px] uppercase tracking-widest text-ink font-semibold">
+              Support
+            </h3>
+            <nav className="flex flex-col gap-3 text-[13px] text-ink-soft">
+              <Link
+                href="/about"
+                className="hover:text-ink transition-colors w-fit"
+              >
+                About Us
+              </Link>
+              <Link
+                href="/contact"
+                className="hover:text-ink transition-colors w-fit"
+              >
+                Contact
+              </Link>
+              <Link href="#" className="hover:text-ink transition-colors w-fit">
+                Shipping & Returns
+              </Link>
+              <Link href="#" className="hover:text-ink transition-colors w-fit">
+                FAQs
+              </Link>
+            </nav>
+          </div>
+
+          {/* Col 4: Contact & Address */}
+          <div className="flex flex-col gap-5">
+            <h3 className="text-[11px] uppercase tracking-widest text-ink font-semibold">
+              Contact
+            </h3>
+            <address className="not-italic flex flex-col gap-3 text-[13px] text-ink-soft">
+              <p>
+                <strong className="font-medium text-ink block mb-1">
+                  Lagos Gallery
+                </strong>
+                5, Abeke Animashaun Street,
+                <br />
+                Lekki Phase 1,
+                <br />
+                Lagos, Nigeria 105102
+              </p>
               <a
                 href="mailto:hello@talkcanvas.gallery"
-                className="hover:text-accent transition-colors flex items-center gap-2 w-fit"
+                className="hover:text-ink transition-colors w-fit mt-2"
               >
-                <Mail size={16} />
                 hello@talkcanvas.gallery
               </a>
-              <a
-                href="tel:+2349155328133"
-                className="hover:text-accent transition-colors flex items-center gap-2 w-fit"
-              >
-                <Phone size={16} />
-                +234 91 5532 8133
-              </a>
-              <a
-                href="https://instagram.com/talk_canvas"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram"
-                className="hover:text-accent transition-colors flex items-center gap-2 w-fit"
-              >
-                <Instagram size={18} />
-                @talk_canvas
-              </a>
-
-              <a
-                href="https://wa.me/2349155328133"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="WhatsApp"
-                className="hover:text-accent transition-colors flex items-center gap-2 w-fit"
-              >
-                <MessageCircle size={18} />
-                WhatsApp
-              </a>
-            </nav>
+            </address>
           </div>
         </div>
 
         {/* Bottom Bar: Copyright & Socials */}
-        <div
-          className=" 
-  flex flex-col-reverse md:flex-row
-  justify-between items-center
-  gap-6
-  border-t border-line
-  mt-14 pt-10 md:pt-8
-  text-xs text-muted
-"
-        >
-          {" "}
-          <p>© {currentYear} Talk Canvas Gallery. All rights reserved.</p>
-          <div className="flex items-center gap-5"></div>
+        <div className="flex flex-col-reverse md:flex-row justify-between items-center gap-6 py-8 border-t border-line text-[11px] text-ink-soft">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            <p>© {currentYear} Talk Canvas Gallery. All rights reserved.</p>
+            <div className="hidden md:block w-px h-3 bg-line"></div>
+            <Link href="#" className="hover:text-ink transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="#" className="hover:text-ink transition-colors">
+              Terms of Service
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-5 text-ink">
+            <a
+              href="https://instagram.com/talk_canvas"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              className="hover:opacity-60 transition-opacity"
+            >
+              <Instagram size={18} />
+            </a>
+            {/* Keeping WhatsApp clean, dropping the text label to match Instagram */}
+            <a
+              href="https://wa.me/2349155328133"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="WhatsApp"
+              className="hover:opacity-60 transition-opacity display-italic text-lg leading-none"
+            >
+              Wa
+            </a>
+          </div>
         </div>
       </div>
     </footer>

@@ -38,20 +38,24 @@ export default function OriginalActions({ original }: { original: Original }) {
 
   if (isSold) {
     return (
-      <div className="space-y-4">
-        <div className="inline-block px-4 py-2 border border-line text-muted uppercase text-xs tracking-[0.15em]">
-          Sold
-        </div>
-        <p className="text-sm text-ink-soft leading-relaxed">
-          This original has found a home. Browse other available works, or get
-          in touch about commissioning something similar.
+      <div className="space-y-4 w-full">
+        {/* Styled as a disabled e-commerce button for consistent UI height */}
+        <button
+          disabled
+          className="w-full flex items-center justify-center py-4 bg-paper text-ink-soft text-[12px] uppercase tracking-widest font-medium cursor-not-allowed"
+        >
+          Sold Out
+        </button>
+        <p className="text-[13px] text-ink-soft leading-relaxed text-center">
+          This original has found a home. Get in touch to commission a similar
+          piece.
         </p>
         <button
           onClick={() => setArOpen(true)}
-          className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink border-b border-line pb-0.5"
+          className="w-full flex items-center justify-center gap-2 py-3.5 border border-line text-ink text-[12px] uppercase tracking-widest font-medium hover:border-ink transition-colors"
         >
           <Box size={16} strokeWidth={1.5} />
-          Still preview it on your wall
+          View in Space (AR)
         </button>
         {arOpen && (
           <OriginalARModal
@@ -64,10 +68,11 @@ export default function OriginalActions({ original }: { original: Original }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 w-full">
+      {/* Primary Action */}
       <button
         onClick={handleAddToCart}
-        className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-ink text-cream uppercase text-xs tracking-[0.15em] hover:bg-ink-soft transition-colors"
+        className="w-full flex items-center justify-center gap-2 py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
       >
         {inCart ? (
           <>
@@ -81,13 +86,16 @@ export default function OriginalActions({ original }: { original: Original }) {
           </>
         )}
       </button>
+
+      {/* Secondary Action - Softened border that darkens on hover */}
       <button
         onClick={() => setArOpen(true)}
-        className="w-full flex items-center justify-center gap-2 px-8 py-4 border border-ink text-ink uppercase text-xs tracking-[0.15em] hover:bg-ink hover:text-cream transition-colors"
+        className="w-full flex items-center justify-center gap-2 py-4 border border-line text-ink text-[12px] uppercase tracking-widest font-medium hover:border-ink transition-colors"
       >
         <Box size={16} strokeWidth={1.5} />
-        Preview on your wall
+        View in Space (AR)
       </button>
+
       {arOpen && (
         <OriginalARModal original={original} onClose={() => setArOpen(false)} />
       )}

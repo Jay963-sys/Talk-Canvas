@@ -19,7 +19,7 @@ function Instagram({
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
       {...props}
@@ -32,121 +32,124 @@ function Instagram({
 }
 
 export const metadata = {
-  title: "About — Talk Canvas Gallery",
+  title: "About Us — Talk Canvas Gallery",
 };
 
 export default function AboutPage() {
   return (
-    <div className="fade-in max-w-4xl mx-auto px-6 md:px-10 pt-16 pb-32">
-      <p className="text-xs uppercase tracking-[0.15em] text-muted">About</p>
+    <div className="fade-in bg-cream min-h-screen">
+      <div className="max-w-4xl mx-auto px-6 md:px-10 pt-24 pb-32">
+        {/* Brand Narrative - Centered and Confident */}
+        <div className="text-center mb-24">
+          <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-6">
+            About the Gallery
+          </p>
+          <h1 className="display text-4xl md:text-5xl lg:text-6xl font-normal leading-tight mb-10">
+            Our Story
+          </h1>
+          <div className="text-[16px] leading-relaxed text-ink-soft max-w-2xl mx-auto space-y-6">
+            <p>
+              Talk Canvas Gallery opened in Lagos in 2021 with a simple
+              intention: to make room for contemporary West African painting,
+              and to let people live with it.
+            </p>
+            <p>
+              Alongside our roster of represented artists, our print studio
+              offers high-quality framed reproductions of your own designs —
+              archival paper, hand-finished frames, and an AR tool that lets you
+              see exactly how it'll sit on your wall before you buy.
+            </p>
+          </div>
+        </div>
 
-      <h1 className="display text-6xl md:text-8xl font-normal leading-none mt-4">
-        Looking, slowly.
-      </h1>
-
-      <div className="mt-12 grid md:grid-cols-2 gap-12 text-[17px] leading-relaxed text-ink-soft">
-        <p>
-          Talk Canvas Gallery opened in Lagos in 2021 with a simple intention:
-          to make room for contemporary West African painting, and to let people
-          live with it.
-        </p>
-
-        <p>
-          Alongside our roster of represented artists, our print studio offers
-          high-quality framed reproductions of your own designs — archival
-          paper, hand-finished frames, and an AR tool that lets you see exactly
-          how it'll sit on your wall before you buy.
-        </p>
-      </div>
-
-      <div className="mt-20 grid md:grid-cols-3 gap-8 border-t border-line pt-10">
-        <InfoBlock label="Visit">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <MapPin size={16} className="mt-1 text-muted shrink-0" />
-
+        {/* Gallery Info - Symmetric 3-Column Grid */}
+        <div className="grid md:grid-cols-3 gap-12 md:gap-8 border-t border-line pt-16">
+          <InfoBlock label="Visit Us">
+            <div className="flex flex-col items-center text-center gap-3">
+              <MapPin size={20} strokeWidth={1.5} className="text-ink mb-2" />
               <p>
-                5, Abeke Animashaun Street, Lekki phase 1, opp Ichie Kris
+                5, Abeke Animashaun Street,
+                <br />
+                Lekki Phase 1, opp Ichie Kris
+                <br />
                 Onyekwuje Street,
                 <br />
-                Lekki, Lagos, Nigeria 105102
+                Lagos, Nigeria 105102
               </p>
             </div>
-
-            <div className="flex items-center gap-3">
-              <Clock size={16} className="text-muted shrink-0" />
-
-              <p>Tues — Sat, 11am — 6pm</p>
+            <div className="flex flex-col items-center text-center gap-2 mt-4 pt-4 border-t border-line/50 w-full">
+              <Clock
+                size={16}
+                strokeWidth={1.5}
+                className="text-ink-soft mb-1"
+              />
+              <p>
+                Tues — Sat
+                <br />
+                11:00 AM — 6:00 PM
+              </p>
             </div>
-          </div>
-        </InfoBlock>
+          </InfoBlock>
 
-        <InfoBlock label="Contact">
-          <div className="space-y-4">
+          <InfoBlock label="Contact">
+            <div className="flex flex-col gap-6 w-full items-center">
+              <a
+                href="mailto:hello@talkcanvas.gallery"
+                className="flex flex-col items-center gap-2 hover:text-ink text-ink-soft transition-colors"
+              >
+                <Mail size={20} strokeWidth={1.5} className="text-ink" />
+                <span>hello@talkcanvas.gallery</span>
+              </a>
+              <a
+                href="tel:+2349155328133"
+                className="flex flex-col items-center gap-2 hover:text-ink text-ink-soft transition-colors"
+              >
+                <Phone size={20} strokeWidth={1.5} className="text-ink" />
+                <span>+234 915 532 8133</span>
+              </a>
+              <a
+                href="https://wa.me/2349155328133"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-2 hover:text-ink text-ink-soft transition-colors group"
+              >
+                <MessageCircle
+                  size={20}
+                  strokeWidth={1.5}
+                  className="text-ink"
+                />
+                <span className="flex items-center gap-1.5">
+                  WhatsApp
+                  <ExternalLink
+                    size={12}
+                    className="opacity-50 group-hover:opacity-100 transition-opacity"
+                  />
+                </span>
+              </a>
+            </div>
+          </InfoBlock>
+
+          <InfoBlock label="Social">
             <a
-              href="mailto:hello@talkcanvas.gallery"
-              className="flex items-center gap-3 hover:text-accent transition-colors group"
-            >
-              <Mail
-                size={16}
-                className="text-muted group-hover:text-accent transition-colors"
-              />
-
-              <span>hello@talkcanvas.gallery</span>
-            </a>
-
-            <a
-              href="tel:+2349155328133"
-              className="flex items-center gap-3 hover:text-accent transition-colors group"
-            >
-              <Phone
-                size={16}
-                className="text-muted group-hover:text-accent transition-colors"
-              />
-
-              <span>+234 915 532 8133</span>
-            </a>
-
-            <a
-              href="https://wa.me/2349155328133"
+              href="https://instagram.com/talk_canvas"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 hover:text-accent transition-colors group"
+              className="flex flex-col items-center gap-3 hover:text-ink text-ink-soft transition-colors group"
             >
-              <MessageCircle
-                size={16}
-                className="text-muted group-hover:text-accent transition-colors"
+              <Instagram
+                size={24}
+                className="text-ink opacity-80 group-hover:opacity-100 transition-opacity"
               />
-
-              <span>WhatsApp</span>
-
-              <ExternalLink
-                size={14}
-                className="opacity-50 group-hover:opacity-100 transition-opacity"
-              />
+              <span>@talk_canvas</span>
             </a>
-          </div>
-        </InfoBlock>
-
-        <InfoBlock label="Follow">
-          <a
-            href="https://instagram.com/talk_canvas"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 hover:text-accent transition-colors group"
-          >
-            <Instagram
-              size={14}
-              className="opacity-50 group-hover:opacity-100 transition-opacity"
-            />
-            <span>@talk_canvas</span>
-          </a>
-        </InfoBlock>
+          </InfoBlock>
+        </div>
       </div>
     </div>
   );
 }
 
+// Restyled to enforce center alignment for e-commerce uniformity
 function InfoBlock({
   label,
   children,
@@ -155,12 +158,11 @@ function InfoBlock({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <p className="text-xs uppercase tracking-[0.15em] text-muted mb-4">
+    <div className="flex flex-col items-center text-center">
+      <p className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-8">
         {label}
       </p>
-
-      <div className="text-[15px] leading-relaxed text-ink-soft">
+      <div className="text-[14px] leading-relaxed text-ink-soft w-full flex flex-col items-center">
         {children}
       </div>
     </div>

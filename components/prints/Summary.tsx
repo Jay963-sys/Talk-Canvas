@@ -38,58 +38,62 @@ export default function Summary() {
   };
 
   return (
-    <div className="bg-paper p-7 sticky top-[100px]">
-      <p className="text-xs uppercase tracking-[0.15em] text-muted mb-5">
+    <div className="bg-paper p-8 lg:p-10 rounded-2xl border border-line/40">
+      <p className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
         Your Selection
       </p>
 
-      <SummaryRow label="Design" value={image ? "Uploaded ✓" : "—"} />
-      <SummaryRow
-        label="Frame"
-        value={frame ? frame.name + (glass ? " · with glass" : "") : "—"}
-      />
-      <SummaryRow label="Size" value={size ? formatInches(size) : "—"} />
+      <div className="space-y-1 mb-2">
+        <SummaryRow label="Design" value={image ? "Uploaded ✓" : "—"} />
+        <SummaryRow
+          label="Frame"
+          value={frame ? frame.name + (glass ? " · with glass" : "") : "—"}
+        />
+        <SummaryRow label="Size" value={size ? formatInches(size) : "—"} />
+      </div>
 
-      <div className="mt-6 pt-5 border-t border-line">
-        <div className="flex justify-between items-baseline">
-          <span className="text-xs text-muted">Total</span>
-          <span className="display text-3xl font-medium">
+      <div className="mt-8 pt-6 border-t border-line/60">
+        <div className="flex justify-between items-end mb-2">
+          <span className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold">
+            Total
+          </span>
+          <span className="display text-3xl font-medium text-ink leading-none">
             {totalPrice > 0 ? formatNaira(totalPrice) : "—"}
           </span>
         </div>
-        <p className="text-[11px] text-muted mt-1.5">
-          Shipping calculated at checkout
+        <p className="text-[12px] text-ink-soft">
+          Shipping calculated at checkout.
         </p>
       </div>
 
-      <div className="mt-6 flex flex-col gap-2">
+      <div className="mt-8 flex flex-col gap-3">
         {step < 3 && (
           <button
             onClick={() => setStep(step + 1)}
             disabled={!canAdvance()}
-            className={`py-4 text-sm font-medium tracking-wider text-cream transition-all ${
+            className={`w-full py-4 text-[12px] uppercase tracking-widest font-medium transition-colors ${
               canAdvance()
-                ? "bg-accent hover:bg-accent-dark hover:-translate-y-0.5"
-                : "bg-muted opacity-60 cursor-not-allowed"
+                ? "bg-ink text-cream hover:bg-ink-soft"
+                : "bg-line/50 text-ink-soft cursor-not-allowed"
             }`}
           >
-            Continue → {STEP_NAMES[step + 1]}
+            Continue to {STEP_NAMES[step + 1]}
           </button>
         )}
         {step === 3 && (
           <button
             onClick={handleAddToCart}
-            className="py-4 bg-accent hover:bg-accent-dark text-cream text-sm font-medium tracking-wider transition-all"
+            className="w-full py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
           >
-            Add to cart → {formatNaira(totalPrice)}
+            Add to cart — {formatNaira(totalPrice)}
           </button>
         )}
         {step > 0 && (
           <button
             onClick={() => setStep(step - 1)}
-            className="py-3.5 border border-line text-sm font-medium hover:border-ink hover:bg-ink hover:text-cream transition-all"
+            className="w-full py-4 border border-line text-[12px] uppercase tracking-widest font-medium hover:border-ink transition-colors flex items-center justify-center gap-2"
           >
-            <ArrowLeft size={14} strokeWidth={2} className="inline mr-2" />
+            <ArrowLeft size={14} strokeWidth={1.5} />
             Back
           </button>
         )}
@@ -100,8 +104,8 @@ export default function Summary() {
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between py-2 text-xs">
-      <span className="text-muted">{label}</span>
+    <div className="flex justify-between items-center py-2 text-[14px]">
+      <span className="text-ink-soft">{label}</span>
       <span className="font-medium text-ink text-right">{value}</span>
     </div>
   );

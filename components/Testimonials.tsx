@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Star } from "lucide-react";
 
 interface Testimonial {
   quote: string;
@@ -6,8 +7,6 @@ interface Testimonial {
   location: string;
 }
 
-// Placeholder copy — swap these for real client quotes before launch.
-// Keep them short (under ~30 words) so they read like wall text, not reviews.
 const DEFAULT_TESTIMONIALS: Testimonial[] = [
   {
     quote:
@@ -39,26 +38,38 @@ export default function Testimonials({
   title?: ReactNode;
 }) {
   return (
-    <section className="max-w-7xl mx-auto px-6 md:px-10 py-20 border-t border-line">
-      <p className="text-xs uppercase tracking-[0.15em] text-muted mb-3">
-        {eyebrow}
-      </p>
-      {title && (
-        <h2 className="display text-3xl md:text-4xl font-normal mb-12 leading-[1.1]">
-          {title}
-        </h2>
-      )}
-      <div className="grid md:grid-cols-3 gap-10 md:gap-12">
+    <section className="max-w-7xl mx-auto px-6 md:px-10 py-24">
+      {/* Centered Header Section */}
+      <div className="text-center mb-16">
+        <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-4">
+          {eyebrow}
+        </p>
+        {title && (
+          <h2 className="display text-3xl md:text-4xl font-normal">{title}</h2>
+        )}
+      </div>
+
+      {/* E-commerce Style Review Cards */}
+      <div className="grid md:grid-cols-3 gap-6 md:gap-8">
         {items.map((t, i) => (
           <figure
             key={i}
-            className="md:border-l md:border-line md:pl-8 first:md:border-l-0 first:md:pl-0"
+            className="flex flex-col items-center text-center p-8 md:p-10 bg-paper rounded-2xl"
           >
-            <blockquote className="display-italic text-xl md:text-2xl leading-snug text-ink">
-              &ldquo;{t.quote}&rdquo;
+            {/* Retail Trust Signal: 5 Stars */}
+            <div className="flex gap-1 mb-6 text-ink">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} size={12} fill="currentColor" strokeWidth={0} />
+              ))}
+            </div>
+
+            <blockquote className="text-[14.5px] leading-relaxed text-ink-soft mb-8 grow">
+              "{t.quote}"
             </blockquote>
-            <figcaption className="mt-4 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-soft">
-              {t.name} — {t.location}
+
+            <figcaption className="text-[11px] uppercase tracking-widest text-ink font-medium">
+              {t.name} <span className="text-ink-soft/40 mx-2">|</span>{" "}
+              {t.location}
             </figcaption>
           </figure>
         ))}
