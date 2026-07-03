@@ -1,4 +1,4 @@
-import { getAllOriginals } from "@/lib/db/queries/originals";
+import { getAllOriginalsWithArtist } from "@/lib/db/queries/originals";
 import Link from "next/link";
 import { MessageCircle, Eye as EyeIcon, Handshake, Truck } from "lucide-react";
 import Testimonials from "@/components/Testimonials";
@@ -38,8 +38,19 @@ const ACQUISITION_STEPS = [
 ];
 
 export default async function OriginalsPage() {
-  const works = await getAllOriginals();
-  const artists = Array.from(new Set(works.map((w) => w.artist)));
+  const works = await getAllOriginalsWithArtist();
+
+  // Unique linked artists, deduped by slug, in first-appearance order.
+  const artistList = Array.from(
+    new Map(
+      works
+        .filter((w) => w.artistSlug)
+        .map((w) => [
+          w.artistSlug as string,
+          { name: w.artistName as string, slug: w.artistSlug as string },
+        ]),
+    ).values(),
+  );
 
   return (
     <div className="fade-in bg-cream">
@@ -93,7 +104,7 @@ export default async function OriginalsPage() {
               key={step.title}
               className="flex flex-col items-center text-center"
             >
-              <div className="w-12 h-12 rounded-full bg-paper flex items-center justify-center mb-6">
+              <div className="w-12 h-12 rounded-full bg-paper flex items-center justify-center mb-6 border border-line/40">
                 <step.icon size={20} strokeWidth={1.5} className="text-ink" />
               </div>
               <h3 className="display text-xl mb-3">{step.title}</h3>
@@ -105,23 +116,39 @@ export default async function OriginalsPage() {
         </div>
       </section>
 
-      {/* Represented artists - Clean comma list */}
-      {artists.length > 0 && (
-        <section className="max-w-4xl mx-auto px-6 md:px-10 pb-24 md:pb-32 text-center">
-          <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-6">
-            Represented Artists
-          </p>
-          <div className="flex flex-wrap justify-center gap-x-2 gap-y-2">
-            {artists.map((name, i) => (
-              <span key={name} className="text-xl md:text-2xl text-ink">
-                {name}
-                {i < artists.length - 1 ? (
-                  <span className="text-ink-soft mx-2">,</span>
-                ) : (
-                  ""
-                )}
-              </span>
-            ))}
+      {/* Represented artists - Full-width dedicated block */}
+      {artistList.length > 0 && (
+        <section className="w-full bg-paper border-y border-line py-20 md:py-28 text-center px-6 md:px-10 mb-20 md:mb-32">
+          <div className="max-w-4xl mx-auto">
+            <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-8">
+              Represented Artists
+            </p>
+            <div className="flex flex-wrap justify-center gap-x-2 gap-y-4 mb-12">
+              {artistList.map((artist, i) => (
+                <span
+                  key={artist.slug}
+                  className="display text-3xl md:text-4xl text-ink"
+                >
+                  <Link
+                    href={`/artists/${artist.slug}`}
+                    className="hover:text-ink-soft transition-colors"
+                  >
+                    {artist.name}
+                  </Link>
+                  {i < artistList.length - 1 ? (
+                    <span className="text-ink-soft mx-3">,</span>
+                  ) : (
+                    ""
+                  )}
+                </span>
+              ))}
+            </div>
+            <Link
+              href="/artists"
+              className="inline-block px-10 py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-bold hover:bg-ink-soft transition-colors"
+            >
+              Meet the artists
+            </Link>
           </div>
         </section>
       )}

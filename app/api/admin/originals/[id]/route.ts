@@ -34,6 +34,9 @@ export async function PATCH(
       ...(data.slug !== undefined && { slug: data.slug }),
       ...(data.title !== undefined && { title: data.title }),
       ...(data.artist !== undefined && { artist: data.artist }),
+      ...(data.artistId !== undefined && {
+        artistId: data.artistId === null ? null : Number(data.artistId),
+      }),
       ...(data.year !== undefined && { year: Number(data.year) }),
       ...(data.medium !== undefined && { medium: data.medium }),
 

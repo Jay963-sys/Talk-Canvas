@@ -48,6 +48,12 @@ export default function OriginalForm({ original }: { original?: Original }) {
   const [slug, setSlug] = useState(original?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [artist, setArtist] = useState(original?.artist ?? "");
+  const [artistId, setArtistId] = useState<string>(
+    original?.artistId != null ? String(original.artistId) : "",
+  );
+  const [artistOptions, setArtistOptions] = useState<
+    { id: number; name: string }[]
+  >([]);
   const [year, setYear] = useState(
     String(original?.year ?? new Date().getFullYear()),
   );
@@ -95,6 +101,20 @@ export default function OriginalForm({ original }: { original?: Original }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load artist options for the select
+  useEffect(() => {
+    let active = true;
+    fetch("/api/admin/artists")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: { id: number; name: string }[]) => {
+        if (active) setArtistOptions(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Auto-slug from title (only until user manually edits the slug)
   useEffect(() => {
     if (!slugTouched && title) {
@@ -128,6 +148,11 @@ export default function OriginalForm({ original }: { original?: Original }) {
       return;
     }
 
+    if (!artistId) {
+      setError("Please select an artist");
+      return;
+    }
+
     const { style: frameStyle, shape: frameShape } =
       frameTypeToStyle(frameType);
 
@@ -135,6 +160,7 @@ export default function OriginalForm({ original }: { original?: Original }) {
       title: title.trim(),
       slug: slug.trim(),
       artist: artist.trim(),
+      artistId: artistId ? Number(artistId) : null,
       year: parseInt(year),
       medium: medium.trim(),
       description: description.trim(),
@@ -220,13 +246,37 @@ export default function OriginalForm({ original }: { original?: Original }) {
             </div>
             <div>
               <label className="block text-sm text-ink-soft mb-2">Artist</label>
-              <input
+              <select
                 required
-                type="text"
-                value={artist}
-                onChange={(e) => setArtist(e.target.value)}
+                value={artistId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setArtistId(val);
+                  const match = artistOptions.find((a) => String(a.id) === val);
+                  if (match) setArtist(match.name);
+                }}
                 className={inputCls}
-              />
+              >
+                <option value="" disabled>
+                  {artistOptions.length ? "Select an artist…" : "Loading…"}
+                </option>
+                {artistOptions.map((a) => (
+                  <option key={a.id} value={String(a.id)}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted mt-1">
+                Not listed?{" "}
+                <a
+                  href="/admin/artists/new"
+                  target="_blank"
+                  className="underline hover:text-ink"
+                >
+                  Add an artist
+                </a>
+                .
+              </p>
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">

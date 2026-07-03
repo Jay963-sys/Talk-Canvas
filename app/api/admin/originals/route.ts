@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       slug: data.slug,
       title: data.title,
       artist: data.artist,
+      artistId: data.artistId != null ? Number(data.artistId) : null,
       year: Number(data.year),
       medium: data.medium,
       widthInches: Number(data.widthInches),

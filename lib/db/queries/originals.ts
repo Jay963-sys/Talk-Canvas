@@ -1,8 +1,29 @@
 import { db } from "../index";
-import { originals, type Original, type NewOriginal } from "../schema";
+import { originals, artists, type Original, type NewOriginal } from "../schema";
 import { eq, asc, desc } from "drizzle-orm";
 import { inArray, isNull, isNotNull } from "drizzle-orm";
 import { ilike, or } from "drizzle-orm";
+
+/**
+ * An original joined with its (nullable) artist row, flattened for display.
+ * artistName/artistSlug are null only if artistId is unset — the `artist`
+ * text field on Original is always present as a fallback byline.
+ */
+export type OriginalWithArtist = Original & {
+  artistName: string | null;
+  artistSlug: string | null;
+};
+
+function withArtist(row: {
+  originals: Original;
+  artists: { name: string; slug: string } | null;
+}): OriginalWithArtist {
+  return {
+    ...row.originals,
+    artistName: row.artists?.name ?? null,
+    artistSlug: row.artists?.slug ?? null,
+  };
+}
 
 /**
  * Used to validate cart items at checkout — fetch all referenced originals
@@ -66,6 +87,48 @@ export async function getOriginalBySlug(
     .where(eq(originals.slug, slug))
     .limit(1);
   return result[0];
+}
+
+// ── ARTIST-AWARE PUBLIC QUERIES ──────────────────────────────────
+// Additive variants that carry the joined artist byline. Existing callers
+// keep using the plain functions above; anything that needs to link to the
+// artist page uses these. leftJoin so an unlinked original still renders.
+
+export async function getAllOriginalsWithArtist(): Promise<
+  OriginalWithArtist[]
+> {
+  const rows = await db
+    .select({ originals, artists })
+    .from(originals)
+    .leftJoin(artists, eq(originals.artistId, artists.id))
+    .where(eq(originals.isVisible, true))
+    .orderBy(asc(originals.displayOrder), asc(originals.id));
+  return rows.map(withArtist);
+}
+
+export async function getOriginalBySlugWithArtist(
+  slug: string,
+): Promise<OriginalWithArtist | undefined> {
+  const rows = await db
+    .select({ originals, artists })
+    .from(originals)
+    .leftJoin(artists, eq(originals.artistId, artists.id))
+    .where(eq(originals.slug, slug))
+    .limit(1);
+  return rows[0] ? withArtist(rows[0]) : undefined;
+}
+
+/**
+ * All visible works for one artist — powers /artists/[slug].
+ */
+export async function getOriginalsByArtistId(
+  artistId: number,
+): Promise<Original[]> {
+  return await db
+    .select()
+    .from(originals)
+    .where(eq(originals.artistId, artistId))
+    .orderBy(asc(originals.displayOrder), asc(originals.id));
 }
 
 // ── ADMIN QUERIES (all originals, including hidden) ──────────────

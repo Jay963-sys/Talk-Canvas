@@ -6,6 +6,7 @@ import LogoutButton from "@/app/admin/LogoutButton";
 
 const links = [
   { href: "/admin", label: "Originals" },
+  { href: "/admin/artists", label: "Artists" },
   { href: "/admin/archive-prints", label: "Archive" },
   { href: "/admin/orders", label: "Orders" },
 ];

@@ -5,8 +5,10 @@ import Reveal from "@/components/Reveal";
 import Testimonials from "@/components/Testimonials";
 import RoomGallery from "@/components/prints/RoomGallery";
 import HomeProductGrid from "@/components/HomeProductGrid";
-import HeroSlideshow from "@/components/HeroSlideshow"; // Imported the new slideshow component
+import HeroSlideshow from "@/components/HeroSlideshow";
+import ArtistCard from "@/components/artists/ArtistCard"; // Imported ArtistCard
 import { getAllOriginals } from "@/lib/db/queries/originals";
+import { getAllArtists } from "@/lib/db/queries/artists"; // Assuming this is your query path
 import {
   getArchivePage,
   getArchiveCollections,
@@ -32,14 +34,17 @@ function thumb(url: string, width = 500): string {
 }
 
 export default async function Home() {
-  const [all, archivePreview, collections] = await Promise.all([
+  // Added artists to the parallel fetch
+  const [all, archivePreview, collections, artists] = await Promise.all([
     getAllOriginals(),
     getArchivePage(undefined, 16),
     getArchiveCollections(),
+    getAllArtists(),
   ]);
 
   const featuredPool = all.slice(0, 8);
   const archiveItems = archivePreview.items;
+  const featuredArtists = artists.slice(0, 4); // Only grab the first 4 to keep it clean
 
   const collectionTiles = await Promise.all(
     collections.map(async (name) => {
@@ -59,9 +64,7 @@ export default async function Home() {
 
       {/* Full-Bleed E-commerce Hero */}
       <section className="relative w-full h-[85vh] min-h-[600px] flex flex-col items-center justify-center text-center px-6 overflow-hidden">
-        {/* Replaced static image with dynamic slideshow */}
         <HeroSlideshow />
-
         <div className="relative z-10 flex flex-col items-center mt-12 w-full max-w-2xl">
           <p className="text-[11px] uppercase tracking-widest font-bold text-cream/90 mb-4 reveal-up drop-shadow-md">
             The Studio Collection
@@ -175,6 +178,41 @@ export default async function Home() {
           archiveItems={archiveItems.slice(0, 8)}
         />
       </Reveal>
+
+      {/* Meet the Artists */}
+      {featuredArtists.length > 0 && (
+        <Reveal>
+          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20 md:pb-32">
+            <div className="flex justify-between items-end mb-8 border-t border-line/40 pt-16 md:pt-20">
+              <h2 className="display text-3xl md:text-4xl font-normal">
+                Popular Artists
+              </h2>
+              <Link
+                href="/artists"
+                className="hidden md:flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink transition-colors"
+              >
+                Meet everyone <ArrowUpRight size={14} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+              {featuredArtists.map((artist) => (
+                <ArtistCard key={artist.slug} artist={artist} />
+              ))}
+            </div>
+
+            {/* Mobile-only CTA */}
+            <div className="mt-8 md:hidden text-center">
+              <Link
+                href="/artists"
+                className="inline-block px-8 py-4 border border-line text-[12px] uppercase tracking-widest font-bold hover:border-ink transition-colors w-full"
+              >
+                Meet all artists
+              </Link>
+            </div>
+          </section>
+        </Reveal>
+      )}
 
       {/* Testimonials (The Canvas Effect) */}
       <Reveal>

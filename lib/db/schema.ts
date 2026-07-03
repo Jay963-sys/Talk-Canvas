@@ -9,11 +9,50 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
+// ── ARTISTS ─────────────────────────────────────────────────────
+// Multi-artist catalog. The gallery's own work lives under a "house"
+// artist row ("Talk Canvas"); attributed third-party works get their
+// own rows. `featured` drives the curated "Popular Artists" surface.
+export const artists = pgTable("artists", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  bio: text("bio"),
+  portraitUrl: text("portrait_url"),
+  portraitPublicId: varchar("portrait_public_id", { length: 255 }),
+  location: varchar("location", { length: 255 }),
+  instagram: varchar("instagram", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+
+  // Curated "Popular Artists" set
+  featured: boolean("featured").default(false).notNull(),
+
+  displayOrder: integer("display_order").default(0).notNull(),
+  isVisible: boolean("is_visible").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Artist = typeof artists.$inferSelect;
+export type NewArtist = typeof artists.$inferInsert;
+
 export const originals = pgTable("originals", {
   id: serial("id").primaryKey(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
   title: varchar("title", { length: 255 }).notNull(),
+
+  // Legacy denormalized attribution. Kept as a display fallback and for
+  // full-text search; `artistId` is the source of truth for linking.
   artist: varchar("artist", { length: 255 }).notNull(),
+
+  // Structured FK into artists. Nullable so the initial ALTER applies to
+  // existing rows; the backfill script populates it. onDelete "set null"
+  // keeps a work intact if its artist row is later removed (the `artist`
+  // text snapshot above survives as the display fallback).
+  artistId: integer("artist_id").references(() => artists.id, {
+    onDelete: "set null",
+  }),
+
   year: integer("year").notNull(),
   medium: varchar("medium", { length: 255 }).notNull(),
 

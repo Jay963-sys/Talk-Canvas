@@ -1,4 +1,8 @@
-import { getAllOriginals, getOriginalBySlug } from "@/lib/db/queries/originals";
+import {
+  getAllOriginals,
+  getOriginalBySlug,
+  getOriginalBySlugWithArtist,
+} from "@/lib/db/queries/originals";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -56,7 +60,7 @@ export default async function WorkDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const work = await getOriginalBySlug(id);
+  const work = await getOriginalBySlugWithArtist(id);
   if (!work) notFound();
 
   return (
@@ -92,9 +96,19 @@ export default async function WorkDetail({
 
           {/* Product Details - E-commerce Hierarchy */}
           <div className="flex flex-col pt-4 md:pt-10">
-            {/* 1. Artist & Year */}
+            {/* 1. Artist & Year — artist links to their page when linked */}
             <p className="text-[12px] uppercase tracking-[0.15em] text-ink-soft font-medium mb-3">
-              {work.artist} — {work.year}
+              {work.artistSlug ? (
+                <Link
+                  href={`/artists/${work.artistSlug}`}
+                  className="hover:text-ink transition-colors"
+                >
+                  {work.artistName ?? work.artist}
+                </Link>
+              ) : (
+                work.artist
+              )}{" "}
+              — {work.year}
             </p>
 
             {/* 2. Title (Removed italics, made standard display font) */}

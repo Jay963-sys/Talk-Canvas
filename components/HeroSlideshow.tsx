@@ -30,7 +30,7 @@ export default function HeroSlideshow() {
         setPrevIndex(prev);
         return (prev + 1) % HERO_IMAGES.length;
       });
-    }, 5000);
+    }, 3000);
 
     return () => clearInterval(timer);
   }, []);
