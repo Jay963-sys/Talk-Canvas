@@ -6,6 +6,7 @@ import {
   Frame as FrameIcon,
   Eye,
   PackageCheck,
+  Check,
 } from "lucide-react";
 import WorkCard from "@/components/WorkCard";
 import Reveal from "@/components/Reveal";
@@ -37,32 +38,6 @@ function thumb(url: string, width = 500): string {
   return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
 }
 
-const HOW_IT_WORKS = [
-  {
-    icon: Upload,
-    title: "Choose a piece",
-    description:
-      "Upload your own design or pick one from our archive — no design experience needed.",
-  },
-  {
-    icon: FrameIcon,
-    title: "Pick frame & size",
-    description:
-      "Choose the frame style, colour, and dimensions that fit your space.",
-  },
-  {
-    icon: Eye,
-    title: "Preview in AR",
-    description:
-      "See it on your actual wall, true to scale, before you commit to buy.",
-  },
-  {
-    icon: PackageCheck,
-    title: "Framed & delivered",
-    description: "Arrives ready to hang — no separate framing required.",
-  },
-];
-
 export default async function Home() {
   const [all, archivePreview, collections] = await Promise.all([
     getAllOriginals(),
@@ -70,7 +45,7 @@ export default async function Home() {
     getArchiveCollections(),
   ]);
 
-  const featuredPool = all.slice(0, 12);
+  const featuredPool = all.slice(0, 8); // Trimmed to 8 for a cleaner grid
   const archiveItems = archivePreview.items;
 
   const collectionTiles = await Promise.all(
@@ -83,43 +58,42 @@ export default async function Home() {
   return (
     <div className="fade-in bg-cream">
       
-      {/* Promotional Top Banner */}
-      <div className="w-full bg-ink text-cream py-2.5 px-4 text-center">
+      {/* 1. Promotional Top Banner */}
+      <div className="w-full bg-ink text-cream py-3 px-4 text-center">
         <p className="text-[10px] uppercase tracking-widest font-medium">
           Shipping across the UK & Nigeria →
         </p>
       </div>
 
-      {/* Full-Bleed E-commerce Hero */}
+      {/* 2. Full-Bleed E-commerce Hero */}
       <section className="relative w-full h-[85vh] min-h-[600px] flex flex-col items-center justify-center text-center px-6 overflow-hidden">
-        {/* Swapped to /1.png so it works immediately without needing to upload a new asset */}
         <Image
           src="/1.png"
           alt="Curated Gallery Wall"
           fill
           priority
-          className="object-cover brightness-[0.65]" 
+          className="object-cover brightness-[0.70]" 
         />
-        <div className="relative z-10 flex flex-col items-center mt-12">
-          <p className="text-[11px] uppercase tracking-widest font-semibold text-cream/90 mb-4 reveal-up">
-            The Canvas Collection
+        <div className="relative z-10 flex flex-col items-center mt-12 w-full max-w-2xl">
+          <p className="text-[11px] uppercase tracking-widest font-bold text-cream/90 mb-4 reveal-up drop-shadow-md">
+            The Studio Collection
           </p>
-          <h1 className="display text-5xl md:text-7xl lg:text-8xl text-cream leading-tight mb-6 reveal-up" style={{ animationDelay: "100ms" }}>
+          <h1 className="display text-5xl md:text-7xl lg:text-8xl text-cream leading-tight mb-6 reveal-up drop-shadow-lg" style={{ animationDelay: "100ms" }}>
             Refresh your walls.
           </h1>
-          <p className="text-[15px] text-cream/90 max-w-md mx-auto mb-10 leading-relaxed reveal-up" style={{ animationDelay: "200ms" }}>
-            Curated contemporary originals and custom archival prints, framed and ready to hang.
+          <p className="text-[16px] text-cream/90 max-w-md mx-auto mb-10 leading-relaxed reveal-up drop-shadow-md" style={{ animationDelay: "200ms" }}>
+            Discover original paintings or frame a piece from our archive.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto reveal-up" style={{ animationDelay: "300ms" }}>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto reveal-up" style={{ animationDelay: "300ms" }}>
             <Link
               href="/originals"
-              className="w-full sm:w-auto px-10 py-4 bg-cream text-ink text-[12px] uppercase tracking-widest font-medium hover:bg-white transition-colors"
+              className="w-full sm:w-auto px-10 py-4 bg-cream text-ink text-[12px] uppercase tracking-widest font-bold hover:bg-white transition-colors"
             >
               Shop Originals
             </Link>
             <Link
               href="/prints"
-              className="w-full sm:w-auto px-10 py-4 border border-cream text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-cream/10 transition-colors"
+              className="w-full sm:w-auto px-10 py-4 border-2 border-cream text-cream text-[12px] uppercase tracking-widest font-bold hover:bg-cream/10 transition-colors"
             >
               Gallery Walls
             </Link>
@@ -127,81 +101,28 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Philosophy - Moved below the fold */}
-      <Reveal>
-        <section className="max-w-4xl mx-auto px-6 md:px-10 py-24 md:py-32 text-center">
-          <h2 className="display text-4xl md:text-5xl font-normal leading-tight mb-6">
-            A space for quiet looking.
-          </h2>
-          <p className="text-[15px] text-ink-soft max-w-2xl mx-auto leading-relaxed">
-            Talk Canvas Gallery represents painters working across Nigeria and the
-            diaspora. We also produce archival prints — from your own designs or
-            from our own archive, framed and ready to hang.
-          </p>
-        </section>
-      </Reveal>
-
-      {/* Two pillars - E-commerce Category Grid */}
-      <Reveal>
-        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20 md:pb-28">
-          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
-            <PillarCard
-              href="/originals"
-              title="Originals"
-              description="Hand-painted, one-of-one works from our roster of represented artists."
-              img="/home/4.jpg"
-            />
-            <PillarCard
-              href="/prints"
-              title="Editions"
-              description="Upload your own design, choose a frame and size, and preview it in AR."
-              img="/home/1.jpg"
-            />
-          </div>
-        </section>
-      </Reveal>
-
-      {/* Currently on view */}
-      <Reveal>
-        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24 md:pb-32">
-          <div className="flex flex-col items-center text-center mb-12">
-            <h2 className="display text-3xl md:text-4xl font-normal mb-4">
-              Currently on view
-            </h2>
-            <Link
-              href="/originals"
-              className="inline-flex items-center gap-2 text-[12px] uppercase tracking-widest text-ink-soft hover:text-ink pb-1 transition-colors font-medium"
-            >
-              Shop all works <ArrowUpRight size={16} strokeWidth={1.5} />
-            </Link>
-          </div>
-          <RotatingGrid
-            slotCount={4}
-            className="grid grid-cols-2 md:grid-cols-4 gap-6"
-            items={featuredPool.map((work, i) => (
-              <WorkCard key={work.id || i} work={work} />
-            ))}
-          />
-        </section>
-      </Reveal>
-
-      {/* Browse by collection - Restored and styled to match the new UI */}
+      {/* 3. Horizontal Collection Scroll (Gallery Walls) */}
       {collectionTiles.some((c) => c.item) && (
         <Reveal>
-          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24 md:pb-32">
-            <div className="flex flex-col items-center text-center mb-12">
-              <h2 className="display text-3xl md:text-4xl font-normal mb-4">
-                Browse by collection
+          <section className="py-16 md:py-24">
+            <div className="flex justify-between items-end px-6 md:px-10 mb-8 max-w-7xl mx-auto">
+              <h2 className="display text-3xl md:text-4xl font-normal">
+                Curated Collections
               </h2>
+              <Link href="/prints/archive" className="hidden md:flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink">
+                View All <ArrowUpRight size={14} />
+              </Link>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            
+            {/* Swipeable Container */}
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-6 md:px-10 pb-8 custom-scrollbar">
               {collectionTiles
                 .filter((c) => c.item)
                 .map(({ name, item }) => (
                   <Link
                     key={name}
                     href={`/prints/archive?collection=${encodeURIComponent(name)}`}
-                    className="group flex flex-col items-center text-center"
+                    className="group flex flex-col min-w-[280px] md:min-w-[320px] snap-start"
                   >
                     <div
                       className="overflow-hidden bg-paper w-full rounded-2xl mb-4 border border-line/40 transition-colors group-hover:border-ink/20"
@@ -210,14 +131,17 @@ export default async function Home() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={thumb(item!.imageUrl, 600)}
-                        alt=""
+                        alt={name}
                         loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                       />
                     </div>
-                    <span className="text-[12px] uppercase tracking-widest font-medium text-ink group-hover:text-ink-soft transition-colors">
-                      {name}
-                    </span>
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-[14px] font-medium text-ink">
+                        {name}
+                      </span>
+                      <ArrowUpRight size={16} className="text-ink-soft opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </Link>
                 ))}
             </div>
@@ -225,118 +149,100 @@ export default async function Home() {
         </Reveal>
       )}
 
-      {/* Archive preview */}
-      {archiveItems.length > 0 && (
-        <Reveal>
-          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24 md:pb-32">
-            <div className="flex flex-col items-center text-center mb-12">
-              <h2 className="display text-3xl md:text-4xl font-normal mb-4">
-                From the archive
-              </h2>
-              <Link
-                href="/prints/archive"
-                className="inline-flex items-center gap-2 text-[12px] uppercase tracking-widest text-ink-soft hover:text-ink pb-1 transition-colors font-medium"
-              >
-                View the archive <ArrowUpRight size={16} strokeWidth={1.5} />
-              </Link>
-            </div>
-
-            <RotatingGrid
-              slotCount={4}
-              items={archiveItems.map((item, i) => (
-                <Link
-                  key={item.imageUrl || i}
-                  href="/prints/archive"
-                  className="group block overflow-hidden bg-paper rounded-xl"
-                  style={{ aspectRatio: `4/5` }}
-                >
-                  <img
-                    src={thumb(item.imageUrl)}
-                    alt=""
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                  />
-                </Link>
-              ))}
-            />
-          </section>
-        </Reveal>
-      )}
-
-      {/* See it in your space */}
+      {/* 4. The Trust Bar */}
       <Reveal>
-        <div className="py-10">
-          <RoomGallery
-            eyebrow="From archive to home"
-            title="What it looks like once it's actually hung."
-          />
+        <div className="w-full border-y border-line bg-paper py-5">
+          <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center md:justify-between items-center gap-y-4 gap-x-8 text-[11px] uppercase tracking-widest text-ink font-medium">
+            <span className="flex items-center gap-2"><Check size={14} /> Museum Quality</span>
+            <span className="flex items-center gap-2"><Check size={14} /> AR Wall Previews</span>
+            <span className="flex items-center gap-2"><Check size={14} /> Framed & Ready to Hang</span>
+          </div>
         </div>
       </Reveal>
 
-      {/* How it works */}
+      {/* 5. Product Grid (Curated Walls) */}
       <Reveal>
-        <section className="max-w-7xl mx-auto px-6 md:px-10 py-24 md:py-32">
-          <div className="text-center mb-16">
-            <h2 className="display text-3xl md:text-4xl font-normal mb-4">
-              From archive to your wall.
+        <section className="max-w-7xl mx-auto px-6 md:px-10 py-20 md:py-32">
+          <div className="flex flex-col items-center text-center mb-12">
+            <h2 className="display text-4xl md:text-5xl font-normal mb-8 leading-tight">
+              Curated walls for <br className="hidden md:block" /> curated spaces.
             </h2>
-            <p className="text-ink-soft">
-              Four simple steps to elevate your space.
-            </p>
+            <div className="flex gap-8 border-b border-line">
+              <span className="pb-3 text-[12px] uppercase tracking-widest font-bold text-ink border-b-2 border-ink -mb-[2px]">
+                Featured Originals
+              </span>
+              <Link href="/prints/archive" className="pb-3 text-[12px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink transition-colors">
+                Archive Prints
+              </Link>
+            </div>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
-            {HOW_IT_WORKS.map((step, i) => (
-              <div
-                key={step.title}
-                className="flex flex-col items-center text-center"
-              >
-                <div className="w-12 h-12 rounded-full bg-paper flex items-center justify-center mb-6">
-                  <step.icon size={20} strokeWidth={1.5} className="text-ink" />
-                </div>
-                <h3 className="display text-xl mb-3">{step.title}</h3>
-                <p className="text-[14px] text-ink-soft leading-relaxed max-w-[200px]">
-                  {step.description}
-                </p>
-              </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
+            {featuredPool.map((work) => (
+              <WorkCard key={work.id} work={work} />
             ))}
+          </div>
+          
+          <div className="mt-16 text-center">
+            <Link href="/originals" className="inline-block px-8 py-4 border border-ink text-[12px] uppercase tracking-widest font-bold hover:bg-ink hover:text-cream transition-colors">
+              Explore All Art
+            </Link>
           </div>
         </section>
       </Reveal>
 
-      {/* Testimonials */}
+      {/* 6. Testimonials (The Kultured Effect) */}
       <Reveal>
-        <Testimonials title="What collectors are saying" />
+        <div className="bg-paper border-y border-line">
+          <Testimonials 
+            eyebrow="The Canvas Effect" 
+            title="Bringing emotion, identity, and cultural resonance into every room." 
+          />
+        </div>
       </Reveal>
-    </div>
-  );
-}
 
-function PillarCard({
-  href,
-  title,
-  description,
-  img,
-}: {
-  href: string;
-  title: string;
-  description: string;
-  img: string;
-}) {
-  return (
-    <Link href={href} className="group flex flex-col items-center text-center bg-paper rounded-2xl overflow-hidden border border-line/40 transition-colors hover:border-ink/20 pb-10">
-      <div className="relative w-full aspect-[4/5] overflow-hidden mb-8 bg-line/20">
-        <Image
-          src={img}
-          alt={title}
-          fill
-          sizes="(max-width: 768px) 100vw, 50vw"
-          className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
-        />
-      </div>
-      <h3 className="display text-3xl md:text-4xl font-normal mb-3 text-ink">{title}</h3>
-      <p className="text-[14px] text-ink-soft leading-relaxed max-w-sm px-6">
-        {description}
-      </p>
-    </Link>
+      {/* 7. Lifestyle (Kultured Homes) */}
+      <Reveal>
+        <div className="py-16 md:py-24">
+          <RoomGallery
+            eyebrow="Canvas Homes"
+            title="See it in your space, not just on an easel."
+          />
+        </div>
+      </Reveal>
+
+      {/* 8. Brand Philosophy Footer */}
+      <Reveal>
+        <section className="border-t border-line">
+          {/* Top Image Block */}
+          <div className="relative w-full h-[40vh] min-h-[300px] flex items-center justify-center text-center px-6 overflow-hidden bg-ink">
+            <Image
+              src="/home/4.jpg" // Swap with a studio/artist working shot if you have one
+              alt="Talk Canvas Studio"
+              fill
+              className="object-cover opacity-50"
+            />
+            <h2 className="relative z-10 display text-4xl md:text-6xl text-cream leading-tight max-w-3xl">
+              Painted by hand, printed with care. Made for you.
+            </h2>
+          </div>
+          
+          {/* Bottom Quote Block */}
+          <div className="bg-cream py-20 px-6 text-center">
+            <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-8">
+              Our Product Philosophy
+            </p>
+            <p className="display text-2xl md:text-3xl leading-relaxed text-ink max-w-3xl mx-auto mb-8">
+              "We believe a piece of art should mean something before it matches
+              your sofa. Every work here is chosen, not generated—shaping spaces that feel personal and deeply meaningful."
+            </p>
+            <Link href="/about" className="text-[12px] uppercase tracking-widest font-bold border-b border-ink pb-1 hover:text-ink-soft hover:border-ink-soft transition-colors">
+              Learn More
+            </Link>
+          </div>
+        </section>
+      </Reveal>
+
+    </div>
   );
 }
