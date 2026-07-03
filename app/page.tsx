@@ -92,9 +92,9 @@ export default async function Home() {
 
       {/* Full-Bleed E-commerce Hero */}
       <section className="relative w-full h-[85vh] min-h-[600px] flex flex-col items-center justify-center text-center px-6 overflow-hidden">
-        {/* Placeholder image path - update this to your best wide lifestyle shot */}
+        {/* Swapped to /1.png so it works immediately without needing to upload a new asset */}
         <Image
-          src="/home/hero-lifestyle.jpg"
+          src="/1.png"
           alt="Curated Gallery Wall"
           fill
           priority
@@ -184,6 +184,46 @@ export default async function Home() {
           />
         </section>
       </Reveal>
+
+      {/* Browse by collection - Restored and styled to match the new UI */}
+      {collectionTiles.some((c) => c.item) && (
+        <Reveal>
+          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24 md:pb-32">
+            <div className="flex flex-col items-center text-center mb-12">
+              <h2 className="display text-3xl md:text-4xl font-normal mb-4">
+                Browse by collection
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {collectionTiles
+                .filter((c) => c.item)
+                .map(({ name, item }) => (
+                  <Link
+                    key={name}
+                    href={`/prints/archive?collection=${encodeURIComponent(name)}`}
+                    className="group flex flex-col items-center text-center"
+                  >
+                    <div
+                      className="overflow-hidden bg-paper w-full rounded-2xl mb-4 border border-line/40 transition-colors group-hover:border-ink/20"
+                      style={{ aspectRatio: "4 / 5" }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={thumb(item!.imageUrl, 600)}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                      />
+                    </div>
+                    <span className="text-[12px] uppercase tracking-widest font-medium text-ink group-hover:text-ink-soft transition-colors">
+                      {name}
+                    </span>
+                  </Link>
+                ))}
+            </div>
+          </section>
+        </Reveal>
+      )}
 
       {/* Archive preview */}
       {archiveItems.length > 0 && (
@@ -300,4 +340,3 @@ function PillarCard({
     </Link>
   );
 }
-
