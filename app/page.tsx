@@ -1,18 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ArrowUpRight,
-  Upload,
-  Frame as FrameIcon,
-  Eye,
-  PackageCheck,
-  Check,
-} from "lucide-react";
-import WorkCard from "@/components/WorkCard";
+import { ArrowUpRight, Check } from "lucide-react";
 import Reveal from "@/components/Reveal";
 import Testimonials from "@/components/Testimonials";
 import RoomGallery from "@/components/prints/RoomGallery";
-import RotatingGrid from "@/components/RotatingGrid";
+import HomeProductGrid from "@/components/HomeProductGrid"; // Imported the new component
 import { getAllOriginals } from "@/lib/db/queries/originals";
 import {
   getArchivePage,
@@ -45,7 +37,7 @@ export default async function Home() {
     getArchiveCollections(),
   ]);
 
-  const featuredPool = all.slice(0, 8); // Trimmed to 8 for a cleaner grid
+  const featuredPool = all.slice(0, 8); 
   const archiveItems = archivePreview.items;
 
   const collectionTiles = await Promise.all(
@@ -58,14 +50,14 @@ export default async function Home() {
   return (
     <div className="fade-in bg-cream">
       
-      {/* 1. Promotional Top Banner */}
+      {/* Promotional Top Banner */}
       <div className="w-full bg-ink text-cream py-3 px-4 text-center">
         <p className="text-[10px] uppercase tracking-widest font-medium">
           Shipping across the UK & Nigeria →
         </p>
       </div>
 
-      {/* 2. Full-Bleed E-commerce Hero */}
+      {/* Full-Bleed E-commerce Hero */}
       <section className="relative w-full h-[85vh] min-h-[600px] flex flex-col items-center justify-center text-center px-6 overflow-hidden">
         <Image
           src="/1.png"
@@ -101,7 +93,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 3. Horizontal Collection Scroll (Gallery Walls) */}
+      {/* Horizontal Collection Scroll (Gallery Walls) */}
       {collectionTiles.some((c) => c.item) && (
         <Reveal>
           <section className="py-16 md:py-24">
@@ -114,7 +106,6 @@ export default async function Home() {
               </Link>
             </div>
             
-            {/* Swipeable Container */}
             <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-6 md:px-10 pb-8 custom-scrollbar">
               {collectionTiles
                 .filter((c) => c.item)
@@ -149,7 +140,7 @@ export default async function Home() {
         </Reveal>
       )}
 
-      {/* 4. The Trust Bar */}
+      {/* The Trust Bar */}
       <Reveal>
         <div className="w-full border-y border-line bg-paper py-5">
           <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center md:justify-between items-center gap-y-4 gap-x-8 text-[11px] uppercase tracking-widest text-ink font-medium">
@@ -160,38 +151,15 @@ export default async function Home() {
         </div>
       </Reveal>
 
-      {/* 5. Product Grid (Curated Walls) */}
+      {/* Product Grid - Replacing static grid with dynamic client component */}
       <Reveal>
-        <section className="max-w-7xl mx-auto px-6 md:px-10 py-20 md:py-32">
-          <div className="flex flex-col items-center text-center mb-12">
-            <h2 className="display text-4xl md:text-5xl font-normal mb-8 leading-tight">
-              Curated walls for <br className="hidden md:block" /> curated spaces.
-            </h2>
-            <div className="flex gap-8 border-b border-line">
-              <span className="pb-3 text-[12px] uppercase tracking-widest font-bold text-ink border-b-2 border-ink -mb-[2px]">
-                Featured Originals
-              </span>
-              <Link href="/prints/archive" className="pb-3 text-[12px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink transition-colors">
-                Archive Prints
-              </Link>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-            {featuredPool.map((work) => (
-              <WorkCard key={work.id} work={work} />
-            ))}
-          </div>
-          
-          <div className="mt-16 text-center">
-            <Link href="/originals" className="inline-block px-8 py-4 border border-ink text-[12px] uppercase tracking-widest font-bold hover:bg-ink hover:text-cream transition-colors">
-              Explore All Art
-            </Link>
-          </div>
-        </section>
+        <HomeProductGrid 
+          originals={featuredPool} 
+          archiveItems={archiveItems.slice(0, 8)} 
+        />
       </Reveal>
 
-      {/* 6. Testimonials (The Kultured Effect) */}
+      {/* Testimonials (The Kultured Effect) */}
       <Reveal>
         <div className="bg-paper border-y border-line">
           <Testimonials 
@@ -201,7 +169,7 @@ export default async function Home() {
         </div>
       </Reveal>
 
-      {/* 7. Lifestyle (Kultured Homes) */}
+      {/* Lifestyle (Kultured Homes) */}
       <Reveal>
         <div className="py-16 md:py-24">
           <RoomGallery
@@ -211,13 +179,12 @@ export default async function Home() {
         </div>
       </Reveal>
 
-      {/* 8. Brand Philosophy Footer */}
+      {/* Brand Philosophy Footer */}
       <Reveal>
         <section className="border-t border-line">
-          {/* Top Image Block */}
           <div className="relative w-full h-[40vh] min-h-[300px] flex items-center justify-center text-center px-6 overflow-hidden bg-ink">
             <Image
-              src="/home/4.jpg" // Swap with a studio/artist working shot if you have one
+              src="/home/4.jpg" 
               alt="Talk Canvas Studio"
               fill
               className="object-cover opacity-50"
@@ -227,7 +194,6 @@ export default async function Home() {
             </h2>
           </div>
           
-          {/* Bottom Quote Block */}
           <div className="bg-cream py-20 px-6 text-center">
             <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-8">
               Our Product Philosophy
