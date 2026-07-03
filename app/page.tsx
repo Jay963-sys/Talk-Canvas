@@ -4,7 +4,8 @@ import { ArrowUpRight, Check } from "lucide-react";
 import Reveal from "@/components/Reveal";
 import Testimonials from "@/components/Testimonials";
 import RoomGallery from "@/components/prints/RoomGallery";
-import HomeProductGrid from "@/components/HomeProductGrid"; // Imported the new component
+import HomeProductGrid from "@/components/HomeProductGrid";
+import HeroSlideshow from "@/components/HeroSlideshow"; // Imported the new slideshow component
 import { getAllOriginals } from "@/lib/db/queries/originals";
 import {
   getArchivePage,
@@ -37,7 +38,7 @@ export default async function Home() {
     getArchiveCollections(),
   ]);
 
-  const featuredPool = all.slice(0, 8); 
+  const featuredPool = all.slice(0, 8);
   const archiveItems = archivePreview.items;
 
   const collectionTiles = await Promise.all(
@@ -49,7 +50,6 @@ export default async function Home() {
 
   return (
     <div className="fade-in bg-cream">
-      
       {/* Promotional Top Banner */}
       <div className="w-full bg-ink text-cream py-3 px-4 text-center">
         <p className="text-[10px] uppercase tracking-widest font-medium">
@@ -59,24 +59,29 @@ export default async function Home() {
 
       {/* Full-Bleed E-commerce Hero */}
       <section className="relative w-full h-[85vh] min-h-[600px] flex flex-col items-center justify-center text-center px-6 overflow-hidden">
-        <Image
-          src="/1.png"
-          alt="Curated Gallery Wall"
-          fill
-          priority
-          className="object-cover brightness-[0.70]" 
-        />
+        {/* Replaced static image with dynamic slideshow */}
+        <HeroSlideshow />
+
         <div className="relative z-10 flex flex-col items-center mt-12 w-full max-w-2xl">
           <p className="text-[11px] uppercase tracking-widest font-bold text-cream/90 mb-4 reveal-up drop-shadow-md">
             The Studio Collection
           </p>
-          <h1 className="display text-5xl md:text-7xl lg:text-8xl text-cream leading-tight mb-6 reveal-up drop-shadow-lg" style={{ animationDelay: "100ms" }}>
+          <h1
+            className="display text-5xl md:text-7xl lg:text-8xl text-cream leading-tight mb-6 reveal-up drop-shadow-lg"
+            style={{ animationDelay: "100ms" }}
+          >
             Refresh your walls.
           </h1>
-          <p className="text-[16px] text-cream/90 max-w-md mx-auto mb-10 leading-relaxed reveal-up drop-shadow-md" style={{ animationDelay: "200ms" }}>
+          <p
+            className="text-[16px] text-cream/90 max-w-md mx-auto mb-10 leading-relaxed reveal-up drop-shadow-md"
+            style={{ animationDelay: "200ms" }}
+          >
             Discover original paintings or frame a piece from our archive.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto reveal-up" style={{ animationDelay: "300ms" }}>
+          <div
+            className="flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto reveal-up"
+            style={{ animationDelay: "300ms" }}
+          >
             <Link
               href="/originals"
               className="w-full sm:w-auto px-10 py-4 bg-cream text-ink text-[12px] uppercase tracking-widest font-bold hover:bg-white transition-colors"
@@ -101,11 +106,14 @@ export default async function Home() {
               <h2 className="display text-3xl md:text-4xl font-normal">
                 Curated Collections
               </h2>
-              <Link href="/prints/archive" className="hidden md:flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink">
+              <Link
+                href="/prints/archive"
+                className="hidden md:flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink"
+              >
                 View All <ArrowUpRight size={14} />
               </Link>
             </div>
-            
+
             <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-6 md:px-10 pb-8 custom-scrollbar">
               {collectionTiles
                 .filter((c) => c.item)
@@ -131,7 +139,10 @@ export default async function Home() {
                       <span className="text-[14px] font-medium text-ink">
                         {name}
                       </span>
-                      <ArrowUpRight size={16} className="text-ink-soft opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowUpRight
+                        size={16}
+                        className="text-ink-soft opacity-0 group-hover:opacity-100 transition-opacity"
+                      />
                     </div>
                   </Link>
                 ))}
@@ -144,32 +155,38 @@ export default async function Home() {
       <Reveal>
         <div className="w-full border-y border-line bg-paper py-5">
           <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center md:justify-between items-center gap-y-4 gap-x-8 text-[11px] uppercase tracking-widest text-ink font-medium">
-            <span className="flex items-center gap-2"><Check size={14} /> Museum Quality</span>
-            <span className="flex items-center gap-2"><Check size={14} /> AR Wall Previews</span>
-            <span className="flex items-center gap-2"><Check size={14} /> Framed & Ready to Hang</span>
+            <span className="flex items-center gap-2">
+              <Check size={14} /> Museum Quality
+            </span>
+            <span className="flex items-center gap-2">
+              <Check size={14} /> AR Wall Previews
+            </span>
+            <span className="flex items-center gap-2">
+              <Check size={14} /> Framed & Ready to Hang
+            </span>
           </div>
         </div>
       </Reveal>
 
-      {/* Product Grid - Replacing static grid with dynamic client component */}
+      {/* Product Grid */}
       <Reveal>
-        <HomeProductGrid 
-          originals={featuredPool} 
-          archiveItems={archiveItems.slice(0, 8)} 
+        <HomeProductGrid
+          originals={featuredPool}
+          archiveItems={archiveItems.slice(0, 8)}
         />
       </Reveal>
 
-      {/* Testimonials (The Kultured Effect) */}
+      {/* Testimonials (The Canvas Effect) */}
       <Reveal>
         <div className="bg-paper border-y border-line">
-          <Testimonials 
-            eyebrow="The Canvas Effect" 
-            title="Bringing emotion, identity, and cultural resonance into every room." 
+          <Testimonials
+            eyebrow="The Canvas Effect"
+            title="Bringing emotion, identity, and cultural resonance into every room."
           />
         </div>
       </Reveal>
 
-      {/* Lifestyle (Kultured Homes) */}
+      {/* Lifestyle (Canvas Homes) */}
       <Reveal>
         <div className="py-16 md:py-24">
           <RoomGallery
@@ -184,7 +201,7 @@ export default async function Home() {
         <section className="border-t border-line">
           <div className="relative w-full h-[40vh] min-h-[300px] flex items-center justify-center text-center px-6 overflow-hidden bg-ink">
             <Image
-              src="/home/4.jpg" 
+              src="/home/4.jpg"
               alt="Talk Canvas Studio"
               fill
               className="object-cover opacity-50"
@@ -193,22 +210,25 @@ export default async function Home() {
               Painted by hand, printed with care. Made for you.
             </h2>
           </div>
-          
+
           <div className="bg-cream py-20 px-6 text-center">
             <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-8">
               Our Product Philosophy
             </p>
             <p className="display text-2xl md:text-3xl leading-relaxed text-ink max-w-3xl mx-auto mb-8">
               "We believe a piece of art should mean something before it matches
-              your sofa. Every work here is chosen, not generated—shaping spaces that feel personal and deeply meaningful."
+              your sofa. Every work here is chosen, not generated—shaping spaces
+              that feel personal and deeply meaningful."
             </p>
-            <Link href="/about" className="text-[12px] uppercase tracking-widest font-bold border-b border-ink pb-1 hover:text-ink-soft hover:border-ink-soft transition-colors">
+            <Link
+              href="/about"
+              className="text-[12px] uppercase tracking-widest font-bold border-b border-ink pb-1 hover:text-ink-soft hover:border-ink-soft transition-colors"
+            >
               Learn More
             </Link>
           </div>
         </section>
       </Reveal>
-
     </div>
   );
 }
