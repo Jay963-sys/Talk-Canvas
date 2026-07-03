@@ -80,31 +80,71 @@ export default async function Home() {
     }),
   );
 
-  const artists = Array.from(new Set(all.map((w) => w.artist))).slice(0, 8);
-
   return (
     <div className="fade-in bg-cream">
-      {/* Hero - Centered and Minimalist */}
-      <section className="max-w-4xl mx-auto px-6 md:px-10 pt-24 md:pt-32 pb-16 md:pb-24 text-center">
-        <h1 className="display font-normal leading-tight text-5xl sm:text-6xl md:text-7xl mb-6">
-          <span className="reveal-up block" style={{ animationDelay: "60ms" }}>
-            A space for quiet looking.
-          </span>
-        </h1>
-        <p
-          className="reveal-up text-lg text-ink-soft max-w-2xl mx-auto leading-relaxed"
-          style={{ animationDelay: "220ms" }}
-        >
-          Talk Canvas Gallery represents painters working across Nigeria and the
-          diaspora. We also produce archival prints — from your own designs or
-          from our own archive, framed and ready to hang.
+      
+      {/* Promotional Top Banner */}
+      <div className="w-full bg-ink text-cream py-2.5 px-4 text-center">
+        <p className="text-[10px] uppercase tracking-widest font-medium">
+          Shipping across the UK & Nigeria →
         </p>
+      </div>
+
+      {/* Full-Bleed E-commerce Hero */}
+      <section className="relative w-full h-[85vh] min-h-[600px] flex flex-col items-center justify-center text-center px-6 overflow-hidden">
+        {/* Placeholder image path - update this to your best wide lifestyle shot */}
+        <Image
+          src="/home/hero-lifestyle.jpg"
+          alt="Curated Gallery Wall"
+          fill
+          priority
+          className="object-cover brightness-[0.65]" 
+        />
+        <div className="relative z-10 flex flex-col items-center mt-12">
+          <p className="text-[11px] uppercase tracking-widest font-semibold text-cream/90 mb-4 reveal-up">
+            The Canvas Collection
+          </p>
+          <h1 className="display text-5xl md:text-7xl lg:text-8xl text-cream leading-tight mb-6 reveal-up" style={{ animationDelay: "100ms" }}>
+            Refresh your walls.
+          </h1>
+          <p className="text-[15px] text-cream/90 max-w-md mx-auto mb-10 leading-relaxed reveal-up" style={{ animationDelay: "200ms" }}>
+            Curated contemporary originals and custom archival prints, framed and ready to hang.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto reveal-up" style={{ animationDelay: "300ms" }}>
+            <Link
+              href="/originals"
+              className="w-full sm:w-auto px-10 py-4 bg-cream text-ink text-[12px] uppercase tracking-widest font-medium hover:bg-white transition-colors"
+            >
+              Shop Originals
+            </Link>
+            <Link
+              href="/prints"
+              className="w-full sm:w-auto px-10 py-4 border border-cream text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-cream/10 transition-colors"
+            >
+              Gallery Walls
+            </Link>
+          </div>
+        </div>
       </section>
 
-      {/* Two pillars - Softened into clean category cards */}
+      {/* Philosophy - Moved below the fold */}
+      <Reveal>
+        <section className="max-w-4xl mx-auto px-6 md:px-10 py-24 md:py-32 text-center">
+          <h2 className="display text-4xl md:text-5xl font-normal leading-tight mb-6">
+            A space for quiet looking.
+          </h2>
+          <p className="text-[15px] text-ink-soft max-w-2xl mx-auto leading-relaxed">
+            Talk Canvas Gallery represents painters working across Nigeria and the
+            diaspora. We also produce archival prints — from your own designs or
+            from our own archive, framed and ready to hang.
+          </p>
+        </section>
+      </Reveal>
+
+      {/* Two pillars - E-commerce Category Grid */}
       <Reveal>
         <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20 md:pb-28">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12">
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
             <PillarCard
               href="/originals"
               title="Originals"
@@ -121,17 +161,41 @@ export default async function Home() {
         </section>
       </Reveal>
 
+      {/* Currently on view */}
+      <Reveal>
+        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24 md:pb-32">
+          <div className="flex flex-col items-center text-center mb-12">
+            <h2 className="display text-3xl md:text-4xl font-normal mb-4">
+              Currently on view
+            </h2>
+            <Link
+              href="/originals"
+              className="inline-flex items-center gap-2 text-[12px] uppercase tracking-widest text-ink-soft hover:text-ink pb-1 transition-colors font-medium"
+            >
+              Shop all works <ArrowUpRight size={16} strokeWidth={1.5} />
+            </Link>
+          </div>
+          <RotatingGrid
+            slotCount={4}
+            className="grid grid-cols-2 md:grid-cols-4 gap-6"
+            items={featuredPool.map((work, i) => (
+              <WorkCard key={work.id || i} work={work} />
+            ))}
+          />
+        </section>
+      </Reveal>
+
       {/* Archive preview */}
       {archiveItems.length > 0 && (
         <Reveal>
-          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-20 md:pb-28">
-            <div className="flex flex-col items-center text-center mb-10">
+          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24 md:pb-32">
+            <div className="flex flex-col items-center text-center mb-12">
               <h2 className="display text-3xl md:text-4xl font-normal mb-4">
                 From the archive
               </h2>
               <Link
                 href="/prints/archive"
-                className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink pb-1 border-b border-ink/20 hover:border-ink transition-colors"
+                className="inline-flex items-center gap-2 text-[12px] uppercase tracking-widest text-ink-soft hover:text-ink pb-1 transition-colors font-medium"
               >
                 View the archive <ArrowUpRight size={16} strokeWidth={1.5} />
               </Link>
@@ -144,56 +208,17 @@ export default async function Home() {
                   key={item.imageUrl || i}
                   href="/prints/archive"
                   className="group block overflow-hidden bg-paper rounded-xl"
-                  style={{ aspectRatio: `${item.width} / ${item.height}` }}
+                  style={{ aspectRatio: `4/5` }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={thumb(item.imageUrl)}
                     alt=""
                     loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                   />
                 </Link>
               ))}
             />
-          </section>
-        </Reveal>
-      )}
-
-      {/* Browse by collection */}
-      {collectionTiles.some((c) => c.item) && (
-        <Reveal>
-          <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24 md:pb-32 bg-paper py-20 rounded-3xl">
-            <h2 className="display text-3xl md:text-4xl font-normal mb-10 text-center">
-              Browse by collection
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {collectionTiles
-                .filter((c) => c.item)
-                .map(({ name, item }) => (
-                  <Link
-                    key={name}
-                    href={`/prints/archive?collection=${encodeURIComponent(name)}`}
-                    className="group flex flex-col items-center text-center"
-                  >
-                    <div
-                      className="overflow-hidden bg-cream w-full rounded-2xl mb-4"
-                      style={{ aspectRatio: "4 / 5" }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={thumb(item!.imageUrl, 600)}
-                        alt=""
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-ink group-hover:text-ink-soft transition-colors">
-                      {name}
-                    </span>
-                  </Link>
-                ))}
-            </div>
           </section>
         </Reveal>
       )}
@@ -208,7 +233,7 @@ export default async function Home() {
         </div>
       </Reveal>
 
-      {/* How it works - Centered and borderless */}
+      {/* How it works */}
       <Reveal>
         <section className="max-w-7xl mx-auto px-6 md:px-10 py-24 md:py-32">
           <div className="text-center mb-16">
@@ -238,43 +263,6 @@ export default async function Home() {
         </section>
       </Reveal>
 
-      {/* Philosophy pull-quote */}
-      <Reveal>
-        <section className="bg-ink text-cream py-24 md:py-32 text-center px-6 md:px-10 rounded-t-3xl">
-          <div className="max-w-4xl mx-auto">
-            <p className="display text-2xl md:text-4xl leading-[1.4] md:leading-[1.3] font-light">
-              We believe a piece of art should mean something before it matches
-              your sofa. Every work here is chosen, not generated — painted by
-              hand, printed with care, and shown to you exactly as it will hang.
-            </p>
-          </div>
-        </section>
-      </Reveal>
-
-      {/* Currently on view */}
-      <Reveal>
-        <section className="max-w-7xl mx-auto px-6 md:px-10 py-20 md:py-28">
-          <div className="flex flex-col items-center text-center mb-12">
-            <h2 className="display text-3xl md:text-4xl lg:text-5xl font-normal mb-4">
-              Currently on view
-            </h2>
-            <Link
-              href="/originals"
-              className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink pb-1 border-b border-ink/20 hover:border-ink transition-colors"
-            >
-              Shop all works <ArrowUpRight size={16} strokeWidth={1.5} />
-            </Link>
-          </div>
-          <RotatingGrid
-            slotCount={4}
-            className="grid grid-cols-2 md:grid-cols-4 gap-6"
-            items={featuredPool.map((work, i) => (
-              <WorkCard key={work.id || i} work={work} />
-            ))}
-          />
-        </section>
-      </Reveal>
-
       {/* Testimonials */}
       <Reveal>
         <Testimonials title="What collectors are saying" />
@@ -283,7 +271,6 @@ export default async function Home() {
   );
 }
 
-// Rewritten PillarCard to float freely without heavy background colors
 function PillarCard({
   href,
   title,
@@ -296,8 +283,8 @@ function PillarCard({
   img: string;
 }) {
   return (
-    <Link href={href} className="group flex flex-col items-center text-center">
-      <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden mb-6 bg-paper">
+    <Link href={href} className="group flex flex-col items-center text-center bg-paper rounded-2xl overflow-hidden border border-line/40 transition-colors hover:border-ink/20 pb-10">
+      <div className="relative w-full aspect-[4/5] overflow-hidden mb-8 bg-line/20">
         <Image
           src={img}
           alt={title}
@@ -306,10 +293,11 @@ function PillarCard({
           className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
         />
       </div>
-      <h3 className="display text-3xl md:text-4xl font-normal mb-3">{title}</h3>
-      <p className="text-[15px] text-ink-soft leading-relaxed max-w-sm">
+      <h3 className="display text-3xl md:text-4xl font-normal mb-3 text-ink">{title}</h3>
+      <p className="text-[14px] text-ink-soft leading-relaxed max-w-sm px-6">
         {description}
       </p>
     </Link>
   );
 }
+o
