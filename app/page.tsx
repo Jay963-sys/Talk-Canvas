@@ -300,4 +300,4 @@ function PillarCard({
     </Link>
   );
 }
-o
+
