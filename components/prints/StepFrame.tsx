@@ -8,10 +8,11 @@ import {
   type FrameShape,
   type Frame,
 } from "@/data/frames";
+import { isSizeAvailable } from "@/data/pricing";
 import { useConfigurator } from "@/lib/store";
 
 export default function StepFrame() {
-  const { frame, glass, setFrame, setGlass } = useConfigurator();
+  const { frame, glass, size, setFrame, setGlass, setSize } = useConfigurator();
 
   const [tab, setTab] = useState<FrameStyle>(frame?.style ?? "regular");
   const [shape, setShape] = useState<FrameShape>(
@@ -20,6 +21,24 @@ export default function StepFrame() {
 
   const regularFrames = FRAMES.filter((f) => f.style === "regular");
   const antiqueFrames = FRAMES.filter((f) => f.style === "antique");
+
+  // Select a frame, and drop the selected size if it isn't offered for this
+  // frame + glass combination (e.g. antique isn't priced for small sizes),
+  // so the summary never shows a size with a "—" total.
+  const selectFrame = (f: Frame) => {
+    setFrame(f);
+    if (size && !isSizeAvailable(size, f, glass)) {
+      setSize(null);
+    }
+  };
+
+  const toggleGlass = () => {
+    const next = !glass;
+    setGlass(next);
+    if (frame && size && !isSizeAvailable(size, frame, next)) {
+      setSize(null);
+    }
+  };
 
   const switchTab = (newTab: FrameStyle) => {
     setTab(newTab);
@@ -32,14 +51,9 @@ export default function StepFrame() {
       const swap = regularFrames.find(
         (f) => f.shape === newShape && f.color === frame.color,
       );
-      if (swap) setFrame(swap);
+      if (swap) selectFrame(swap);
     }
   };
-
-  const visibleColors =
-    tab === "regular"
-      ? regularFrames.filter((f) => f.shape === shape)
-      : antiqueFrames;
 
   return (
     <div className="fade-in">
@@ -83,19 +97,21 @@ export default function StepFrame() {
             Color
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-            {visibleColors.map((f) => (
-              <ColorTile
-                key={f.id}
-                frame={f}
-                selected={frame?.id === f.id}
-                onClick={() => setFrame(f)}
-              />
-            ))}
+            {regularFrames
+              .filter((f) => f.shape === shape)
+              .map((f) => (
+                <ColorTile
+                  key={f.id}
+                  frame={f}
+                  selected={frame?.id === f.id}
+                  onClick={() => selectFrame(f)}
+                />
+              ))}
           </div>
 
           {shape === "box" && (
             <button
-              onClick={() => setGlass(!glass)}
+              onClick={toggleGlass}
               className="flex items-center gap-3 text-[14px] text-ink"
             >
               <span
@@ -106,6 +122,35 @@ export default function StepFrame() {
               Add anti-reflective museum glass
             </button>
           )}
+        </>
+      )}
+
+      {tab === "antique" && (
+        <>
+          <p className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-5">
+            Color
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            {antiqueFrames.map((f) => (
+              <ColorTile
+                key={f.id}
+                frame={f}
+                selected={frame?.id === f.id}
+                onClick={() => selectFrame(f)}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3 text-[14px] text-ink-soft">
+            <span className="w-5 h-5 border border-ink bg-ink flex items-center justify-center">
+              <Check size={14} className="text-cream" />
+            </span>
+            Anti-reflective museum glass is included with every antique frame.
+          </div>
+
+          <p className="text-[12px] text-ink-soft mt-4">
+            Antique framing is available on medium sizes and larger.
+          </p>
         </>
       )}
     </div>

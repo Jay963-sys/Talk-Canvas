@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2 } from "lucide-react";
 
 export interface ArchiveItem {
@@ -9,6 +10,7 @@ export interface ArchiveItem {
   imagePublicId: string;
   width: number;
   height: number;
+  collection: string | null;
 }
 
 interface Props {
@@ -27,8 +29,22 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [collections, setCollections] = useState<string[]>([]);
+  const [collection, setCollection] = useState<string | null>(null);
+  // Ref mirror so `load` always reads the active filter without needing to be
+  // re-created (and re-subscribing the infinite-scroll observer) on change.
+  const collectionRef = useRef<string | null>(null);
+
   const sentinel = useRef<HTMLDivElement>(null);
   const firstLoad = useRef(true);
+
+  // Portal target — mount to <body> so the modal escapes any transformed /
+  // filtered ancestor (e.g. `.fade-in`, film-grain filter) that would
+  // otherwise trap `position: fixed` inside the page instead of the viewport.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const load = useCallback(
     async (cur?: number | null) => {
@@ -38,7 +54,12 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
       setError(null);
 
       try {
-        const qs = cur ? `?cursor=${cur}` : "";
+        const params = new URLSearchParams();
+        if (cur) params.set("cursor", String(cur));
+        if (collectionRef.current) {
+          params.set("collection", collectionRef.current);
+        }
+        const qs = params.toString() ? `?${params.toString()}` : "";
         const res = await fetch(`/api/archive-prints${qs}`);
 
         if (!res.ok) throw new Error("Couldn't load the archive");
@@ -59,6 +80,32 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
     },
     [loading],
   );
+
+  const switchCollection = (next: string | null) => {
+    if (next === collection) return;
+    collectionRef.current = next;
+    setCollection(next);
+    // Reset the feed and pull a fresh first page for the new filter.
+    setItems([]);
+    setCursor(null);
+    setLoadedOnce(false);
+    setError(null);
+    load(null);
+  };
+
+  // Load the collection list for the filter row (self-contained).
+  useEffect(() => {
+    let active = true;
+    fetch("/api/archive-collections")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: string[]) => {
+        if (active) setCollections(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -95,12 +142,23 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
     return () => observer.disconnect();
   }, [cursor, load]);
 
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/80">
+  if (!mounted) return null;
+
+  const modal = (
+    <div
+      className="fixed inset-x-0 top-0 z-[200] h-[100dvh] bg-black/80"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Choose a design from the archive"
+      onClick={(e) => {
+        // Click on the dark backdrop (not the panel) closes the modal.
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
         className="
           absolute inset-0
-          bg-cream
+          bg-cream text-ink
           flex flex-col
 
           md:inset-auto
@@ -127,13 +185,36 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
             </div>
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 hover:text-accent transition-colors"
+              aria-label="Close"
+              className="flex items-center justify-center w-10 h-10 rounded-full border border-line text-ink bg-cream hover:bg-ink hover:text-cream hover:border-ink transition-colors"
             >
-              <X size={22} strokeWidth={1.5} />
+              <X size={20} strokeWidth={1.5} />
             </button>
           </div>
         </div>
+
+        {/* Collection filter */}
+        {collections.length > 0 && (
+          <div className="shrink-0 border-b border-line bg-cream px-6 md:px-8">
+            <div className="flex gap-x-6 overflow-x-auto py-3 custom-scrollbar">
+              <FilterTab
+                label="All"
+                active={!collection}
+                onClick={() => switchCollection(null)}
+              />
+              {collections.map((c) => (
+                <FilterTab
+                  key={c}
+                  label={c}
+                  active={collection === c}
+                  onClick={() => switchCollection(c)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Scroll Area */}
         <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6">
@@ -147,7 +228,9 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
             <div className="py-20 text-center">
               <p className="display-italic text-2xl">Nothing here yet</p>
               <p className="text-sm text-muted mt-2">
-                New designs are added all the time — check back soon.
+                {collection
+                  ? "No designs in this collection yet."
+                  : "New designs are added all the time — check back soon."}
               </p>
             </div>
           )}
@@ -193,11 +276,12 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
           )}
         </div>
 
-        {/* Mobile close bar — pinned to bottom, never scrolls away */}
+        {/* Mobile close bar — pinned to bottom, clears browser chrome / safe area */}
         <div className="md:hidden shrink-0 border-t border-line bg-cream">
           <button
+            type="button"
             onClick={onClose}
-            className="flex items-center justify-center gap-2 w-full py-4 text-sm uppercase tracking-[0.12em] hover:text-accent transition-colors"
+            className="flex items-center justify-center gap-2 w-full pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm uppercase tracking-[0.12em] text-ink hover:bg-ink hover:text-cream transition-colors"
           >
             <X size={16} strokeWidth={1.5} />
             Close
@@ -205,5 +289,31 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
         </div>
       </div>
     </div>
+  );
+
+  return createPortal(modal, document.body);
+}
+
+function FilterTab({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`shrink-0 text-[12px] uppercase tracking-widest pb-1 border-b transition-colors ${
+        active
+          ? "text-ink border-ink font-medium"
+          : "text-ink-soft hover:text-ink border-transparent"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
