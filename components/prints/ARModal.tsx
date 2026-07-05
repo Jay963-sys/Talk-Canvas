@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Camera, Rotate3d } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useConfigurator } from "@/lib/store";
 import { generateFrameGLB } from "@/lib/frameModel";
 import { generateFrameUSDZ } from "@/lib/frameUSDZ";
@@ -10,28 +11,21 @@ import { formatInches } from "@/data/sizes";
 import ARViewer from "./ARViewer";
 import { USE_CUSTOM_USDZ } from "@/lib/arConfig";
 
-// Custom wall-anchored USDZ for iOS Quick Look.
-//
-// model-viewer's auto-generated USDZ ignores ar-placement and anchors to the
-// FLOOR; a custom USDZ is the only way to get true wall placement on iOS. But a
-// malformed USDZ breaks Quick Look (camera flicker-and-die), which is worse
-// than the floor fallback — so this stays OFF until a generated .usdz has been
-// validated with `xcrun usdchecker` and confirmed on a real iPhone.
-//
-// When false: behaves exactly like the GLB-only version (model-viewer makes its
-// own floor USDZ). When true: generates + caches a wall-anchored USDZ and only
-// then hands it to Quick Look. Flip to true once verified — and clear the cache
-// (`DELETE FROM ar_models;`) so existing rows (usdzUrl = null) regenerate.
-//
-// Tip: swap for `process.env.NEXT_PUBLIC_ENABLE_CUSTOM_USDZ === "true"` if you'd
-// rather toggle via env than edit code.
-
 function getDownsizedUrl(originalUrl: string, maxWidth = 1200): string {
   if (originalUrl.startsWith("blob:")) return originalUrl;
   return originalUrl.replace(
     "/upload/",
     `/upload/w_${maxWidth},c_fit,q_auto,f_jpg/`,
   );
+}
+
+function buildArUrl(glb: string, usdz: string | null, label: string) {
+  if (typeof window === "undefined") return null;
+  // A blob: GLB only exists in this browser tab — it can't be opened on a phone.
+  if (glb.startsWith("blob:")) return null;
+  const p = new URLSearchParams({ glb, label });
+  if (usdz) p.set("usdz", usdz);
+  return `${window.location.origin}/ar?${p.toString()}`;
 }
 
 export default function ARModal() {
@@ -88,7 +82,6 @@ export default function ARModal() {
               if (cached?.glbUrl) {
                 if (cancelled) return;
                 setModelUrl(cached.glbUrl);
-                // Only trust a cached USDZ when the custom path is enabled.
                 if (USE_CUSTOM_USDZ && cached.usdzUrl) {
                   setIosUrl(cached.usdzUrl);
                 }
@@ -115,8 +108,6 @@ export default function ARModal() {
         }
 
         // --- 3. Custom wall-anchored USDZ — best-effort, Cloudinary-hosted only.
-        // On ANY failure we leave iosUrl unset, so model-viewer falls back to
-        // its own floor USDZ and AR keeps working.
         let finalUsdzUrl: string | null = null;
         if (USE_CUSTOM_USDZ && !isLocalBlob) {
           try {
@@ -140,7 +131,7 @@ export default function ARModal() {
             body: JSON.stringify({
               cacheKey,
               glbUrl: finalGlbUrl,
-              usdzUrl: finalUsdzUrl, // null unless the custom USDZ succeeded
+              usdzUrl: finalUsdzUrl,
             }),
           }).catch(() => {});
         }
@@ -162,6 +153,8 @@ export default function ARModal() {
   if (!image || !frame || !size) return null;
 
   const glassNote = frame.shape === "box" && glass ? " · with glass" : "";
+  const label = `${frame.name}${glassNote} · ${formatInches(size)}`;
+  const arUrl = modelUrl ? buildArUrl(modelUrl, iosUrl, label) : null;
 
   return (
     <div
@@ -170,6 +163,7 @@ export default function ARModal() {
     >
       <button
         onClick={() => setArOpen(false)}
+        aria-label="Close"
         className="fixed top-6 right-6 text-cream p-2 z-10"
       >
         <X size={24} strokeWidth={1.5} />
@@ -177,12 +171,36 @@ export default function ARModal() {
 
       <div onClick={(e) => e.stopPropagation()} className="max-w-4xl w-full">
         <div className="relative aspect-[4/3] bg-[#1a1814] overflow-hidden">
+          {modelUrl && (
+            <div className="absolute top-4 left-4 z-10 inline-flex items-center gap-2 bg-black/40 backdrop-blur-sm text-cream/90 rounded-full px-3 py-1.5">
+              <Rotate3d size={14} strokeWidth={1.5} />
+              <span className="text-[11px] uppercase tracking-widest">
+                3D preview
+              </span>
+            </div>
+          )}
+
           {modelUrl ? (
             <ARViewer
               src={modelUrl}
               iosSrc={iosUrl ?? undefined}
               alt={`${frame.name}${glassNote}, ${formatInches(size)}`}
-            />
+            >
+              <button
+                slot="ar-button"
+                className="flex items-center gap-2 bg-cream text-ink text-[12px] uppercase tracking-widest font-medium px-5 py-3 rounded-full shadow-lg"
+                style={{
+                  position: "absolute",
+                  bottom: "16px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <Camera size={16} strokeWidth={1.5} />
+                See it on your wall
+              </button>
+            </ARViewer>
           ) : error ? (
             <div className="absolute inset-0 flex items-center justify-center text-cream/80 text-center px-6">
               <p>{error}</p>
@@ -198,7 +216,33 @@ export default function ARModal() {
             </div>
           )}
         </div>
-        {/* ... keeping your text elements below ... */}
+
+        <div className="mt-6 text-center text-cream">
+          <p className="display-italic text-2xl">{label}</p>
+          <p className="text-xs text-muted mt-3 max-w-md mx-auto leading-relaxed">
+            This is a 3D preview — drag to rotate and inspect the frame. On your
+            phone, tap{" "}
+            <span className="text-cream/90">See it on your wall</span> to place
+            it in your room at true size.
+          </p>
+
+          {/* Desktop: hand off to a phone via QR (skipped for un-uploaded
+              local previews, which can't be opened on another device). */}
+          {arUrl && (
+            <div className="hidden lg:flex items-center justify-center gap-4 mt-6">
+              <div className="bg-cream p-3 rounded-lg">
+                <QRCodeSVG value={arUrl} size={132} level="M" />
+              </div>
+              <div className="text-left max-w-[220px]">
+                <p className="text-sm text-cream">Prefer your phone?</p>
+                <p className="text-xs text-muted mt-1 leading-relaxed">
+                  Scan to open the wall preview on your phone — AR needs a phone
+                  camera.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

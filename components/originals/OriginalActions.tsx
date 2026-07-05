@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingBag, Box, Check } from "lucide-react";
+import { ShoppingBag, Camera, Check } from "lucide-react";
 import { useCart } from "@/lib/cartStore";
 import { originalFrameLabel, originalSizeLabel } from "@/lib/originalDisplay";
 import OriginalARModal from "./OriginalARModal";
@@ -54,8 +54,8 @@ export default function OriginalActions({ original }: { original: Original }) {
           onClick={() => setArOpen(true)}
           className="w-full flex items-center justify-center gap-2 py-3.5 border border-line text-ink text-[12px] uppercase tracking-widest font-medium hover:border-ink transition-colors"
         >
-          <Box size={16} strokeWidth={1.5} />
-          View in Space (AR)
+          <Camera size={16} strokeWidth={1.5} />
+          See it on your wall
         </button>
         {arOpen && (
           <OriginalARModal
@@ -87,14 +87,20 @@ export default function OriginalActions({ original }: { original: Original }) {
         )}
       </button>
 
-      {/* Secondary Action - Softened border that darkens on hover */}
-      <button
-        onClick={() => setArOpen(true)}
-        className="w-full flex items-center justify-center gap-2 py-4 border border-line text-ink text-[12px] uppercase tracking-widest font-medium hover:border-ink transition-colors"
-      >
-        <Box size={16} strokeWidth={1.5} />
-        View in Space (AR)
-      </button>
+      {/* Secondary Action — the AR entry. Camera icon + outcome-led label so it
+          reads as "use your real room", not another 3D toy. */}
+      <div>
+        <button
+          onClick={() => setArOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-4 border border-line text-ink text-[12px] uppercase tracking-widest font-medium hover:border-ink transition-colors"
+        >
+          <Camera size={16} strokeWidth={1.5} />
+          See it on your wall
+        </button>
+        <p className="text-[12px] text-ink-soft text-center mt-2">
+          Use your phone camera to place it in your room at true size.
+        </p>
+      </div>
 
       {arOpen && (
         <OriginalARModal original={original} onClose={() => setArOpen(false)} />
