@@ -79,8 +79,8 @@ export default function Footer() {
               Talk Canvas
             </Link>
             <p className="text-[13px] text-ink-soft leading-relaxed max-w-xs">
-              Connecting audiences with premium prints and original hand-painted
-              works. Designed in our studio, inspired by the world.
+              Creating beautiful art and interior décor solutions that transform
+              spaces and inspire creativity.
             </p>
           </div>
 
@@ -100,19 +100,25 @@ export default function Footer() {
                 href="/prints"
                 className="hover:text-ink transition-colors w-fit"
               >
-                Gallery Wall
+                Prints
               </Link>
               <Link
                 href="/prints/archive"
                 className="hover:text-ink transition-colors w-fit"
               >
-                Print Archive
+                Gallery Archive
               </Link>
               <Link
-                href="/search"
+                href="/prints/custom"
                 className="hover:text-ink transition-colors w-fit"
               >
-                Search
+                Custom Artwork
+              </Link>
+              <Link
+                href="/artists"
+                className="hover:text-ink transition-colors w-fit"
+              >
+                Artists
               </Link>
             </nav>
           </div>
@@ -161,10 +167,10 @@ export default function Footer() {
                 Lagos, Nigeria 105102
               </p>
               <a
-                href="mailto:hello@talkcanvas.gallery"
+                href="mailto:info@talkcanvas.com"
                 className="hover:text-ink transition-colors w-fit mt-2"
               >
-                hello@talkcanvas.gallery
+                info@talkcanvas.com
               </a>
             </address>
           </div>

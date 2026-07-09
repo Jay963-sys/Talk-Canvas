@@ -49,9 +49,22 @@ export default function AboutPage() {
           </h1>
           <div className="text-[16px] leading-relaxed text-ink-soft max-w-2xl mx-auto space-y-6">
             <p>
-              Talk Canvas Gallery opened in Lagos in 2021 with a simple
-              intention: to make room for contemporary West African painting,
-              and to let people live with it.
+              At Talk Canvas, we believe that walls should tell stories. We are
+              a premium canvas and framing company dedicated to transforming
+              spaces through high-quality art, frames, and custom canvas prints
+              that elevate interiors and inspire everyday living. With years of
+              experience in interior décor and wall styling, we have helped
+              thousands of homes, offices, hotels, and commercial spaces achieve
+              a refined and timeless look. Every piece we create is crafted with
+              attention to detail, durability, and aesthetic excellence—because
+              great art deserves to last. From modern canvas prints to elegant
+              frames and professional installations, our team combines
+              creativity, craftsmanship, and innovation to deliver results that
+              exceed expectations. We do not just sell frames; we curate
+              experiences that enhance the beauty and personality of every
+              space. Our commitment to quality, customer satisfaction, and
+              flawless installation has made us a trusted name in canvas and
+              framing solutions across Nigeria.
             </p>
             <p>
               Alongside our roster of represented artists, our print studio
@@ -94,11 +107,11 @@ export default function AboutPage() {
           <InfoBlock label="Contact">
             <div className="flex flex-col gap-6 w-full items-center">
               <a
-                href="mailto:hello@talkcanvas.gallery"
+                href="mailto:info@talkcanvas.com"
                 className="flex flex-col items-center gap-2 hover:text-ink text-ink-soft transition-colors"
               >
                 <Mail size={20} strokeWidth={1.5} className="text-ink" />
-                <span>hello@talkcanvas.gallery</span>
+                <span>info@talkcanvas.com</span>
               </a>
               <a
                 href="tel:+2349155328133"

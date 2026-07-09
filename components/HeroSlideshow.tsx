@@ -7,6 +7,8 @@ import Image from "next/image";
 // 'object-top' pins the top of the image to the top of the screen.
 // 'object-[center_20%]' means center horizontally, and push the focus 20% down from the top.
 const HERO_IMAGES = [
+  { src: "/10.jpg", position: "object-[center_80%]" },
+  { src: "/11.jpg", position: "object-[center_60%]" },
   { src: "/2.png", position: "object-[center_25%]" },
   { src: "/5.png", position: "object-top" },
   { src: "/8.png", position: "object-[center_40%]" },

@@ -6,7 +6,7 @@
 
 export const CONTACT = {
   // TODO: swap with real email
-  email: "hello@talkcanvasgallery.com",
+  email: "info@talkcanvas.com",
 
   // TODO: swap with real phone number
   phone: "+234 915 532 8133",
