@@ -41,11 +41,6 @@ export default function ArchiveCard({ item }: { item: ArchiveItem }) {
         height={item.height}
         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
       />
-      {item.collection && (
-        <span className="absolute bottom-2 left-2 bg-ink/80 text-cream text-[10px] uppercase tracking-[0.1em] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          {item.collection}
-        </span>
-      )}
     </button>
   );
 }
