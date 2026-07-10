@@ -141,14 +141,7 @@ export default function StepFrame() {
             ))}
           </div>
 
-          <div className="flex items-center gap-3 text-[14px] text-ink-soft">
-            <span className="w-5 h-5 border border-ink bg-ink flex items-center justify-center">
-              <Check size={14} className="text-cream" />
-            </span>
-            Anti-reflective museum glass is included with every antique frame.
-          </div>
-
-          <p className="text-[12px] text-ink-soft mt-4">
+          <p className="text-[12px] text-ink-soft">
             Antique framing is available on medium sizes and larger.
           </p>
         </>

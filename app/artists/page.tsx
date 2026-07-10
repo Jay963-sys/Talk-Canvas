@@ -33,9 +33,11 @@ export default async function ArtistsPage() {
           <h1 className="display text-4xl md:text-5xl lg:text-6xl font-normal leading-tight mb-6">
             Featured Artists
           </h1>
-          <p className="text-[15px] text-ink-soft leading-relaxed max-w-xl mx-auto">
-            The painters behind the work. Explore each artist and the original
-            pieces they have available.
+
+          <p className="text-[17px] text-ink-soft leading-relaxed max-w-xl mx-auto mt-2">
+            A curated selection of original works from our represented artists.
+            Each piece is one-of-one and comes with a certificate of
+            authenticity, confirming its provenance and value.
           </p>
         </div>
 

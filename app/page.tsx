@@ -58,7 +58,7 @@ export default async function Home() {
       {/* Promotional Top Banner */}
       <div className="w-full bg-ink text-cream py-3 px-4 text-center">
         <p className="text-[10px] uppercase tracking-widest font-medium">
-          Shipping across the UK & Nigeria →
+          Shipping across Nigeria →
         </p>
       </div>
 

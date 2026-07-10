@@ -141,10 +141,16 @@ export default function Footer() {
               >
                 Contact
               </Link>
-              <Link href="#" className="hover:text-ink transition-colors w-fit">
+              <Link
+                href="/shipping-returns"
+                className="hover:text-ink transition-colors w-fit"
+              >
                 Shipping & Returns
               </Link>
-              <Link href="#" className="hover:text-ink transition-colors w-fit">
+              <Link
+                href="/faq"
+                className="hover:text-ink transition-colors w-fit"
+              >
                 FAQs
               </Link>
             </nav>

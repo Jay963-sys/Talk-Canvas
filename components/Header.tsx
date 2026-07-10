@@ -98,7 +98,7 @@ export default function Header() {
         {/* Top Announcement Bar */}
         <div className="w-full bg-ink text-cream text-[10px] sm:text-[11px] uppercase tracking-[0.1em] text-center py-2.5 font-medium">
           <Link href="/about" className="hover:opacity-80 transition-opacity">
-            Shipping across the UK & Nigeria →
+            Shipping across Nigeria →
           </Link>
         </div>
 

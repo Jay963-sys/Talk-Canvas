@@ -1,6 +1,12 @@
 import { getAllOriginalsWithArtist } from "@/lib/db/queries/originals";
 import Link from "next/link";
-import { MessageCircle, Eye as EyeIcon, Handshake, Truck } from "lucide-react";
+import {
+  MessageCircle,
+  Eye as EyeIcon,
+  Handshake,
+  Truck,
+  ShoppingCart,
+} from "lucide-react";
 import Testimonials from "@/components/Testimonials";
 import WorkCard from "@/components/WorkCard";
 
@@ -15,19 +21,19 @@ const ACQUISITION_STEPS = [
   {
     icon: EyeIcon,
     title: "Browse the gallery",
-    description: "Each piece is one-of-one — what you see is what's available.",
+    description: "Each piece is one of one.  what you see is what's available.",
   },
   {
-    icon: MessageCircle,
-    title: "Enquire",
+    icon: ShoppingCart,
+    title: "Add to Cart",
     description:
-      "Reach out about a piece. We'll share more on the work and the artist.",
+      "Select the piece and add it straight to your cart, no waiting on a reply.",
   },
   {
     icon: Handshake,
-    title: "Secure it",
+    title: "Checkout",
     description:
-      "Once terms are agreed, the piece is marked sold and held for you.",
+      "Complete payment online and the piece is marked sold immediately",
   },
   {
     icon: Truck,
@@ -57,12 +63,11 @@ export default async function OriginalsPage() {
       {/* Hero Section - Centered and Clean */}
       <section className="max-w-4xl mx-auto px-6 md:px-10 pt-24 md:pt-32 pb-16 text-center">
         <h1 className="display text-5xl md:text-6xl lg:text-7xl font-normal leading-tight mb-6">
-          Shop Originals
+          Talk Canvas Originals
         </h1>
         <p className="text-lg text-ink-soft max-w-2xl mx-auto leading-relaxed">
-          A selection of recent work from our represented artists. Each piece is
-          one-of-one. For enquiries about acquisition, pricing, or studio
-          visits, please get in touch.
+          Original designs from our studio, hand-painted on canvas. the exact
+          piece you see can be recreated for your space, made to order.
         </p>
       </section>
 

@@ -51,12 +51,12 @@ export default function AboutPage() {
             <p>
               At Talk Canvas, we believe that walls should tell stories. We are
               a premium canvas and framing company dedicated to transforming
-              spaces through high-quality art, frames, and custom canvas prints
+              spaces through high quality art, frames, and custom canvas prints
               that elevate interiors and inspire everyday living. With years of
               experience in interior décor and wall styling, we have helped
               thousands of homes, offices, hotels, and commercial spaces achieve
               a refined and timeless look. Every piece we create is crafted with
-              attention to detail, durability, and aesthetic excellence—because
+              attention to detail, durability, and aesthetic excellence because
               great art deserves to last. From modern canvas prints to elegant
               frames and professional installations, our team combines
               creativity, craftsmanship, and innovation to deliver results that
@@ -68,8 +68,8 @@ export default function AboutPage() {
             </p>
             <p>
               Alongside our roster of represented artists, our print studio
-              offers high-quality framed reproductions of your own designs —
-              archival paper, hand-finished frames, and an AR tool that lets you
+              offers high quality framed reproductions of your own designs
+              archival paper, hand finished frames, and an AR tool that lets you
               see exactly how it'll sit on your wall before you buy.
             </p>
           </div>
@@ -97,9 +97,9 @@ export default function AboutPage() {
                 className="text-ink-soft mb-1"
               />
               <p>
-                Tues — Sat
+                Mon — Sat
                 <br />
-                11:00 AM — 6:00 PM
+                9:00 AM — 5:00 PM
               </p>
             </div>
           </InfoBlock>
