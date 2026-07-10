@@ -29,12 +29,6 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [collections, setCollections] = useState<string[]>([]);
-  const [collection, setCollection] = useState<string | null>(null);
-  // Ref mirror so `load` always reads the active filter without needing to be
-  // re-created (and re-subscribing the infinite-scroll observer) on change.
-  const collectionRef = useRef<string | null>(null);
-
   const sentinel = useRef<HTMLDivElement>(null);
   const firstLoad = useRef(true);
 
@@ -54,12 +48,7 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
       setError(null);
 
       try {
-        const params = new URLSearchParams();
-        if (cur) params.set("cursor", String(cur));
-        if (collectionRef.current) {
-          params.set("collection", collectionRef.current);
-        }
-        const qs = params.toString() ? `?${params.toString()}` : "";
+        const qs = cur ? `?cursor=${cur}` : "";
         const res = await fetch(`/api/archive-prints${qs}`);
 
         if (!res.ok) throw new Error("Couldn't load the archive");
@@ -80,32 +69,6 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
     },
     [loading],
   );
-
-  const switchCollection = (next: string | null) => {
-    if (next === collection) return;
-    collectionRef.current = next;
-    setCollection(next);
-    // Reset the feed and pull a fresh first page for the new filter.
-    setItems([]);
-    setCursor(null);
-    setLoadedOnce(false);
-    setError(null);
-    load(null);
-  };
-
-  // Load the collection list for the filter row (self-contained).
-  useEffect(() => {
-    let active = true;
-    fetch("/api/archive-collections")
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data: string[]) => {
-        if (active) setCollections(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -195,27 +158,6 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
           </div>
         </div>
 
-        {/* Collection filter */}
-        {collections.length > 0 && (
-          <div className="shrink-0 border-b border-line bg-cream px-6 md:px-8">
-            <div className="flex gap-x-6 overflow-x-auto py-3 custom-scrollbar">
-              <FilterTab
-                label="All"
-                active={!collection}
-                onClick={() => switchCollection(null)}
-              />
-              {collections.map((c) => (
-                <FilterTab
-                  key={c}
-                  label={c}
-                  active={collection === c}
-                  onClick={() => switchCollection(c)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Scroll Area */}
         <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6">
           {!loadedOnce && (
@@ -228,9 +170,7 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
             <div className="py-20 text-center">
               <p className="display-italic text-2xl">Nothing here yet</p>
               <p className="text-sm text-muted mt-2">
-                {collection
-                  ? "No designs in this collection yet."
-                  : "New designs are added all the time — check back soon."}
+                New designs are added all the time — check back soon.
               </p>
             </div>
           )}
@@ -292,28 +232,4 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
   );
 
   return createPortal(modal, document.body);
-}
-
-function FilterTab({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`shrink-0 text-[12px] uppercase tracking-widest pb-1 border-b transition-colors ${
-        active
-          ? "text-ink border-ink font-medium"
-          : "text-ink-soft hover:text-ink border-transparent"
-      }`}
-    >
-      {label}
-    </button>
-  );
 }
