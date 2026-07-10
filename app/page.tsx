@@ -55,12 +55,12 @@ export default async function Home() {
 
   return (
     <div className="fade-in bg-cream">
-      {/* Promotional Top Banner */}
+      {/* Promotional Top Banner 
       <div className="w-full bg-ink text-cream py-3 px-4 text-center">
         <p className="text-[10px] uppercase tracking-widest font-medium">
           Shipping across Nigeria →
         </p>
-      </div>
+      </div> */}
 
       {/* Full-Bleed E-commerce Hero */}
       <section className="relative w-full h-[85vh] min-h-[600px] flex flex-col items-center justify-center text-center px-6 overflow-hidden">
@@ -89,13 +89,13 @@ export default async function Home() {
               href="/originals"
               className="w-full sm:w-auto px-10 py-4 bg-cream text-ink text-[12px] uppercase tracking-widest font-bold hover:bg-white transition-colors"
             >
-              Shop Originals
+              Shop Original Paintings
             </Link>
             <Link
               href="/prints"
               className="w-full sm:w-auto px-10 py-4 border-2 border-cream text-cream text-[12px] uppercase tracking-widest font-bold hover:bg-cream/10 transition-colors"
             >
-              Gallery Walls
+             Shop Prints
             </Link>
           </div>
         </div>
