@@ -10,7 +10,7 @@ interface Testimonial {
 const DEFAULT_TESTIMONIALS: Testimonial[] = [
   {
     quote:
-      "I wasn't sure how the piece would feel in person — the AR preview meant there were no surprises when it arrived.",
+      "I wasn't sure how the piece would feel in person the AR preview meant there were no surprises when it arrived.",
     name: "Folake A.",
     location: "Lagos",
   },
