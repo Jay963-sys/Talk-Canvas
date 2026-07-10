@@ -30,7 +30,7 @@ const ACQUISITION_STEPS = [
     icon: ShoppingCart,
     title: "Add to cart",
     description:
-      "Select a design and add it straight to your cart — no waiting on a reply.",
+      "Select a design and add it straight to your cart no waiting on a reply.",
   },
   {
     icon: Paintbrush,
@@ -42,7 +42,7 @@ const ACQUISITION_STEPS = [
     icon: Truck,
     title: "Delivery or pickup",
     description:
-      "Repaints are produced in 5–7 working days, then delivered or ready to collect in Lagos.",
+      "Repaints are produced in 5–7 working days, then delivered or ready to collect in Our Studio in Lagos.",
   },
 ];
 
