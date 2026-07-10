@@ -92,6 +92,30 @@ export default async function OriginalsPage() {
         </div>
       </section>
 
+      {/* Cross-sell to the one-of-one line — reinforces the distinction */}
+      <section className="w-full bg-paper border-y border-line py-20 md:py-28 text-center px-6 md:px-10 mb-20 md:mb-32">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-6">
+            Looking for one-of-one?
+          </p>
+          <h2 className="display text-3xl md:text-4xl font-normal mb-5">
+            Original paintings by our represented artists
+          </h2>
+          <p className="text-[15px] text-ink-soft leading-relaxed mb-10">
+            Each is a single, hand-painted work once it sells, that exact piece
+            is gone for good. Explore the artists we represent and the pieces
+            they have available.
+          </p>
+          <Link
+            href="/artists"
+            className="inline-flex items-center gap-2 px-10 py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-bold hover:bg-ink-soft transition-colors"
+          >
+            Meet the artists
+            <ArrowRight size={15} strokeWidth={1.5} />
+          </Link>
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24 md:pb-32">
         <div className="text-center mb-16">
@@ -117,30 +141,6 @@ export default async function OriginalsPage() {
               </p>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* Cross-sell to the one-of-one line — reinforces the distinction */}
-      <section className="w-full bg-paper border-y border-line py-20 md:py-28 text-center px-6 md:px-10 mb-20 md:mb-32">
-        <div className="max-w-2xl mx-auto">
-          <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-6">
-            Looking for one-of-one?
-          </p>
-          <h2 className="display text-3xl md:text-4xl font-normal mb-5">
-            Original paintings by our represented artists
-          </h2>
-          <p className="text-[15px] text-ink-soft leading-relaxed mb-10">
-            Each is a single, hand-painted work once it sells, that exact
-            piece is gone for good. Explore the artists we represent and the
-            pieces they have available.
-          </p>
-          <Link
-            href="/artists"
-            className="inline-flex items-center gap-2 px-10 py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-bold hover:bg-ink-soft transition-colors"
-          >
-            Meet the artists
-            <ArrowRight size={15} strokeWidth={1.5} />
-          </Link>
         </div>
       </section>
 
