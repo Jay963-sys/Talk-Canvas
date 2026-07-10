@@ -9,11 +9,19 @@ import clsx from "clsx";
 import { useCart } from "@/lib/cartStore";
 
 const NAV = [
-  { href: "/originals", label: "Shop" },
-  { href: "/prints", label: "Gallery Wall" },
+  { href: "/", label: "Home" },
+  { href: "/originals", label: "Originals" },
+  { href: "/prints", label: "Prints" },
   { href: "/about", label: "About us" },
   { href: "/contact", label: "Contact us" },
 ];
+
+// Home must match exactly — every path startsWith("/"), so the naive check
+// would light up Home as active on every page.
+function isActivePath(href: string, pathname: string | null): boolean {
+  if (href === "/") return pathname === "/";
+  return !!pathname?.startsWith(href);
+}
 
 // Animation variants for the mobile menu
 const menuVars: Variants = {
@@ -78,7 +86,6 @@ export default function Header() {
     const query = formData.get("q");
     if (query) {
       router.push(`/search?q=${encodeURIComponent(query.toString())}`);
-      console.log("Ready to route to search with query:", query);
       setSearchOpen(false);
     }
   };
@@ -189,7 +196,7 @@ export default function Header() {
                 href={item.href}
                 className={clsx(
                   "relative transition-colors hover:text-ink-soft",
-                  pathname?.startsWith(item.href)
+                  isActivePath(item.href, pathname)
                     ? "text-ink border-b border-ink/30 pb-0.5"
                     : "text-ink",
                 )}
@@ -246,7 +253,7 @@ export default function Header() {
           >
             <div className="flex flex-col gap-8 -mt-20">
               {NAV.map((item) => {
-                const isActive = pathname?.startsWith(item.href);
+                const isActive = isActivePath(item.href, pathname);
 
                 return (
                   <motion.div key={item.href} variants={linkVars}>
