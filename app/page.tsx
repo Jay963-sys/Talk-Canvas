@@ -6,13 +6,10 @@ import Testimonials from "@/components/Testimonials";
 import RoomGallery from "@/components/prints/RoomGallery";
 import HomeProductGrid from "@/components/HomeProductGrid";
 import HeroSlideshow from "@/components/HeroSlideshow";
-import ArtistCard from "@/components/artists/ArtistCard"; // Imported ArtistCard
+import ArtistCard from "@/components/artists/ArtistCard";
 import { getAllOriginals } from "@/lib/db/queries/originals";
-import { getAllArtists } from "@/lib/db/queries/artists"; // Assuming this is your query path
-import {
-  getArchivePage,
-  getArchiveCollections,
-} from "@/lib/db/queries/archivePrints";
+import { getAllArtists } from "@/lib/db/queries/artists";
+import { getArchivePage } from "@/lib/db/queries/archivePrints";
 import { Metadata } from "next";
 
 export const revalidate = 60;
@@ -34,34 +31,20 @@ function thumb(url: string, width = 500): string {
 }
 
 export default async function Home() {
-  // Added artists to the parallel fetch
-  const [all, archivePreview, collections, artists] = await Promise.all([
+  const [all, archivePreview, artists] = await Promise.all([
     getAllOriginals(),
     getArchivePage(undefined, 16),
-    getArchiveCollections(),
     getAllArtists(),
   ]);
 
   const featuredPool = all.slice(0, 8);
   const archiveItems = archivePreview.items;
-  const featuredArtists = artists.slice(0, 4); // Only grab the first 4 to keep it clean
-
-  const collectionTiles = await Promise.all(
-    collections.map(async (name) => {
-      const page = await getArchivePage(undefined, 1, name);
-      return { name, item: page.items[0] ?? null };
-    }),
-  );
+  // Grid uses the first 8; the archive rail takes the next 8 so nothing repeats.
+  const archiveRail = archiveItems.slice(8, 16);
+  const featuredArtists = artists.slice(0, 4);
 
   return (
     <div className="fade-in bg-cream">
-      {/* Promotional Top Banner 
-      <div className="w-full bg-ink text-cream py-3 px-4 text-center">
-        <p className="text-[10px] uppercase tracking-widest font-medium">
-          Shipping across Nigeria →
-        </p>
-      </div> */}
-
       {/* Full-Bleed E-commerce Hero */}
       <section className="relative w-full h-[85vh] min-h-[600px] flex flex-col items-center justify-center text-center px-6 overflow-hidden">
         <HeroSlideshow />
@@ -95,60 +78,76 @@ export default async function Home() {
               href="/prints"
               className="w-full sm:w-auto px-10 py-4 border-2 border-cream text-cream text-[12px] uppercase tracking-widest font-bold hover:bg-cream/10 transition-colors"
             >
-             Shop Prints
+              Shop Prints
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Horizontal Collection Scroll (Gallery Walls) */}
-      {collectionTiles.some((c) => c.item) && (
+      {/* From the Archive — horizontal rail (was Curated Collections) */}
+      {archiveRail.length > 0 && (
         <Reveal>
           <section className="py-16 md:py-24">
             <div className="flex justify-between items-end px-6 md:px-10 mb-8 max-w-7xl mx-auto">
-              <h2 className="display text-3xl md:text-4xl font-normal">
-                Curated Collections
-              </h2>
+              <div>
+                <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-2">
+                  The Archive
+                </p>
+                <h2 className="display text-3xl md:text-4xl font-normal">
+                  Hundreds of designs, ready to frame
+                </h2>
+              </div>
               <Link
                 href="/prints/archive"
                 className="hidden md:flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink"
               >
-                View All <ArrowUpRight size={14} />
+                Browse all <ArrowUpRight size={14} />
               </Link>
             </div>
 
             <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-6 md:px-10 pb-8 custom-scrollbar">
-              {collectionTiles
-                .filter((c) => c.item)
-                .map(({ name, item }) => (
-                  <Link
-                    key={name}
-                    href={`/prints/archive?collection=${encodeURIComponent(name)}`}
-                    className="group flex flex-col min-w-[280px] md:min-w-[320px] snap-start"
+              {archiveRail.map((item) => (
+                <Link
+                  key={item.id}
+                  href="/prints/archive"
+                  className="group flex flex-col min-w-[240px] md:min-w-[280px] snap-start"
+                >
+                  <div
+                    className="overflow-hidden bg-paper w-full rounded-2xl border border-line/40 transition-colors group-hover:border-ink/20"
+                    style={{ aspectRatio: "4 / 5" }}
                   >
-                    <div
-                      className="overflow-hidden bg-paper w-full rounded-2xl mb-4 border border-line/40 transition-colors group-hover:border-ink/20"
-                      style={{ aspectRatio: "4 / 5" }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={thumb(item!.imageUrl, 600)}
-                        alt={name}
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                      />
-                    </div>
-                    <div className="flex justify-between items-center px-1">
-                      <span className="text-[14px] font-medium text-ink">
-                        {name}
-                      </span>
-                      <ArrowUpRight
-                        size={16}
-                        className="text-ink-soft opacity-0 group-hover:opacity-100 transition-opacity"
-                      />
-                    </div>
-                  </Link>
-                ))}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={thumb(item.imageUrl, 600)}
+                      alt=""
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                    />
+                  </div>
+                </Link>
+              ))}
+
+              {/* Trailing CTA tile */}
+              <Link
+                href="/prints/archive"
+                className="group flex flex-col items-center justify-center text-center min-w-[240px] md:min-w-[280px] snap-start rounded-2xl border border-line/40 bg-paper hover:border-ink/20 transition-colors"
+                style={{ aspectRatio: "4 / 5" }}
+              >
+                <span className="text-[12px] uppercase tracking-widest font-bold text-ink flex items-center gap-2">
+                  View the full archive
+                  <ArrowUpRight size={16} />
+                </span>
+              </Link>
+            </div>
+
+            {/* Mobile-only browse link */}
+            <div className="px-6 md:hidden">
+              <Link
+                href="/prints/archive"
+                className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink"
+              >
+                Browse all <ArrowUpRight size={14} />
+              </Link>
             </div>
           </section>
         </Reveal>
