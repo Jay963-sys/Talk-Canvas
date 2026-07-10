@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import {
-  getArchivePage,
-  getArchiveCollections,
-} from "@/lib/db/queries/archivePrints";
+import { getArchivePage } from "@/lib/db/queries/archivePrints";
 import ArchiveGrid, { type ArchiveItem } from "@/components/prints/ArchiveGrid";
 import Testimonials from "@/components/Testimonials";
 
@@ -15,17 +12,8 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-interface Props {
-  searchParams: Promise<{ collection?: string }>;
-}
-
-export default async function ArchivePage({ searchParams }: Props) {
-  const { collection } = await searchParams;
-
-  const [{ items, nextCursor }, collections] = await Promise.all([
-    getArchivePage(undefined, undefined, collection),
-    getArchiveCollections(),
-  ]);
+export default async function ArchivePage() {
+  const { items, nextCursor } = await getArchivePage();
 
   const initialItems: ArchiveItem[] = items.map((i) => ({
     id: i.id,
@@ -70,42 +58,8 @@ export default async function ArchivePage({ searchParams }: Props) {
           </p>
         </div>
 
-        {/* Collection Filters - Centered, stripped of accent colors */}
-        {collections.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 mb-16 border-b border-line pb-4 max-w-4xl mx-auto">
-            <Link
-              href="/prints/archive"
-              className={`text-[13px] uppercase tracking-widest pb-2 transition-colors ${
-                !collection
-                  ? "text-ink border-b border-ink font-medium"
-                  : "text-ink-soft hover:text-ink border-b border-transparent"
-              }`}
-            >
-              All
-            </Link>
-            {collections.map((c) => (
-              <Link
-                key={c}
-                href={`/prints/archive?collection=${encodeURIComponent(c)}`}
-                className={`text-[13px] uppercase tracking-widest pb-2 transition-colors ${
-                  collection === c
-                    ? "text-ink border-b border-ink font-medium"
-                    : "text-ink-soft hover:text-ink border-b border-transparent"
-                }`}
-              >
-                {c}
-              </Link>
-            ))}
-          </div>
-        )}
-
         {/* The Grid Component */}
-        <ArchiveGrid
-          key={collection ?? "all"}
-          initialItems={initialItems}
-          initialCursor={nextCursor}
-          collection={collection}
-        />
+        <ArchiveGrid initialItems={initialItems} initialCursor={nextCursor} />
 
         {/* Testimonials */}
         <div className="mt-32">
