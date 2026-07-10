@@ -85,7 +85,7 @@ export default async function OriginalsPage() {
             <p className="display text-2xl md:text-4xl leading-[1.4] md:leading-[1.3] font-light">
               A print is a machine reproduction. A Talk Canvas Original is the
               same design hand-painted onto canvas, brushstroke by brushstroke,
-              made to order for your wall — the depth and texture of real paint,
+              made to order for your wall the depth and texture of real paint,
               without the one-of-one price.
             </p>
           </div>
@@ -130,7 +130,7 @@ export default async function OriginalsPage() {
             Original paintings by our represented artists
           </h2>
           <p className="text-[15px] text-ink-soft leading-relaxed mb-10">
-            Each is a single, hand-painted work — once it sells, that exact
+            Each is a single, hand-painted work once it sells, that exact
             piece is gone for good. Explore the artists we represent and the
             pieces they have available.
           </p>
