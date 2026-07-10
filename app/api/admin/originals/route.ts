@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
 
       // Status Fields
       soldAt: data.soldAt ? new Date(data.soldAt) : null,
+      oneOfOne: Boolean(data.oneOfOne),
       displayOrder: Number(data.displayOrder) || 0,
       isVisible: data.isVisible ?? true,
     });

@@ -65,6 +65,7 @@ export async function PATCH(
       ...(data.soldAt !== undefined && {
         soldAt: data.soldAt ? new Date(data.soldAt) : null,
       }),
+      ...(data.oneOfOne !== undefined && { oneOfOne: Boolean(data.oneOfOne) }),
       ...(data.displayOrder !== undefined && {
         displayOrder: Number(data.displayOrder),
       }),

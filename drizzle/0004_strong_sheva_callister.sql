@@ -1,0 +1,1 @@
+ALTER TABLE "originals" ADD COLUMN "one_of_one" boolean DEFAULT false NOT NULL;

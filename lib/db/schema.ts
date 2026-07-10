@@ -76,6 +76,12 @@ export const originals = pgTable("originals", {
   // One-of-one sold tracking
   soldAt: timestamp("sold_at"),
 
+  // Product-line discriminator. Artist works are one-of-one — marked sold once
+  // purchased and gone for good. Talk Canvas Originals are recreatable house
+  // designs, repainted to order, and never sell out. Drives the mark-sold
+  // logic in fulfillment and any "Sold Out" state in the UI.
+  oneOfOne: boolean("one_of_one").default(false).notNull(),
+
   displayOrder: integer("display_order").default(0).notNull(),
   isVisible: boolean("is_visible").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

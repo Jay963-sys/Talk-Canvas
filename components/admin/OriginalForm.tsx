@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ImageUploader from "@/components/admin/ImageUploader";
 import { slugify } from "@/lib/utils";
+import { HOUSE_ARTIST_SLUG } from "@/lib/constants";
 import type { Original } from "@/lib/db/schema";
 
 type FrameType = "floating" | "box" | "antique";
@@ -52,7 +53,7 @@ export default function OriginalForm({ original }: { original?: Original }) {
     original?.artistId != null ? String(original.artistId) : "",
   );
   const [artistOptions, setArtistOptions] = useState<
-    { id: number; name: string }[]
+    { id: number; name: string; slug: string }[]
   >([]);
   const [year, setYear] = useState(
     String(original?.year ?? new Date().getFullYear()),
@@ -92,6 +93,11 @@ export default function OriginalForm({ original }: { original?: Original }) {
 
   // Status
   const [isSold, setIsSold] = useState(!!original?.soldAt);
+  // One-of-one → marked sold once purchased. Recreatable house designs are
+  // false. Defaults from the selected artist (real artist → true) but the
+  // admin can override.
+  const [oneOfOne, setOneOfOne] = useState(original?.oneOfOne ?? false);
+  const oneOfOneTouched = useRef(isEdit);
   const [isVisible, setIsVisible] = useState(original?.isVisible ?? true);
   const [displayOrder, setDisplayOrder] = useState(
     String(original?.displayOrder ?? 0),
@@ -106,8 +112,14 @@ export default function OriginalForm({ original }: { original?: Original }) {
     let active = true;
     fetch("/api/admin/artists")
       .then((r) => (r.ok ? r.json() : []))
-      .then((data: { id: number; name: string }[]) => {
-        if (active) setArtistOptions(Array.isArray(data) ? data : []);
+      .then((data: { id: number; name: string; slug: string }[]) => {
+        if (active) {
+          setArtistOptions(
+            Array.isArray(data)
+              ? data.map((a) => ({ id: a.id, name: a.name, slug: a.slug }))
+              : [],
+          );
+        }
       })
       .catch(() => {});
     return () => {
@@ -127,7 +139,8 @@ export default function OriginalForm({ original }: { original?: Original }) {
     if (frameType === "floating") {
       setGlass(false);
     } else if (frameType === "antique") {
-      setGlass(true);
+      // Antique frames don't take glass.
+      setGlass(false);
       if (frameColor === "brown" || frameColor === "white") {
         setFrameColor("black");
       }
@@ -178,6 +191,7 @@ export default function OriginalForm({ original }: { original?: Original }) {
           ? new Date(original.soldAt).toISOString()
           : new Date().toISOString()
         : null,
+      oneOfOne,
       displayOrder: parseInt(displayOrder) || 0,
       isVisible,
     };
@@ -253,7 +267,14 @@ export default function OriginalForm({ original }: { original?: Original }) {
                   const val = e.target.value;
                   setArtistId(val);
                   const match = artistOptions.find((a) => String(a.id) === val);
-                  if (match) setArtist(match.name);
+                  if (match) {
+                    setArtist(match.name);
+                    // Suggest one-of-one for real artists, not for the house
+                    // studio — unless the admin has already set it by hand.
+                    if (!oneOfOneTouched.current) {
+                      setOneOfOne(match.slug !== HOUSE_ARTIST_SLUG);
+                    }
+                  }
                 }}
                 className={inputCls}
               >
@@ -446,7 +467,7 @@ export default function OriginalForm({ original }: { original?: Original }) {
             )}
             {frameType === "antique" && (
               <span className="text-xs text-muted">
-                (antique frames always include glass)
+                (antique frames don't take glass)
               </span>
             )}
           </label>
@@ -503,6 +524,22 @@ export default function OriginalForm({ original }: { original?: Original }) {
                 )
               </span>
             )}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={oneOfOne}
+              onChange={(e) => {
+                oneOfOneTouched.current = true;
+                setOneOfOne(e.target.checked);
+              }}
+              className="accent-ink"
+            />
+            <span>One-of-one original</span>
+            <span className="text-xs text-muted">
+              (marks the piece sold once purchased — off for recreatable Talk
+              Canvas designs)
+            </span>
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input

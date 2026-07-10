@@ -19,14 +19,14 @@
  * Nothing is flattened: a piece attributed to "Ada Okoye" links to an
  * "Ada Okoye" row, not to the house.
  */
-import { config } from "dotenv";
-config({ path: ".env.local" });
+
 import { db } from "../lib/db/index";
 import { artists, originals } from "../lib/db/schema";
 import { eq, isNull } from "drizzle-orm";
+import { HOUSE_ARTIST_NAME, HOUSE_ARTIST_SLUG } from "../lib/constants";
 
-const HOUSE_NAME = "Talk Canvas";
-const HOUSE_SLUG = "talk-canvas";
+const HOUSE_NAME = HOUSE_ARTIST_NAME;
+const HOUSE_SLUG = HOUSE_ARTIST_SLUG;
 
 function slugify(input: string): string {
   return input

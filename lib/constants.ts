@@ -13,3 +13,11 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
 };
+
+// ── HOUSE ARTIST ────────────────────────────────────────────────
+// Works under this artist are the recreatable Talk Canvas Originals (not
+// one-of-one); everything under a real artist is a one-of-one piece. Single
+// source of truth for the slug/name so the mark-sold logic, admin defaults,
+// and backfills all agree.
+export const HOUSE_ARTIST_SLUG = "talk-canvas";
+export const HOUSE_ARTIST_NAME = "Talk Canvas";

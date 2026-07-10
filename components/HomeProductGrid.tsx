@@ -23,7 +23,7 @@ export default function HomeProductGrid({
         <h2 className="display text-4xl md:text-5xl font-normal mb-8 leading-tight">
           Curated walls for <br className="hidden md:block" /> curated spaces.
         </h2>
-        
+
         {/* Interactive Tabs */}
         <div className="flex gap-8 border-b border-line">
           <button
@@ -34,7 +34,7 @@ export default function HomeProductGrid({
                 : "font-medium text-ink-soft hover:text-ink"
             }`}
           >
-            Featured Originals
+            Featured Works
           </button>
           <button
             onClick={() => setTab("archive")}

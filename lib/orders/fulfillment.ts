@@ -1,4 +1,7 @@
-import { markOriginalSold } from "@/lib/db/queries/originals";
+import {
+  markOriginalSold,
+  getOriginalsByIds,
+} from "@/lib/db/queries/originals";
 import {
   getOrderByReference,
   markOrderPaidByReference,
@@ -9,13 +12,22 @@ import OrderConfirmation from "@/lib/email/templates/OrderConfirmation";
 import OrderNotification from "@/lib/email/templates/OrderNotification";
 import { SHIPPING_CONFIG } from "@/data/shipping";
 
-/** Runs exactly once per confirmed order: mark originals sold + send emails. */
+/** Runs exactly once per confirmed order: mark one-of-one originals sold + send emails. */
 export async function fulfillOrder(order: OrderWithItems): Promise<void> {
   const originalIds = order.items
     .filter((i) => i.type === "original" && i.originalId != null)
     .map((i) => i.originalId as number);
+
   if (originalIds.length > 0) {
-    await Promise.allSettled(originalIds.map((id) => markOriginalSold(id)));
+    // Only one-of-one works (artist originals) are marked sold. Talk Canvas
+    // Originals are recreatable house designs — repainted to order — so they
+    // must stay available after purchase.
+    const originals = await getOriginalsByIds(originalIds);
+    const soldIds = originals.filter((o) => o.oneOfOne).map((o) => o.id);
+
+    if (soldIds.length > 0) {
+      await Promise.allSettled(soldIds.map((id) => markOriginalSold(id)));
+    }
   }
 
   const orderNumber = String(order.id).padStart(5, "0");
