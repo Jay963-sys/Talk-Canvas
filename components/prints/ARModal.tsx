@@ -37,10 +37,17 @@ export default function ARModal() {
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setArOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+
     return () => {
       document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [setArOpen]);
 
   useEffect(() => {
     if (!image || !frame || !size) return;
@@ -159,16 +166,8 @@ export default function ARModal() {
   return (
     <div
       onClick={() => setArOpen(false)}
-      className="fade-in fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-6"
+      className="fade-in fixed inset-x-0 top-0 z-[100] h-[100dvh] overflow-y-auto bg-black/90 flex flex-col items-center justify-center p-6"
     >
-      <button
-        onClick={() => setArOpen(false)}
-        aria-label="Close"
-        className="fixed top-6 right-6 text-cream p-2 z-10"
-      >
-        <X size={24} strokeWidth={1.5} />
-      </button>
-
       <div onClick={(e) => e.stopPropagation()} className="max-w-4xl w-full">
         <div className="relative aspect-[4/3] bg-[#1a1814] overflow-hidden">
           {modelUrl && (
@@ -242,6 +241,15 @@ export default function ARModal() {
               </div>
             </div>
           )}
+          {/* Single, unmissable exit — same on mobile and desktop. Esc also closes. */}
+          <button
+            type="button"
+            onClick={() => setArOpen(false)}
+            className="mt-8 w-full flex items-center justify-center gap-2 border border-cream/30 text-cream py-4 text-[12px] uppercase tracking-widest hover:bg-cream hover:text-ink hover:border-cream transition-colors"
+          >
+            <X size={16} strokeWidth={1.5} />
+            Close preview
+          </button>
         </div>
       </div>
     </div>
