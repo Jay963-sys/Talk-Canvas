@@ -18,10 +18,18 @@ export default function CartDrawer() {
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
+
+    // Esc closes the drawer, matching the AR modals and archive picker.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+
     return () => {
       document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
     };
-  }, [isOpen]);
+  }, [isOpen, setOpen]);
 
   if (!mounted) return null;
   if (pathname?.startsWith("/admin")) return null;
@@ -52,8 +60,10 @@ export default function CartDrawer() {
             <span className="text-[13px] text-ink-soft">({items.length})</span>
           </div>
           <button
+            type="button"
             onClick={() => setOpen(false)}
             aria-label="Close cart"
+            title="Close (Esc)"
             className="text-ink hover:text-ink-soft transition-colors p-1 -mr-1"
           >
             <X size={22} strokeWidth={1.5} />
@@ -83,7 +93,7 @@ export default function CartDrawer() {
                   onClick={() => setOpen(false)}
                   className="w-full py-3.5 border border-line bg-transparent text-ink text-[11px] uppercase tracking-widest font-medium hover:border-ink transition-colors"
                 >
-                  Gallery Walls
+                  Shop Prints
                 </Link>
               </div>
             </div>
@@ -131,6 +141,7 @@ export default function CartDrawer() {
                         {formatNaira(item.price)}
                       </p>
                       <button
+                        type="button"
                         onClick={() => removeItem(item.id)}
                         className="text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink flex items-center gap-1.5 transition-colors"
                       >
