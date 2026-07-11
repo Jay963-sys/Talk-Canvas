@@ -128,6 +128,10 @@ export const orderItems = pgTable("order_items", {
   imagePublicId: varchar("image_public_id", { length: 255 }),
   price: integer("price").notNull(),
 
+  // Unit price is `price`; the line total is price * quantity. One-of-one
+  // works are always 1.
+  quantity: integer("quantity").default(1).notNull(),
+
   // Frame info — both types have a frame
   frameName: varchar("frame_name", { length: 255 }).notNull(),
   glass: boolean("glass").default(false).notNull(),

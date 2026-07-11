@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X, ShoppingBag, Trash2 } from "lucide-react";
-import { useCart } from "@/lib/cartStore";
+import { X, ShoppingBag, Trash2, Minus, Plus } from "lucide-react";
+import {
+  useCart,
+  cartSubtotal,
+  cartCount,
+  MAX_QUANTITY,
+  type CartItem,
+} from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
 import { usePathname } from "next/navigation";
 
 export default function CartDrawer() {
-  const { items, isOpen, setOpen, removeItem } = useCart();
+  const { items, isOpen, setOpen, removeItem, increment, decrement } =
+    useCart();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
@@ -34,7 +41,11 @@ export default function CartDrawer() {
   if (!mounted) return null;
   if (pathname?.startsWith("/admin")) return null;
 
-  const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+  const subtotal = cartSubtotal(items);
+  const pieceCount = cartCount(items);
+
+  // One-of-one works are fixed at a single piece — no stepper.
+  const isFixed = (item: CartItem) => item.type === "original" && item.oneOfOne;
 
   return (
     <>
@@ -57,7 +68,7 @@ export default function CartDrawer() {
           <div className="flex items-center gap-3">
             <ShoppingBag size={18} strokeWidth={1.5} className="text-ink" />
             <h2 className="display text-2xl font-normal text-ink">Your Cart</h2>
-            <span className="text-[13px] text-ink-soft">({items.length})</span>
+            <span className="text-[13px] text-ink-soft">({pieceCount})</span>
           </div>
           <button
             type="button"
@@ -109,7 +120,7 @@ export default function CartDrawer() {
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   </div>
-                  <div className="flex-1 flex flex-col py-0.5">
+                  <div className="flex-1 flex flex-col py-0.5 min-w-0">
                     {item.type === "original" ? (
                       <>
                         <p className="display text-[15px] leading-tight text-ink mb-1">
@@ -121,6 +132,11 @@ export default function CartDrawer() {
                         <p className="text-[12px] text-ink-soft mt-0.5">
                           {item.frameName} · {item.sizeLabel}
                         </p>
+                        {item.oneOfOne && (
+                          <p className="text-[11px] uppercase tracking-widest text-ink-soft mt-1.5">
+                            One of one
+                          </p>
+                        )}
                       </>
                     ) : (
                       <>
@@ -136,10 +152,50 @@ export default function CartDrawer() {
                         </p>
                       </>
                     )}
-                    <div className="mt-auto flex items-end justify-between pt-3">
-                      <p className="text-[13px] font-medium text-ink">
-                        {formatNaira(item.price)}
-                      </p>
+
+                    {/* Quantity + line total */}
+                    <div className="mt-auto flex items-end justify-between pt-3 gap-3">
+                      {isFixed(item) ? (
+                        <span className="text-[12px] text-ink-soft">Qty 1</span>
+                      ) : (
+                        <div className="flex items-center border border-line">
+                          <button
+                            type="button"
+                            onClick={() => decrement(item.id)}
+                            disabled={item.quantity <= 1}
+                            aria-label="Decrease quantity"
+                            className="w-8 h-8 flex items-center justify-center text-ink hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                          >
+                            <Minus size={13} strokeWidth={1.5} />
+                          </button>
+                          <span className="w-8 text-center text-[13px] font-medium text-ink tabular-nums">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => increment(item.id)}
+                            disabled={item.quantity >= MAX_QUANTITY}
+                            aria-label="Increase quantity"
+                            className="w-8 h-8 flex items-center justify-center text-ink hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                          >
+                            <Plus size={13} strokeWidth={1.5} />
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="text-right shrink-0">
+                        <p className="text-[13px] font-medium text-ink">
+                          {formatNaira(item.price * item.quantity)}
+                        </p>
+                        {item.quantity > 1 && (
+                          <p className="text-[11px] text-ink-soft mt-0.5">
+                            {formatNaira(item.price)} each
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
                       <button
                         type="button"
                         onClick={() => removeItem(item.id)}

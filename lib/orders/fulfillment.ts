@@ -18,11 +18,17 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
     .filter((i) => i.type === "original" && i.originalId != null)
     .map((i) => i.originalId as number);
 
+  // originalId → oneOfOne. Used both to decide what to mark sold and to tag
+  // the emails, so the gallery can tell a one-of-one from a repaint.
+  const oneOfOneById = new Map<number, boolean>();
+
   if (originalIds.length > 0) {
     // Only one-of-one works (artist originals) are marked sold. Talk Canvas
     // Originals are recreatable house designs — repainted to order — so they
     // must stay available after purchase.
     const originals = await getOriginalsByIds(originalIds);
+    for (const o of originals) oneOfOneById.set(o.id, o.oneOfOne);
+
     const soldIds = originals.filter((o) => o.oneOfOne).map((o) => o.id);
 
     if (soldIds.length > 0) {
@@ -49,10 +55,39 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
     glass: i.glass,
     sizeLabel: i.sizeLabel,
     price: i.price,
+    quantity: i.quantity ?? 1,
+    oneOfOne:
+      i.type === "original" && i.originalId != null
+        ? (oneOfOneById.get(i.originalId) ?? false)
+        : false,
     title: i.title,
     artist: i.artist,
     year: i.year,
   }));
+
+  // Production times differ by piece type, so the customer email shouldn't
+  // hardcode one figure. Derive a line that's true for THIS order.
+  const hasPrint = emailItems.some((i) => i.type === "print");
+  const hasRepaint = emailItems.some(
+    (i) => i.type === "original" && !i.oneOfOne,
+  );
+  const hasOneOfOne = emailItems.some((i) => i.oneOfOne);
+
+  const timelineParts: string[] = [];
+  if (hasPrint) timelineParts.push("framed prints take 3–5 working days");
+  if (hasRepaint)
+    timelineParts.push("hand-painted repaints take 5–7 working days");
+  if (hasOneOfOne)
+    timelineParts.push(
+      "original artist paintings ship within a week, as they're already complete",
+    );
+
+  const productionNote =
+    timelineParts.length === 0
+      ? "We'll be in touch as soon as your order is ready."
+      : timelineParts.length === 1
+        ? `Production: ${timelineParts[0]}.`
+        : `Production times vary by piece: ${timelineParts.join("; ")}.`;
 
   const galleryEmail = process.env.GALLERY_EMAIL;
 
@@ -64,6 +99,7 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
         orderNumber,
         customerName: order.customerName,
         items: emailItems,
+        productionNote,
         subtotal: order.subtotal,
         shipping: order.shipping,
         total: order.total,

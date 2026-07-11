@@ -36,6 +36,13 @@
       "when": 1783691155288,
       "tag": "0004_strong_sheva_callister",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783807927129,
+      "tag": "0005_safe_magus",
+      "breakpoints": true
     }
   ]
 }

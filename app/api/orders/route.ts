@@ -10,6 +10,15 @@ import { fulfillOrder } from "@/lib/orders/fulfillment";
 import type { Original, NewOrderItem } from "@/lib/db/schema";
 import { SHIPPING_CONFIG } from "@/data/shipping";
 
+/** Mirror of the cart's ceiling. Never trust the client's number. */
+const MAX_QUANTITY = 99;
+
+function clampQuantity(n: unknown): number {
+  const q = Math.floor(Number(n));
+  if (!Number.isFinite(q) || q < 1) return 1;
+  return Math.min(q, MAX_QUANTITY);
+}
+
 interface PrintItemInput {
   type?: "print";
   imageUrl: string;
@@ -20,6 +29,7 @@ interface PrintItemInput {
   sizeId: string;
   sizeLabel: string;
   price: number;
+  quantity?: number;
 }
 interface OriginalItemInput {
   type: "original";
@@ -33,6 +43,7 @@ interface OriginalItemInput {
   artist: string;
   year: number;
   price: number;
+  quantity?: number;
 }
 type OrderItemInput = PrintItemInput | OriginalItemInput;
 
@@ -103,7 +114,8 @@ export async function POST(req: NextRequest) {
             { status: 409 },
           );
         }
-        if (dbOrig.soldAt) {
+        // Only one-of-one works can sell out; recreatable house designs never do.
+        if (dbOrig.oneOfOne && dbOrig.soldAt) {
           return NextResponse.json(
             {
               error: `"${dbOrig.title}" has just been sold. Please remove it from your cart and try again.`,
@@ -114,16 +126,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build item rows with server-trusted prices
+    // Build item rows with server-trusted prices AND quantities
     const itemRows: Omit<NewOrderItem, "id" | "orderId">[] = [];
     for (const item of items) {
       if (item.type === "original") {
         const dbOrig = originalsMap.get(item.originalId)!;
+        // A one-of-one piece can only ever be bought once, whatever the client sends.
+        const quantity = dbOrig.oneOfOne ? 1 : clampQuantity(item.quantity);
         itemRows.push({
           type: "original",
           imageUrl: dbOrig.imageUrl,
           imagePublicId: dbOrig.imagePublicId ?? null,
           price: dbOrig.price,
+          quantity,
           frameName: item.frameName,
           glass: item.glass ?? dbOrig.glass,
           sizeLabel: item.sizeLabel,
@@ -144,9 +159,10 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
+      // Antique frames don't take glass; only box frames offer it.
       const effectiveGlass =
         frame.style === "antique"
-          ? true
+          ? false
           : frame.shape === "box"
             ? (item.glass ?? false)
             : false;
@@ -162,6 +178,7 @@ export async function POST(req: NextRequest) {
         imageUrl: item.imageUrl,
         imagePublicId: item.imagePublicId ?? null,
         price,
+        quantity: clampQuantity(item.quantity),
         frameName: item.frameName,
         glass: effectiveGlass,
         sizeLabel: formatInches(size),
@@ -174,7 +191,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const computedSubtotal = itemRows.reduce((sum, i) => sum + i.price, 0);
+    // Quantity-aware subtotal, computed server-side from trusted values.
+    const computedSubtotal = itemRows.reduce(
+      (sum, i) => sum + i.price * (i.quantity ?? 1),
+      0,
+    );
     const computedShipping =
       deliveryMethod === "pickup" ? 0 : SHIPPING_CONFIG.delivery.fee;
     const computedTotal = computedSubtotal + computedShipping;

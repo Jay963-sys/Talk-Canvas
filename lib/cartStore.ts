@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+/** Generous ceiling — guards against runaway input, not real customers. */
+export const MAX_QUANTITY = 99;
+
+export function clampQuantity(n: unknown): number {
+  const q = Math.floor(Number(n));
+  if (!Number.isFinite(q) || q < 1) return 1;
+  return Math.min(q, MAX_QUANTITY);
+}
+
 export interface PrintCartItem {
   id: string;
   type: "print";
@@ -12,6 +21,7 @@ export interface PrintCartItem {
   sizeId: string;
   sizeLabel: string;
   price: number;
+  quantity: number;
   addedAt: string;
 }
 
@@ -29,6 +39,13 @@ export interface OriginalCartItem {
   glass: boolean;
   sizeLabel: string;
   price: number;
+  quantity: number;
+  /**
+   * True for represented-artist works — only one exists, so quantity is locked
+   * at 1 and the piece can never be added twice. Recreatable Talk Canvas
+   * Originals are false and behave like prints.
+   */
+  oneOfOne: boolean;
   addedAt: string;
 }
 
@@ -37,11 +54,16 @@ export type CartItem = PrintCartItem | OriginalCartItem;
 interface CartState {
   items: CartItem[];
   isOpen: boolean;
-  addItem: (item: Omit<PrintCartItem, "id" | "addedAt" | "type">) => void;
+  addItem: (
+    item: Omit<PrintCartItem, "id" | "addedAt" | "type" | "quantity">,
+  ) => void;
   addOriginal: (
-    item: Omit<OriginalCartItem, "id" | "addedAt" | "type">,
+    item: Omit<OriginalCartItem, "id" | "addedAt" | "type" | "quantity">,
   ) => void;
   removeItem: (id: string) => void;
+  setQuantity: (id: string, quantity: number) => void;
+  increment: (id: string) => void;
+  decrement: (id: string) => void;
   clear: () => void;
   setOpen: (open: boolean) => void;
 }
@@ -52,6 +74,19 @@ function genId(): string {
     : `cart_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Two prints are the same line if image + frame + glass + size all match. */
+function samePrint(
+  a: PrintCartItem,
+  b: Omit<PrintCartItem, "id" | "addedAt" | "type" | "quantity">,
+): boolean {
+  return (
+    a.imageUrl === b.imageUrl &&
+    a.frameId === b.frameId &&
+    a.glass === b.glass &&
+    a.sizeId === b.sizeId
+  );
+}
+
 export const useCart = create<CartState>()(
   persist(
     (set) => ({
@@ -59,35 +94,64 @@ export const useCart = create<CartState>()(
       isOpen: false,
 
       addItem: (item) =>
-        set((state) => ({
-          items: [
-            ...state.items,
-            {
-              ...item,
-              type: "print" as const,
-              id: genId(),
-              addedAt: new Date().toISOString(),
-            },
-          ],
-          isOpen: true,
-        })),
-
-      addOriginal: (item) =>
         set((state) => {
-          // One-of-one: never add the same original twice
-          if (
-            state.items.some(
-              (i) => i.type === "original" && i.originalId === item.originalId,
-            )
-          ) {
-            return { isOpen: true };
+          // Adding an identical configuration bumps the existing line rather
+          // than stacking duplicate rows.
+          const existing = state.items.find(
+            (i): i is PrintCartItem => i.type === "print" && samePrint(i, item),
+          );
+          if (existing) {
+            return {
+              items: state.items.map((i) =>
+                i.id === existing.id
+                  ? { ...i, quantity: clampQuantity(i.quantity + 1) }
+                  : i,
+              ),
+              isOpen: true,
+            };
           }
           return {
             items: [
               ...state.items,
               {
                 ...item,
+                type: "print" as const,
+                quantity: 1,
+                id: genId(),
+                addedAt: new Date().toISOString(),
+              },
+            ],
+            isOpen: true,
+          };
+        }),
+
+      addOriginal: (item) =>
+        set((state) => {
+          const existing = state.items.find(
+            (i): i is OriginalCartItem =>
+              i.type === "original" && i.originalId === item.originalId,
+          );
+
+          if (existing) {
+            // One-of-one: there's only ever one to sell — never increment.
+            if (existing.oneOfOne) return { isOpen: true };
+            return {
+              items: state.items.map((i) =>
+                i.id === existing.id
+                  ? { ...i, quantity: clampQuantity(i.quantity + 1) }
+                  : i,
+              ),
+              isOpen: true,
+            };
+          }
+
+          return {
+            items: [
+              ...state.items,
+              {
+                ...item,
                 type: "original" as const,
+                quantity: 1,
                 id: genId(),
                 addedAt: new Date().toISOString(),
               },
@@ -101,17 +165,61 @@ export const useCart = create<CartState>()(
           items: state.items.filter((i) => i.id !== id),
         })),
 
+      setQuantity: (id, quantity) =>
+        set((state) => ({
+          items: state.items.map((i) => {
+            if (i.id !== id) return i;
+            // One-of-one works are always exactly 1.
+            if (i.type === "original" && i.oneOfOne) return i;
+            return { ...i, quantity: clampQuantity(quantity) };
+          }),
+        })),
+
+      increment: (id) =>
+        set((state) => ({
+          items: state.items.map((i) => {
+            if (i.id !== id) return i;
+            if (i.type === "original" && i.oneOfOne) return i;
+            return { ...i, quantity: clampQuantity(i.quantity + 1) };
+          }),
+        })),
+
+      decrement: (id) =>
+        set((state) => ({
+          items: state.items.map((i) => {
+            if (i.id !== id) return i;
+            if (i.type === "original" && i.oneOfOne) return i;
+            return { ...i, quantity: clampQuantity(i.quantity - 1) };
+          }),
+        })),
+
       clear: () => set({ items: [] }),
       setOpen: (isOpen) => set({ isOpen }),
     }),
     {
       name: "talk-canvas-cart",
-      version: 3, // bumped — clears old print-only carts that lack `type`
+      version: 4, // bumped — items gained `quantity` + `oneOfOne`
       migrate: (persistedState, version) => {
-        if (version < 3) return { items: [] };
+        // Older carts have no quantity/oneOfOne. Rather than guess, start clean.
+        if (version < 4) return { items: [] };
         return persistedState as { items: CartItem[] };
       },
       partialize: (state) => ({ items: state.items }),
     },
   ),
 );
+
+/** Line total for one cart item. */
+export function lineTotal(item: CartItem): number {
+  return item.price * item.quantity;
+}
+
+/** Sum of all lines, quantity-aware. */
+export function cartSubtotal(items: CartItem[]): number {
+  return items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+}
+
+/** Total number of pieces (not lines) — for the header badge. */
+export function cartCount(items: CartItem[]): number {
+  return items.reduce((sum, i) => sum + i.quantity, 0);
+}

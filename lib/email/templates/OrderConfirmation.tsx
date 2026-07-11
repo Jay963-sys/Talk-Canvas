@@ -21,6 +21,8 @@ interface Item {
   glass: boolean;
   sizeLabel: string;
   price: number;
+  quantity?: number;
+  oneOfOne?: boolean;
   title?: string | null;
   artist?: string | null;
   year?: number | null;
@@ -37,6 +39,7 @@ interface Props {
   pickupAddress?: string;
   pickupDays?: string;
   pickupHours?: string;
+  productionNote?: string;
   shippingAddress?: {
     line1: string;
     line2?: string | null;
@@ -59,6 +62,7 @@ export default function OrderConfirmation({
   pickupHours,
   shippingAddress,
   notes,
+  productionNote,
 }: Props) {
   const firstName = customerName.split(" ")[0];
 
@@ -77,8 +81,8 @@ export default function OrderConfirmation({
           </Heading>
 
           <Text style={styles.paragraph}>
-            We've received your order. Production typically takes 5–7 days;
-            we'll be in touch with{" "}
+            We've received your order.
+            {productionNote ? ` ${productionNote}` : ""} We'll be in touch with{" "}
             {deliveryMethod === "pickup" ? "pickup" : "delivery"} details once
             your order is ready.
           </Text>
@@ -144,8 +148,13 @@ export default function OrderConfirmation({
                   }}
                 >
                   <Text style={{ ...styles.infoText, fontWeight: 500 }}>
-                    {formatNaira(item.price)}
+                    {formatNaira(item.price * (item.quantity ?? 1))}
                   </Text>
+                  {(item.quantity ?? 1) > 1 && (
+                    <Text style={styles.metaText}>
+                      {item.quantity} × {formatNaira(item.price)}
+                    </Text>
+                  )}
                 </Column>
               </Row>
             </Section>

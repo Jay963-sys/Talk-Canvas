@@ -21,6 +21,8 @@ interface Item {
   glass: boolean;
   sizeLabel: string;
   price: number;
+  quantity?: number;
+  oneOfOne?: boolean;
   title?: string | null;
   artist?: string | null;
   year?: number | null;
@@ -110,6 +112,18 @@ export default function OrderNotification({
                       <Text style={styles.metaText}>
                         {item.frameName} · {item.sizeLabel}
                       </Text>
+                      {item.oneOfOne && (
+                        <Text
+                          style={{
+                            ...styles.metaText,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.1em",
+                            fontSize: "10px",
+                          }}
+                        >
+                          One of one — now sold
+                        </Text>
+                      )}
                     </>
                   ) : (
                     <>
@@ -131,8 +145,13 @@ export default function OrderNotification({
                   }}
                 >
                   <Text style={{ ...styles.infoText, fontWeight: 500 }}>
-                    {formatNaira(item.price)}
+                    {formatNaira(item.price * (item.quantity ?? 1))}
                   </Text>
+                  {(item.quantity ?? 1) > 1 && (
+                    <Text style={styles.metaText}>
+                      {item.quantity} × {formatNaira(item.price)}
+                    </Text>
+                  )}
                 </Column>
               </Row>
             </Section>

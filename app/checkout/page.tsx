@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useCart } from "@/lib/cartStore";
+import { useCart, cartSubtotal } from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
 import { SHIPPING_CONFIG } from "@/data/shipping";
 import Image from "next/image";
@@ -62,13 +62,13 @@ export default function CheckoutPage() {
           href="/prints"
           className="inline-block px-8 py-3.5 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
         >
-          Gallery Walls
+          Shop Prints
         </Link>
       </div>
     );
   }
 
-  const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+  const subtotal = cartSubtotal(items);
   const shipping =
     deliveryMethod === "pickup" ? 0 : SHIPPING_CONFIG.delivery.fee;
   const total = subtotal + shipping;
@@ -114,6 +114,7 @@ export default function CheckoutPage() {
                   artist: item.artist,
                   year: item.year,
                   price: item.price,
+                  quantity: item.quantity,
                 }
               : {
                   type: "print" as const,
@@ -125,6 +126,7 @@ export default function CheckoutPage() {
                   sizeId: item.sizeId,
                   sizeLabel: item.sizeLabel,
                   price: item.price,
+                  quantity: item.quantity,
                 },
           ),
           subtotal,
@@ -393,7 +395,13 @@ export default function CheckoutPage() {
                         </>
                       )}
                       <p className="text-[13px] font-medium text-ink mt-2">
-                        {formatNaira(item.price)}
+                        {formatNaira(item.price * item.quantity)}
+                        {item.quantity > 1 && (
+                          <span className="text-[12px] text-ink-soft font-normal">
+                            {" "}
+                            · Qty {item.quantity}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>

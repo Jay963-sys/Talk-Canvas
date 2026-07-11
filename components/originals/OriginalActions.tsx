@@ -15,9 +15,10 @@ export default function OriginalActions({ original }: { original: Original }) {
   const inCart = items.some(
     (i) => i.type === "original" && i.originalId === original.id,
   );
+  const lockedInCart = inCart && original.oneOfOne;
 
   const handleAddToCart = () => {
-    if (inCart) {
+    if (lockedInCart) {
       setOpen(true);
       return;
     }
@@ -33,6 +34,7 @@ export default function OriginalActions({ original }: { original: Original }) {
       glass: original.glass,
       sizeLabel: originalSizeLabel(original),
       price: original.price,
+      oneOfOne: original.oneOfOne,
     });
   };
 
@@ -74,7 +76,7 @@ export default function OriginalActions({ original }: { original: Original }) {
         onClick={handleAddToCart}
         className="w-full flex items-center justify-center gap-2 py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
       >
-        {inCart ? (
+        {lockedInCart ? (
           <>
             <Check size={16} strokeWidth={1.5} />
             In cart — view
