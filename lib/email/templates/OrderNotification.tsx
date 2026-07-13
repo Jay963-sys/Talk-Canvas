@@ -40,6 +40,11 @@ interface Props {
   discountAmount?: number;
   affiliateCode?: string | null;
   discountPercent?: number | null;
+  // Delivery is priced per Lagos LGA, by the vehicle the order needs. Outside
+  // Lagos isn't in the price list — nothing is charged and the gallery quotes.
+  deliveryZoneLabel?: string | null;
+  deliveryVehicleLabel?: string | null;
+  deliveryQuotePending?: boolean;
   shippingAddress?: {
     line1: string;
     line2?: string | null;
@@ -62,12 +67,17 @@ export default function OrderNotification({
   discountAmount,
   affiliateCode,
   discountPercent,
+  deliveryZoneLabel,
+  deliveryVehicleLabel,
+  deliveryQuotePending,
 }: Props) {
   return (
     <Html>
       <Head />
       <Preview>
-        New order #{orderNumber} from {customer.name} · {formatNaira(total)}
+        {deliveryQuotePending
+          ? `New order #${orderNumber} from ${customer.name} · delivery quote needed`
+          : `New order #${orderNumber} from ${customer.name} · ${formatNaira(total)}`}
       </Preview>
       <Body style={styles.main}>
         <Container style={styles.container}>
@@ -77,6 +87,28 @@ export default function OrderNotification({
             {customer.name} just placed an order for{" "}
             <strong>{formatNaira(total)}</strong>.
           </Text>
+
+          {/* Outside Lagos: shipped at zero until a fee is agreed. Loud, because
+              the body would otherwise read "Delivery: Free". */}
+          {deliveryQuotePending && (
+            <Section
+              style={{
+                borderLeft: "3px solid #b45309",
+                backgroundColor: "#fffbeb",
+                padding: "12px 16px",
+                marginTop: "16px",
+              }}
+            >
+              <Text style={{ ...styles.infoText, fontWeight: 600, margin: 0 }}>
+                Delivery quote needed
+              </Text>
+              <Text style={{ ...styles.metaText, marginTop: "4px" }}>
+                This order is outside Lagos — no delivery fee was charged.
+                Contact the customer with a price, then record it on the order
+                in the admin.
+              </Text>
+            </Section>
+          )}
 
           <Hr style={styles.divider} />
 
@@ -173,6 +205,7 @@ export default function OrderNotification({
               <Text style={styles.metaText}>{formatNaira(subtotal)}</Text>
             </Column>
           </Row>
+
           {(discountAmount ?? 0) > 0 && (
             <Row>
               <Column>
@@ -188,6 +221,7 @@ export default function OrderNotification({
               </Column>
             </Row>
           )}
+
           <Row>
             <Column>
               <Text style={styles.metaText}>
@@ -196,10 +230,15 @@ export default function OrderNotification({
             </Column>
             <Column style={{ textAlign: "right" }}>
               <Text style={styles.metaText}>
-                {shipping === 0 ? "Free" : formatNaira(shipping)}
+                {deliveryQuotePending
+                  ? "To be quoted"
+                  : shipping === 0
+                    ? "Free"
+                    : formatNaira(shipping)}
               </Text>
             </Column>
           </Row>
+
           <Row
             style={{
               borderTop: `1px solid ${colors.line}`,
@@ -232,18 +271,30 @@ export default function OrderNotification({
               Customer will collect from the showroom.
             </Text>
           ) : (
-            shippingAddress && (
-              <>
-                <Text style={styles.infoText}>{shippingAddress.line1}</Text>
-                {shippingAddress.line2 && (
-                  <Text style={styles.infoText}>{shippingAddress.line2}</Text>
-                )}
-                <Text style={styles.infoText}>
-                  {shippingAddress.city}, {shippingAddress.state}
+            <>
+              {shippingAddress && (
+                <>
+                  <Text style={styles.infoText}>{shippingAddress.line1}</Text>
+                  {shippingAddress.line2 && (
+                    <Text style={styles.infoText}>{shippingAddress.line2}</Text>
+                  )}
+                  <Text style={styles.infoText}>
+                    {shippingAddress.city}, {shippingAddress.state}
+                  </Text>
+                  <Text style={styles.infoText}>{shippingAddress.country}</Text>
+                </>
+              )}
+
+              {/* What the courier needs: the area and the vehicle the order
+                  was priced for. */}
+              {(deliveryZoneLabel || deliveryVehicleLabel) && (
+                <Text style={{ ...styles.metaText, marginTop: "6px" }}>
+                  {deliveryZoneLabel}
+                  {deliveryZoneLabel && deliveryVehicleLabel ? " · " : ""}
+                  {deliveryVehicleLabel}
                 </Text>
-                <Text style={styles.infoText}>{shippingAddress.country}</Text>
-              </>
-            )
+              )}
+            </>
           )}
 
           <Text style={styles.footer}>
