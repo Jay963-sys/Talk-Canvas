@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { createOrder } from "@/lib/db/queries/orders";
 import { getOriginalsByIds } from "@/lib/db/queries/originals";
 import { getFrame } from "@/data/frames";
-import { getSize, formatInches } from "@/data/sizes";
+import { getSize, formatInches, type Orientation } from "@/data/sizes";
 import { getPrice } from "@/data/pricing";
 import { paystackEnabled, initializeTransaction } from "@/lib/paystack";
 import { fulfillOrder } from "@/lib/orders/fulfillment";
@@ -29,6 +29,7 @@ interface PrintItemInput {
   glass?: boolean;
   sizeId: string;
   sizeLabel: string;
+  orientation?: Orientation;
   price: number;
   quantity?: number;
 }
@@ -182,6 +183,11 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
+      // Sizes are stored portrait; a landscape design rotates them. Trust the
+      // orientation flag but never the client's label — derive it ourselves,
+      // or the gallery frames a landscape print as a portrait one.
+      const orientation: Orientation =
+        item.orientation === "landscape" ? "landscape" : "portrait";
       const printQuantity = clampQuantity(item.quantity);
       discountableSubtotal += price * printQuantity;
       itemRows.push({
@@ -192,7 +198,7 @@ export async function POST(req: NextRequest) {
         quantity: printQuantity,
         frameName: item.frameName,
         glass: effectiveGlass,
-        sizeLabel: formatInches(size),
+        sizeLabel: formatInches(size, orientation),
         frameId: item.frameId,
         sizeId: item.sizeId,
         originalId: null,

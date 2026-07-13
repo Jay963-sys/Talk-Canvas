@@ -3,7 +3,7 @@
 import { useConfigurator, formatNaira } from "@/lib/store";
 import { useCart } from "@/lib/cartStore";
 import { getPrice } from "@/data/pricing";
-import { formatInches } from "@/data/sizes";
+import { formatInches, orientationOf } from "@/data/sizes";
 import { ArrowLeft } from "lucide-react";
 
 const STEP_NAMES = ["Upload", "Frame", "Size", "Review"];
@@ -13,6 +13,11 @@ export default function Summary() {
   const { addItem, setOpen: setCartOpen } = useCart();
 
   const totalPrice = frame && size ? (getPrice(frame, glass, size) ?? 0) : 0;
+
+  // Sizes are stored portrait; a landscape design uses them rotated. The label
+  // must record the orientation actually bought — it's what the gallery frames.
+  const orientation = orientationOf(image);
+  const sizeLabel = size ? formatInches(size, orientation) : null;
 
   const canAdvance = () => {
     if (step === 0) return !!image;
@@ -30,7 +35,8 @@ export default function Summary() {
       frameName: frame.name,
       glass,
       sizeId: size.id,
-      sizeLabel: formatInches(size),
+      sizeLabel: formatInches(size, orientation),
+      orientation,
       price: totalPrice,
     });
     reset();
@@ -49,7 +55,7 @@ export default function Summary() {
           label="Frame"
           value={frame ? frame.name + (glass ? " · with glass" : "") : "—"}
         />
-        <SummaryRow label="Size" value={size ? formatInches(size) : "—"} />
+        <SummaryRow label="Size" value={sizeLabel ?? "—"} />
       </div>
 
       <div className="mt-8 pt-6 border-t border-line/60">

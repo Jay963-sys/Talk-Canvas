@@ -7,7 +7,7 @@ import { useConfigurator } from "@/lib/store";
 import { generateFrameGLB } from "@/lib/frameModel";
 import { generateFrameUSDZ } from "@/lib/frameUSDZ";
 import { uploadModelToCloudinary, uploadUSDZToCloudinary } from "@/lib/upload";
-import { formatInches } from "@/data/sizes";
+import { formatInches, orientCm, orientationOf } from "@/data/sizes";
 import ARViewer from "./ARViewer";
 import { USE_CUSTOM_USDZ } from "@/lib/arConfig";
 
@@ -56,7 +56,11 @@ export default function ARModal() {
 
     (async () => {
       try {
-        const dims = { w: size.cm.w / 100, h: size.cm.h / 100 };
+        // Orient the canvas to the artwork. Without this a landscape design is
+        // built into a portrait frame and squashed.
+        const orientation = orientationOf(image);
+        const oriented = orientCm(size, orientation);
+        const dims = { w: oriented.w / 100, h: oriented.h / 100 };
         const opts = {
           imageUrl: getDownsizedUrl(image.url, 1200),
           frameColor: frame.swatchColor,
@@ -73,8 +77,9 @@ export default function ARModal() {
           frame.style,
           frame.shape ?? "none",
           frame.swatchColor,
-          size.cm.w,
-          size.cm.h,
+          oriented.w,
+          oriented.h,
+          orientation,
           glass ? "g" : "n",
         ].join("|");
 
@@ -160,7 +165,7 @@ export default function ARModal() {
   if (!image || !frame || !size) return null;
 
   const glassNote = frame.shape === "box" && glass ? " · with glass" : "";
-  const label = `${frame.name}${glassNote} · ${formatInches(size)}`;
+  const label = `${frame.name}${glassNote} · ${formatInches(size, orientationOf(image))}`;
   const arUrl = modelUrl ? buildArUrl(modelUrl, iosUrl, label) : null;
 
   return (
@@ -183,7 +188,7 @@ export default function ARModal() {
             <ARViewer
               src={modelUrl}
               iosSrc={iosUrl ?? undefined}
-              alt={`${frame.name}${glassNote}, ${formatInches(size)}`}
+              alt={`${frame.name}${glassNote}, ${formatInches(size, orientationOf(image))}`}
             >
               <button
                 slot="ar-button"

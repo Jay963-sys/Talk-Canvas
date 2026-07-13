@@ -20,6 +20,11 @@ export interface PrintCartItem {
   glass: boolean;
   sizeId: string;
   sizeLabel: string;
+  /**
+   * Sizes are stored portrait; a landscape design uses them rotated. Carried
+   * through to the order so the gallery frames the piece the right way round.
+   */
+  orientation: "portrait" | "landscape";
   price: number;
   quantity: number;
   addedAt: string;
@@ -83,7 +88,8 @@ function samePrint(
     a.imageUrl === b.imageUrl &&
     a.frameId === b.frameId &&
     a.glass === b.glass &&
-    a.sizeId === b.sizeId
+    a.sizeId === b.sizeId &&
+    a.orientation === b.orientation
   );
 }
 
@@ -198,10 +204,10 @@ export const useCart = create<CartState>()(
     }),
     {
       name: "talk-canvas-cart",
-      version: 4, // bumped — items gained `quantity` + `oneOfOne`
+      version: 5, // bumped — print items gained `orientation`
       migrate: (persistedState, version) => {
         // Older carts have no quantity/oneOfOne. Rather than guess, start clean.
-        if (version < 4) return { items: [] };
+        if (version < 5) return { items: [] };
         return persistedState as { items: CartItem[] };
       },
       partialize: (state) => ({ items: state.items }),

@@ -1,5 +1,7 @@
 export type SizeCategory = "small" | "medium" | "large" | "long";
 
+export type Orientation = "portrait" | "landscape";
+
 export interface SizePrices {
   regular: number;
   regularGlass: number | null;
@@ -21,6 +23,14 @@ export const SIZE_CATEGORIES: { id: SizeCategory; label: string }[] = [
   { id: "long", label: "Long Canvas" },
 ];
 
+/**
+ * All sizes are stored PORTRAIT (w <= h). A landscape print is the same canvas
+ * rotated — same area, same frame length, same price — so rather than maintain
+ * a second catalogue we orient these to match the artwork.
+ *
+ * Use the orient* helpers below rather than reading `inches`/`cm` directly, or
+ * a landscape image ends up squeezed into a portrait frame.
+ */
 export const SIZES: PrintSize[] = [
   // ── Small (smaller side < 24") ─────────────────────────────────
   {
@@ -217,11 +227,50 @@ export function getSize(id: string): PrintSize | undefined {
   return SIZES.find((s) => s.id === id);
 }
 
-// Display helpers
-export function formatInches(s: PrintSize): string {
-  return `${s.inches.w} × ${s.inches.h} in`;
+// ── ORIENTATION ──────────────────────────────────────────────────
+
+/** Derived from the artwork's own pixel dimensions — never a manual tag. */
+export function orientationOf(
+  image: { width: number; height: number } | null | undefined,
+): Orientation {
+  if (!image || !image.height) return "portrait";
+  return image.width > image.height ? "landscape" : "portrait";
 }
 
-export function formatCm(s: PrintSize): string {
-  return `${s.cm.w} × ${s.cm.h} cm`;
+/** True when the frame is rotated relative to the stored (portrait) size. */
+function isRotated(o: Orientation, s: PrintSize): boolean {
+  // A square size looks identical either way — don't bother swapping.
+  return o === "landscape" && s.inches.w !== s.inches.h;
+}
+
+/** Inches, oriented to the artwork. 30×40 portrait becomes 40×30 landscape. */
+export function orientInches(
+  s: PrintSize,
+  o: Orientation,
+): { w: number; h: number } {
+  return isRotated(o, s) ? { w: s.inches.h, h: s.inches.w } : { ...s.inches };
+}
+
+/** Centimetres, oriented to the artwork. */
+export function orientCm(
+  s: PrintSize,
+  o: Orientation,
+): { w: number; h: number } {
+  return isRotated(o, s) ? { w: s.cm.h, h: s.cm.w } : { ...s.cm };
+}
+
+// ── DISPLAY ──────────────────────────────────────────────────────
+// Orientation defaults to portrait so existing callers keep working.
+
+export function formatInches(
+  s: PrintSize,
+  o: Orientation = "portrait",
+): string {
+  const { w, h } = orientInches(s, o);
+  return `${w} × ${h} in`;
+}
+
+export function formatCm(s: PrintSize, o: Orientation = "portrait"): string {
+  const { w, h } = orientCm(s, o);
+  return `${w} × ${h} cm`;
 }

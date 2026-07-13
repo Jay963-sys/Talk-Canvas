@@ -193,6 +193,7 @@ export default function CheckoutPage() {
                   glass: item.glass,
                   sizeId: item.sizeId,
                   sizeLabel: item.sizeLabel,
+                  orientation: item.orientation,
                   price: item.price,
                   quantity: item.quantity,
                 },
