@@ -27,6 +27,7 @@ interface Item {
   artist?: string | null;
   year?: number | null;
 }
+
 interface Props {
   orderNumber: string;
   customerName: string;
@@ -43,6 +44,10 @@ interface Props {
   discountAmount?: number;
   affiliateCode?: string | null;
   discountPercent?: number | null;
+  // Delivery is priced per Lagos LGA. Outside Lagos isn't in the price list, so
+  // nothing is charged up front and the gallery quotes the customer by hand.
+  deliveryZoneLabel?: string | null;
+  deliveryQuotePending?: boolean;
   shippingAddress?: {
     line1: string;
     line2?: string | null;
@@ -69,6 +74,8 @@ export default function OrderConfirmation({
   discountAmount,
   affiliateCode,
   discountPercent,
+  deliveryZoneLabel,
+  deliveryQuotePending,
 }: Props) {
   const firstName = customerName.split(" ")[0];
 
@@ -87,11 +94,19 @@ export default function OrderConfirmation({
           </Heading>
 
           <Text style={styles.paragraph}>
-            We've received your order.
-            {productionNote ? ` ${productionNote}` : ""} We'll be in touch with{" "}
-            {deliveryMethod === "pickup" ? "pickup" : "delivery"} details once
-            your order is ready.
+            We&apos;ve received your order.
+            {productionNote ? ` ${productionNote}` : ""} We&apos;ll be in touch
+            with {deliveryMethod === "pickup" ? "pickup" : "delivery"} details
+            once your order is ready.
           </Text>
+
+          {deliveryQuotePending && (
+            <Text style={styles.paragraph}>
+              Your delivery is outside Lagos, so we haven&apos;t charged for it
+              yet. We&apos;ll be in touch shortly with the delivery cost for
+              your area.
+            </Text>
+          )}
 
           <Text style={styles.orderNumber}>ORDER #{orderNumber}</Text>
 
@@ -176,6 +191,7 @@ export default function OrderConfirmation({
               <Text style={styles.metaText}>{formatNaira(subtotal)}</Text>
             </Column>
           </Row>
+
           {(discountAmount ?? 0) > 0 && (
             <Row>
               <Column>
@@ -191,6 +207,7 @@ export default function OrderConfirmation({
               </Column>
             </Row>
           )}
+
           <Row>
             <Column>
               <Text style={styles.metaText}>
@@ -199,10 +216,15 @@ export default function OrderConfirmation({
             </Column>
             <Column style={{ textAlign: "right" }}>
               <Text style={styles.metaText}>
-                {shipping === 0 ? "Free" : formatNaira(shipping)}
+                {deliveryQuotePending
+                  ? "To be quoted"
+                  : shipping === 0
+                    ? "Free"
+                    : formatNaira(shipping)}
               </Text>
             </Column>
           </Row>
+
           <Row
             style={{
               borderTop: `1px solid ${colors.line}`,
@@ -228,6 +250,13 @@ export default function OrderConfirmation({
             </Column>
           </Row>
 
+          {deliveryQuotePending && (
+            <Text style={{ ...styles.metaText, marginTop: "8px" }}>
+              Delivery cost is not included in this total — we&apos;ll confirm
+              it with you.
+            </Text>
+          )}
+
           {deliveryMethod === "pickup" && pickupAddress && (
             <>
               <Text style={styles.sectionLabel}>Pickup details</Text>
@@ -249,8 +278,14 @@ export default function OrderConfirmation({
                 {shippingAddress.city}, {shippingAddress.state}
               </Text>
               <Text style={styles.infoText}>{shippingAddress.country}</Text>
+              {deliveryZoneLabel && (
+                <Text style={{ ...styles.metaText, marginTop: "4px" }}>
+                  Area: {deliveryZoneLabel}
+                </Text>
+              )}
             </>
           )}
+
           {notes && (
             <>
               <Text style={styles.sectionLabel}>Your notes</Text>
