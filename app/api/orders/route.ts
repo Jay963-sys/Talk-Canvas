@@ -7,6 +7,7 @@ import { getSize, formatInches } from "@/data/sizes";
 import { getPrice } from "@/data/pricing";
 import { paystackEnabled, initializeTransaction } from "@/lib/paystack";
 import { fulfillOrder } from "@/lib/orders/fulfillment";
+import { checkCode } from "@/lib/db/queries/affiliates";
 import type { Original, NewOrderItem } from "@/lib/db/schema";
 import { SHIPPING_CONFIG } from "@/data/shipping";
 
@@ -60,6 +61,7 @@ interface OrderBody {
   } | null;
   items: OrderItemInput[];
   notes?: string;
+  affiliateCode?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -128,11 +130,18 @@ export async function POST(req: NextRequest) {
 
     // Build item rows with server-trusted prices AND quantities
     const itemRows: Omit<NewOrderItem, "id" | "orderId">[] = [];
+    // Discounts apply to prints + recreatable Talk Canvas designs only —
+    // never to one-of-one artist works. Tracked as we go, from DB truth.
+    let discountableSubtotal = 0;
+
     for (const item of items) {
       if (item.type === "original") {
         const dbOrig = originalsMap.get(item.originalId)!;
         // A one-of-one piece can only ever be bought once, whatever the client sends.
         const quantity = dbOrig.oneOfOne ? 1 : clampQuantity(item.quantity);
+        if (!dbOrig.oneOfOne) {
+          discountableSubtotal += dbOrig.price * quantity;
+        }
         itemRows.push({
           type: "original",
           imageUrl: dbOrig.imageUrl,
@@ -173,12 +182,14 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
+      const printQuantity = clampQuantity(item.quantity);
+      discountableSubtotal += price * printQuantity;
       itemRows.push({
         type: "print",
         imageUrl: item.imageUrl,
         imagePublicId: item.imagePublicId ?? null,
         price,
-        quantity: clampQuantity(item.quantity),
+        quantity: printQuantity,
         frameName: item.frameName,
         glass: effectiveGlass,
         sizeLabel: formatInches(size),
@@ -196,9 +207,49 @@ export async function POST(req: NextRequest) {
       (sum, i) => sum + i.price * (i.quantity ?? 1),
       0,
     );
+
+    // ── Affiliate discount ─────────────────────────────────────────
+    // The client sends a CODE, never a price or a discount. The server decides
+    // what it's worth, and only against the discountable portion of the cart.
+    let affiliateId: number | null = null;
+    let affiliateCode: string | null = null;
+    let discountPercent: number | null = null;
+    let discountAmount = 0;
+
+    if (typeof body.affiliateCode === "string" && body.affiliateCode.trim()) {
+      const result = await checkCode(body.affiliateCode, customer.email);
+      if (!result.ok) {
+        const messages: Record<string, string> = {
+          not_found: "That code isn't valid.",
+          inactive: "That code is no longer active.",
+          expired: "That code has expired.",
+          already_used: "You've already used that code.",
+        };
+        return NextResponse.json(
+          { error: messages[result.reason] ?? "That code isn't valid." },
+          { status: 400 },
+        );
+      }
+
+      const affiliate = result.affiliate;
+      affiliateId = affiliate.id;
+      affiliateCode = affiliate.code;
+      discountPercent = affiliate.discountPercent;
+
+      // Round down — never hand out a fractional naira in the customer's favour.
+      discountAmount = Math.floor(
+        (discountableSubtotal * affiliate.discountPercent) / 100,
+      );
+      // Belt and braces: a discount can never exceed what's discountable.
+      discountAmount = Math.max(
+        0,
+        Math.min(discountAmount, discountableSubtotal),
+      );
+    }
+
     const computedShipping =
       deliveryMethod === "pickup" ? 0 : SHIPPING_CONFIG.delivery.fee;
-    const computedTotal = computedSubtotal + computedShipping;
+    const computedTotal = computedSubtotal - discountAmount + computedShipping;
 
     const paymentReference = paystackEnabled()
       ? `tcg_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`
@@ -223,6 +274,10 @@ export async function POST(req: NextRequest) {
         country: deliveryMethod === "delivery" ? address!.country : null,
         subtotal: computedSubtotal,
         shipping: computedShipping,
+        affiliateId,
+        affiliateCode,
+        discountPercent,
+        discountAmount,
         total: computedTotal,
         notes,
         status: "pending",

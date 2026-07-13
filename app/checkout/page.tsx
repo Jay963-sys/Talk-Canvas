@@ -3,13 +3,23 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { useCart, cartSubtotal } from "@/lib/cartStore";
+import { ArrowLeft, X, Check, Loader2 } from "lucide-react";
+import {
+  useCart,
+  cartSubtotal,
+  discountableSubtotal,
+  discountFor,
+} from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
 import { SHIPPING_CONFIG } from "@/data/shipping";
 import Image from "next/image";
 
 type DeliveryMethod = "delivery" | "pickup";
+
+interface AppliedCode {
+  code: string;
+  discountPercent: number;
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -33,6 +43,12 @@ export default function CheckoutPage() {
   });
   const [notes, setNotes] = useState("");
 
+  // Affiliate / discount code
+  const [codeInput, setCodeInput] = useState("");
+  const [applied, setApplied] = useState<AppliedCode | null>(null);
+  const [codeChecking, setCodeChecking] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+
   useEffect(() => {
     const p = new URLSearchParams(window.location.search).get("payment");
     if (p === "failed")
@@ -45,6 +61,15 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Pre-fill from an affiliate link (?ref=CODE dropped a cookie on landing).
+  useEffect(() => {
+    const fromCookie = document.cookie
+      .split("; ")
+      .find((c) => c.startsWith("tc_ref="))
+      ?.split("=")[1];
+    if (fromCookie) setCodeInput(decodeURIComponent(fromCookie));
   }, []);
 
   if (!mounted) return null;
@@ -69,9 +94,52 @@ export default function CheckoutPage() {
   }
 
   const subtotal = cartSubtotal(items);
+  const eligible = discountableSubtotal(items);
+  const discount = applied ? discountFor(items, applied.discountPercent) : 0;
   const shipping =
     deliveryMethod === "pickup" ? 0 : SHIPPING_CONFIG.delivery.fee;
-  const total = subtotal + shipping;
+  const total = subtotal - discount + shipping;
+
+  // True when the cart is nothing but one-of-one artist works — a code would
+  // validate but take nothing off, so say so rather than show "−₦0".
+  const nothingEligible = eligible === 0;
+
+  const applyCode = async () => {
+    const code = codeInput.trim();
+    if (!code) return;
+
+    setCodeChecking(true);
+    setCodeError(null);
+    try {
+      const res = await fetch("/api/validate-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Email is sent so the "once per customer" check runs before payment,
+        // not after. If they haven't typed it yet, the server re-checks on submit.
+        body: JSON.stringify({ code, email: form.email || undefined }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.valid) {
+        setApplied(null);
+        setCodeError(data.error || "That code isn't valid.");
+        return;
+      }
+
+      setApplied({ code: data.code, discountPercent: data.discountPercent });
+      setCodeInput(data.code);
+    } catch {
+      setCodeError("Couldn't check that code — try again.");
+    } finally {
+      setCodeChecking(false);
+    }
+  };
+
+  const removeCode = () => {
+    setApplied(null);
+    setCodeInput("");
+    setCodeError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,6 +200,9 @@ export default function CheckoutPage() {
           subtotal,
           shipping,
           total,
+          // The server re-validates this code and recomputes the discount from
+          // scratch — nothing we send about price is trusted.
+          affiliateCode: applied?.code,
           notes: notes.trim() !== "" ? notes : undefined,
         }),
       });
@@ -315,6 +386,79 @@ export default function CheckoutPage() {
               </section>
             )}
 
+            {/* Discount code */}
+            <section>
+              <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6 flex items-center gap-2">
+                Discount Code
+                <span className="text-ink-soft lowercase tracking-normal font-normal">
+                  (optional)
+                </span>
+              </h2>
+
+              {applied ? (
+                <div className="flex items-center justify-between gap-4 px-4 py-3 border border-ink bg-paper">
+                  <span className="flex items-center gap-2 text-[14px] text-ink">
+                    <Check size={16} strokeWidth={1.5} />
+                    <span className="font-medium">{applied.code}</span>
+                    <span className="text-ink-soft">
+                      · {applied.discountPercent}% off
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={removeCode}
+                    aria-label="Remove code"
+                    className="text-ink-soft hover:text-ink transition-colors p-1"
+                  >
+                    <X size={16} strokeWidth={1.5} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={codeInput}
+                    onChange={(e) => {
+                      setCodeInput(e.target.value.toUpperCase());
+                      setCodeError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      // Enter inside the checkout form would submit the order.
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        applyCode();
+                      }
+                    }}
+                    placeholder="Enter code"
+                    className="flex-1 px-4 py-3 bg-transparent border border-line focus:border-ink outline-none transition-colors text-[14px] text-ink placeholder:text-ink-soft uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyCode}
+                    disabled={codeChecking || !codeInput.trim()}
+                    className="px-6 py-3 border border-ink text-ink text-[12px] uppercase tracking-widest font-medium hover:bg-ink hover:text-cream transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink flex items-center gap-2"
+                  >
+                    {codeChecking ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      "Apply"
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {codeError && (
+                <p className="text-[13px] text-red-600 mt-3">{codeError}</p>
+              )}
+
+              {applied && nothingEligible && (
+                <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
+                  Discounts don't apply to one-of-one artist works, so this code
+                  takes nothing off your current cart.
+                </p>
+              )}
+            </section>
+
             {/* Order Notes */}
             <section>
               <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6 flex items-center gap-2">
@@ -333,7 +477,7 @@ export default function CheckoutPage() {
               />
             </section>
 
-            {/* Mobile Submit Button (Hidden on Desktop, shown for better mobile UX) */}
+            {/* Mobile Submit Button */}
             <div className="md:hidden pt-4">
               <button
                 type="submit"
@@ -410,6 +554,13 @@ export default function CheckoutPage() {
 
               <div className="border-t border-line/60 pt-6 space-y-3">
                 <SummaryLine label="Subtotal" value={formatNaira(subtotal)} />
+                {discount > 0 && applied && (
+                  <SummaryLine
+                    label={`${applied.code} (${applied.discountPercent}% off)`}
+                    value={`− ${formatNaira(discount)}`}
+                    accent
+                  />
+                )}
                 <SummaryLine
                   label={deliveryMethod === "pickup" ? "Pickup" : "Delivery"}
                   value={shipping === 0 ? "Free" : formatNaira(shipping)}
@@ -535,11 +686,23 @@ function Field({
   );
 }
 
-function SummaryLine({ label, value }: { label: string; value: string }) {
+function SummaryLine({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
   return (
-    <div className="flex justify-between items-center text-[14px]">
-      <span className="text-ink-soft">{label}</span>
-      <span className="text-ink font-medium">{value}</span>
+    <div className="flex justify-between items-center text-[14px] gap-4">
+      <span className={accent ? "text-ink" : "text-ink-soft"}>{label}</span>
+      <span
+        className={`font-medium whitespace-nowrap ${accent ? "text-ink" : "text-ink"}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

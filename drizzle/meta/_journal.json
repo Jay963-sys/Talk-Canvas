@@ -43,6 +43,13 @@
       "when": 1783807927129,
       "tag": "0005_safe_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783901677157,
+      "tag": "0006_lumpy_emma_frost",
+      "breakpoints": true
     }
   ]
 }

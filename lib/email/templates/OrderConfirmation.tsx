@@ -40,6 +40,9 @@ interface Props {
   pickupDays?: string;
   pickupHours?: string;
   productionNote?: string;
+  discountAmount?: number;
+  affiliateCode?: string | null;
+  discountPercent?: number | null;
   shippingAddress?: {
     line1: string;
     line2?: string | null;
@@ -63,6 +66,9 @@ export default function OrderConfirmation({
   shippingAddress,
   notes,
   productionNote,
+  discountAmount,
+  affiliateCode,
+  discountPercent,
 }: Props) {
   const firstName = customerName.split(" ")[0];
 
@@ -170,6 +176,21 @@ export default function OrderConfirmation({
               <Text style={styles.metaText}>{formatNaira(subtotal)}</Text>
             </Column>
           </Row>
+          {(discountAmount ?? 0) > 0 && (
+            <Row>
+              <Column>
+                <Text style={styles.metaText}>
+                  {affiliateCode}
+                  {discountPercent ? ` (${discountPercent}% off)` : ""}
+                </Text>
+              </Column>
+              <Column style={{ textAlign: "right" }}>
+                <Text style={styles.metaText}>
+                  − {formatNaira(discountAmount!)}
+                </Text>
+              </Column>
+            </Row>
+          )}
           <Row>
             <Column>
               <Text style={styles.metaText}>

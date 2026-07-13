@@ -219,6 +219,27 @@ export function cartSubtotal(items: CartItem[]): number {
   return items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 }
 
+/**
+ * The portion an affiliate discount may apply to: prints and recreatable Talk
+ * Canvas designs only. One-of-one artist works always pay full price.
+ *
+ * NOTE: this mirrors the authoritative rule in app/api/orders/route.ts. It's
+ * for display only — the server always recomputes — but the two must agree or
+ * the customer sees one total and is charged another.
+ */
+export function discountableSubtotal(items: CartItem[]): number {
+  return items.reduce((sum, i) => {
+    if (i.type === "original" && i.oneOfOne) return sum;
+    return sum + i.price * i.quantity;
+  }, 0);
+}
+
+/** Naira off, for a given percent. Floored — never round in the buyer's favour. */
+export function discountFor(items: CartItem[], percent: number): number {
+  const base = discountableSubtotal(items);
+  return Math.max(0, Math.min(Math.floor((base * percent) / 100), base));
+}
+
 /** Total number of pieces (not lines) — for the header badge. */
 export function cartCount(items: CartItem[]): number {
   return items.reduce((sum, i) => sum + i.quantity, 0);

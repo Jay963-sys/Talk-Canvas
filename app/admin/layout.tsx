@@ -31,7 +31,11 @@ export default async function AdminLayout({
           {session && <AdminNav />}
         </div>
       </header>
-      <main>{children}</main>
+
+      {/* 4. Global Admin Container */}
+      <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+        {children}
+      </main>
     </div>
   );
 }

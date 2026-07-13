@@ -88,6 +88,35 @@ export const originals = pgTable("originals", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ── AFFILIATES ──────────────────────────────────────────────────
+// Influencer/reseller codes. The gallery grants an allowance (e.g. 20%); the
+// influencer chooses how much of it to pass to their audience as a discount
+// and keeps the rest as commission. Commission is settled offline — the site
+// only applies `discountPercent` and records who referred each order.
+export const affiliates = pgTable("affiliates", {
+  id: serial("id").primaryKey(),
+  // Stored uppercase; lookups are case-insensitive.
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  notes: text("notes"),
+
+  // 0–100. No hard ceiling — the gallery may raise a code above the usual
+  // allowance, so this is validated as a percentage, not against a policy.
+  discountPercent: integer("discount_percent").notNull(),
+
+  // Null = never expires.
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Affiliate = typeof affiliates.$inferSelect;
+export type NewAffiliate = typeof affiliates.$inferInsert;
+
 // ── ORDERS ──────────────────────────────────────────────────────
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
@@ -103,6 +132,17 @@ export const orders = pgTable("orders", {
   country: varchar("country", { length: 100 }),
   subtotal: integer("subtotal").notNull(),
   shipping: integer("shipping").notNull(),
+
+  // Affiliate/discount snapshot. Frozen at order time so editing a code's rate
+  // later never rewrites historical orders. discountAmount is the naira taken
+  // off; it only ever applies to prints + recreatable Talk Canvas designs.
+  affiliateId: integer("affiliate_id").references(() => affiliates.id, {
+    onDelete: "set null",
+  }),
+  affiliateCode: varchar("affiliate_code", { length: 50 }),
+  discountPercent: integer("discount_percent"),
+  discountAmount: integer("discount_amount").default(0).notNull(),
+
   total: integer("total").notNull(),
   notes: text("notes"),
   status: varchar("status", { length: 20 }).default("pending").notNull(),

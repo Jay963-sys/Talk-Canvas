@@ -37,6 +37,9 @@ interface Props {
   total: number;
   deliveryMethod: "pickup" | "delivery";
   notes?: string | null;
+  discountAmount?: number;
+  affiliateCode?: string | null;
+  discountPercent?: number | null;
   shippingAddress?: {
     line1: string;
     line2?: string | null;
@@ -56,6 +59,9 @@ export default function OrderNotification({
   deliveryMethod,
   shippingAddress,
   notes,
+  discountAmount,
+  affiliateCode,
+  discountPercent,
 }: Props) {
   return (
     <Html>
@@ -167,6 +173,21 @@ export default function OrderNotification({
               <Text style={styles.metaText}>{formatNaira(subtotal)}</Text>
             </Column>
           </Row>
+          {(discountAmount ?? 0) > 0 && (
+            <Row>
+              <Column>
+                <Text style={styles.metaText}>
+                  {affiliateCode}
+                  {discountPercent ? ` (${discountPercent}% off)` : ""}
+                </Text>
+              </Column>
+              <Column style={{ textAlign: "right" }}>
+                <Text style={styles.metaText}>
+                  − {formatNaira(discountAmount!)}
+                </Text>
+              </Column>
+            </Row>
+          )}
           <Row>
             <Column>
               <Text style={styles.metaText}>

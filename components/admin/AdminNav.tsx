@@ -9,6 +9,7 @@ const links = [
   { href: "/admin/artists", label: "Artists" },
   { href: "/admin/archive-prints", label: "Archive" },
   { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/affiliates", label: "Affiliates" },
 ];
 
 function isActive(href: string, pathname: string): boolean {
