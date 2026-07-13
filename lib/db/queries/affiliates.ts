@@ -7,6 +7,7 @@ import {
   type Order,
 } from "../schema";
 import { eq, and, sql, desc, count } from "drizzle-orm";
+import { randomBytes } from "crypto";
 
 /** Why a code was rejected — surfaced to the customer at checkout. */
 export type CodeRejection =
@@ -22,6 +23,33 @@ export type CodeCheck =
 /** Codes are stored uppercase; user input is normalized before lookup. */
 export function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
+}
+
+/**
+ * The stats token IS the credential for an influencer's private page — there
+ * are no influencer logins. 32 random bytes (~256 bits) as hex: not guessable,
+ * not enumerable.
+ */
+export function generateStatsToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+/**
+ * Look up an affiliate by their private stats token. Only ever matches
+ * "affiliate" rows — a promo code has no influencer and no stats page.
+ */
+export async function getAffiliateByStatsToken(
+  token: string,
+): Promise<Affiliate | undefined> {
+  if (!token || token.length < 32) return undefined;
+  const [row] = await db
+    .select()
+    .from(affiliates)
+    .where(
+      and(eq(affiliates.statsToken, token), eq(affiliates.kind, "affiliate")),
+    )
+    .limit(1);
+  return row;
 }
 
 export async function getAffiliateByCode(
@@ -85,6 +113,33 @@ export async function getAllAffiliates(): Promise<Affiliate[]> {
     .orderBy(desc(affiliates.isActive), desc(affiliates.id));
 }
 
+/** Influencer codes only — excludes site promos like the first-visit offer. */
+export async function getAffiliatesByKind(
+  kind: "affiliate" | "promo",
+): Promise<Affiliate[]> {
+  return await db
+    .select()
+    .from(affiliates)
+    .where(eq(affiliates.kind, kind))
+    .orderBy(desc(affiliates.isActive), desc(affiliates.id));
+}
+
+/**
+ * The active site-wide promo, if any — powers the first-visit pop-up. If the
+ * gallery has several, the most recently created live one wins.
+ */
+export async function getActivePromo(): Promise<Affiliate | undefined> {
+  const rows = await db
+    .select()
+    .from(affiliates)
+    .where(and(eq(affiliates.kind, "promo"), eq(affiliates.isActive, true)))
+    .orderBy(desc(affiliates.id));
+
+  return rows.find(
+    (p) => !p.expiresAt || new Date(p.expiresAt).getTime() > Date.now(),
+  );
+}
+
 export async function getAffiliateById(
   id: number,
 ): Promise<Affiliate | undefined> {
@@ -97,9 +152,17 @@ export async function getAffiliateById(
 }
 
 export async function createAffiliate(data: NewAffiliate): Promise<Affiliate> {
+  const kind = data.kind ?? "affiliate";
   const [created] = await db
     .insert(affiliates)
-    .values({ ...data, code: normalizeCode(data.code) })
+    .values({
+      ...data,
+      kind,
+      code: normalizeCode(data.code),
+      // Influencers get a private stats link; promos don't.
+      statsToken:
+        kind === "affiliate" ? (data.statsToken ?? generateStatsToken()) : null,
+    })
     .returning();
   return created;
 }

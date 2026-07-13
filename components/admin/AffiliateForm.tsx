@@ -23,6 +23,9 @@ export default function AffiliateForm({
   const router = useRouter();
   const isEdit = !!affiliate;
 
+  const [kind, setKind] = useState<"affiliate" | "promo">(
+    (affiliate?.kind as "affiliate" | "promo") ?? "affiliate",
+  );
   const [code, setCode] = useState(affiliate?.code ?? "");
   const [name, setName] = useState(affiliate?.name ?? "");
   const [email, setEmail] = useState(affiliate?.email ?? "");
@@ -59,6 +62,7 @@ export default function AffiliateForm({
           method: isEdit ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            kind,
             code: code.trim().toUpperCase(),
             name: name.trim(),
             email: email.trim() || null,
@@ -87,14 +91,54 @@ export default function AffiliateForm({
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
-  // The server and the client now run this exact same logic,
-  // guaranteeing the HTML matches perfectly.
   const shareLink = code.trim()
     ? `${baseUrl}/?ref=${code.trim().toUpperCase()}`
     : "";
 
+  const statsLink =
+    typeof window !== "undefined" &&
+    kind === "affiliate" &&
+    affiliate?.statsToken
+      ? `${baseUrl}/partner/${affiliate.statsToken}`
+      : "";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-10 max-w-3xl">
+      <section>
+        <h2 className="text-xs uppercase tracking-[0.15em] text-muted mb-4">
+          Type
+        </h2>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setKind("affiliate")}
+            className={`px-5 py-3 border text-sm transition-colors ${
+              kind === "affiliate"
+                ? "border-ink bg-ink text-cream"
+                : "border-line bg-cream text-ink hover:border-ink-soft"
+            }`}
+          >
+            Influencer code
+          </button>
+          <button
+            type="button"
+            onClick={() => setKind("promo")}
+            className={`px-5 py-3 border text-sm transition-colors ${
+              kind === "promo"
+                ? "border-ink bg-ink text-cream"
+                : "border-line bg-cream text-ink hover:border-ink-soft"
+            }`}
+          >
+            Site promo
+          </button>
+        </div>
+        <p className="text-xs text-muted mt-3 leading-relaxed">
+          {kind === "affiliate"
+            ? "Belongs to an influencer. They get a share link and a private stats page."
+            : "A site-wide offer. The most recent active promo shows in the first-visit pop-up. No influencer, no stats page."}
+        </p>
+      </section>
+
       <section>
         <h2 className="text-xs uppercase tracking-[0.15em] text-muted mb-4">
           The code
@@ -110,7 +154,7 @@ export default function AffiliateForm({
               placeholder="TOYE10"
               className={`${inputCls} uppercase`}
             />
-            {shareLink && (
+            {shareLink && kind === "affiliate" && (
               <p className="text-xs text-muted mt-1 break-all">
                 Share link: {shareLink}
               </p>
@@ -144,9 +188,24 @@ export default function AffiliateForm({
         </p>
       </section>
 
+      {statsLink && (
+        <section>
+          <h2 className="text-xs uppercase tracking-[0.15em] text-muted mb-4">
+            Private stats link
+          </h2>
+          <p className="text-sm text-ink-soft mb-2 leading-relaxed">
+            Send this to {name || "the influencer"}. It needs no login — anyone
+            with the link can view their numbers, so treat it as private.
+          </p>
+          <code className="block text-xs bg-paper border border-line p-3 break-all">
+            {statsLink}
+          </code>
+        </section>
+      )}
+
       <section>
         <h2 className="text-xs uppercase tracking-[0.15em] text-muted mb-4">
-          Influencer
+          {kind === "promo" ? "Label" : "Influencer"}
         </h2>
         <div className="space-y-4">
           <div>

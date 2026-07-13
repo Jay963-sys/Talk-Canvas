@@ -102,6 +102,16 @@ export const affiliates = pgTable("affiliates", {
   phone: varchar("phone", { length: 50 }),
   notes: text("notes"),
 
+  // "affiliate" = an influencer's code (has a person behind it, gets a stats
+  // link). "promo" = a site-wide offer like the first-visit pop-up — no
+  // influencer, no stats page.
+  kind: varchar("kind", { length: 20 }).default("affiliate").notNull(),
+
+  // Unguessable token for the influencer's private read-only stats page at
+  // /partner/[token]. Null for promos. This token IS the credential — there
+  // are no influencer logins — so it must be high-entropy and never reused.
+  statsToken: varchar("stats_token", { length: 64 }).unique(),
+
   // 0–100. No hard ceiling — the gallery may raise a code above the usual
   // allowance, so this is validated as a percentage, not against a policy.
   discountPercent: integer("discount_percent").notNull(),
@@ -237,3 +247,27 @@ export const arModels = pgTable("ar_models", {
 });
 
 export type ArModel = typeof arModels.$inferSelect;
+
+// ── TESTIMONIALS ────────────────────────────────────────────────
+// Admin-managed customer reviews. An optional photo of the piece on the
+// customer's own wall is the strongest social proof the gallery has, so it
+// gets the hero treatment when present.
+export const testimonials = pgTable("testimonials", {
+  id: serial("id").primaryKey(),
+  quote: text("quote").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  location: varchar("location", { length: 255 }),
+  rating: integer("rating").default(5).notNull(), // 1–5
+
+  // Optional customer wall photo (Cloudinary).
+  imageUrl: text("image_url"),
+  imagePublicId: varchar("image_public_id", { length: 255 }),
+
+  displayOrder: integer("display_order").default(0).notNull(),
+  isVisible: boolean("is_visible").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Testimonial = typeof testimonials.$inferSelect;
+export type NewTestimonial = typeof testimonials.$inferInsert;

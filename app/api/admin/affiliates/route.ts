@@ -42,7 +42,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const kind = data.kind === "promo" ? "promo" : "affiliate";
+
     const created = await createAffiliate({
+      kind,
       code: data.code,
       name: data.name,
       email: data.email || null,

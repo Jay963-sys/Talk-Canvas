@@ -42,6 +42,9 @@ export async function PATCH(
     }
 
     const updated = await updateAffiliate(numId, {
+      ...(data.kind !== undefined && {
+        kind: data.kind === "promo" ? "promo" : "affiliate",
+      }),
       ...(data.code !== undefined && { code: data.code }),
       ...(data.name !== undefined && { name: data.name }),
       ...(data.email !== undefined && { email: data.email || null }),

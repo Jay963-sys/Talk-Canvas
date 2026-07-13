@@ -62,6 +62,11 @@ export default async function AdminAffiliatesPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {a.kind === "promo" && (
+                    <span className="px-2 py-1 border border-line text-ink-soft text-[10px] uppercase tracking-widest">
+                      Promo
+                    </span>
+                  )}
                   {!a.isActive && (
                     <span className="px-2 py-1 border border-line text-ink-soft text-[10px] uppercase tracking-widest">
                       Inactive
