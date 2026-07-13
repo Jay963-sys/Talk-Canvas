@@ -57,6 +57,13 @@
       "when": 1783946670308,
       "tag": "0007_bumpy_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783954050581,
+      "tag": "0008_careful_tinkerer",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getArchivePage } from "@/lib/db/queries/archivePrints";
+import {
+  getArchivePage,
+  type ArchiveOrientation,
+} from "@/lib/db/queries/archivePrints";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +16,10 @@ export async function GET(req: NextRequest) {
 
   const collection = req.nextUrl.searchParams.get("collection") ?? undefined;
 
-  const page = await getArchivePage(cursor, undefined, collection);
+  const o = req.nextUrl.searchParams.get("orientation");
+  const orientation: ArchiveOrientation | undefined =
+    o === "portrait" || o === "landscape" ? o : undefined;
+
+  const page = await getArchivePage(cursor, undefined, collection, orientation);
   return NextResponse.json(page);
 }

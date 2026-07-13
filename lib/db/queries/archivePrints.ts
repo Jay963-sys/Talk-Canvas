@@ -4,6 +4,16 @@ import { and, desc, eq, lt, isNotNull } from "drizzle-orm";
 
 const PAGE_SIZE = 24;
 
+export type ArchiveOrientation = "portrait" | "landscape";
+
+/** Derived from the image itself — never a manual tag. Squares read portrait. */
+export function deriveOrientation(
+  width: number,
+  height: number,
+): ArchiveOrientation {
+  return width > height ? "landscape" : "portrait";
+}
+
 export interface ArchivePage {
   items: (typeof archivePrints.$inferSelect)[];
   nextCursor: number | null;
@@ -11,16 +21,20 @@ export interface ArchivePage {
 
 /**
  * Public grid feed — visible only, newest first, cursor-paginated by id.
- * Optionally scoped to a single collection.
+ * Optionally scoped to a collection and/or an orientation.
  */
 export async function getArchivePage(
   cursor?: number,
   pageSize = PAGE_SIZE,
   collection?: string,
+  orientation?: ArchiveOrientation,
 ): Promise<ArchivePage> {
   const conditions = [eq(archivePrints.isVisible, true)];
   if (cursor) conditions.push(lt(archivePrints.id, cursor));
   if (collection) conditions.push(eq(archivePrints.collection, collection));
+  if (orientation) {
+    conditions.push(eq(archivePrints.orientation, orientation));
+  }
 
   const rows = await db
     .select()
@@ -71,7 +85,14 @@ export async function createArchivePrint(input: {
   height: number;
   collection?: string;
 }) {
-  const [row] = await db.insert(archivePrints).values(input).returning();
+  const [row] = await db
+    .insert(archivePrints)
+    .values({
+      ...input,
+      // Set automatically — the admin never picks this.
+      orientation: deriveOrientation(input.width, input.height),
+    })
+    .returning();
   return row;
 }
 

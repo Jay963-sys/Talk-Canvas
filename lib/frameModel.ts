@@ -104,8 +104,8 @@ export async function buildScene(
   scene.add(art);
 
   // Glass — included for box-with-glass and all antique frames
-  const hasGlass =
-    (style === "regular" && shape === "box" && glass) || style === "antique";
+  // Glass — box frames only. Antique frames don't take glass.
+  const hasGlass = style === "regular" && shape === "box" && glass;
   if (hasGlass) {
     const glassMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,

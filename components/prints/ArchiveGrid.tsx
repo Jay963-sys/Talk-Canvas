@@ -17,12 +17,14 @@ interface Props {
   initialItems: ArchiveItem[];
   initialCursor: number | null;
   collection?: string;
+  orientation?: "portrait" | "landscape";
 }
 
 export default function ArchiveGrid({
   initialItems,
   initialCursor,
   collection,
+  orientation,
 }: Props) {
   const [items, setItems] = useState<ArchiveItem[]>(initialItems);
   const [cursor, setCursor] = useState<number | null>(initialCursor);
@@ -35,15 +37,17 @@ export default function ArchiveGrid({
     setItems(initialItems);
     setCursor(initialCursor);
     setError(null);
-  }, [initialItems, initialCursor]);
+  }, [initialItems, initialCursor, orientation, collection]);
 
   const loadMore = useCallback(async () => {
     if (loading || cursor === null) return;
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ cursor: String(cursor) });
+      const params = new URLSearchParams();
+      params.set("cursor", String(cursor));
       if (collection) params.set("collection", collection);
+      if (orientation) params.set("orientation", orientation);
       const res = await fetch(`/api/archive-prints?${params.toString()}`);
       if (!res.ok) throw new Error("Couldn't load more pieces");
       const data: { items: ArchiveItem[]; nextCursor: number | null } =
@@ -55,7 +59,7 @@ export default function ArchiveGrid({
     } finally {
       setLoading(false);
     }
-  }, [cursor, loading, collection]);
+  }, [cursor, loading, collection, orientation]);
 
   useEffect(() => {
     const node = sentinel.current;

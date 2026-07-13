@@ -4,12 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2 } from "lucide-react";
 
+type Orientation = "portrait" | "landscape";
+
 export interface ArchiveItem {
   id: number;
   imageUrl: string;
   imagePublicId: string;
   width: number;
   height: number;
+  orientation: Orientation;
   collection: string | null;
 }
 
@@ -22,12 +25,23 @@ function thumb(url: string, width = 500) {
   return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
 }
 
+const FILTERS: { id: Orientation | null; label: string }[] = [
+  { id: null, label: "All" },
+  { id: "portrait", label: "Portrait" },
+  { id: "landscape", label: "Landscape" },
+];
+
 export default function ArchivePickerModal({ onSelect, onClose }: Props) {
   const [items, setItems] = useState<ArchiveItem[]>([]);
   const [cursor, setCursor] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [orientation, setOrientation] = useState<Orientation | null>(null);
+  // Ref mirror so `load` reads the active filter without being re-created
+  // (which would re-subscribe the infinite-scroll observer on every change).
+  const orientationRef = useRef<Orientation | null>(null);
 
   const sentinel = useRef<HTMLDivElement>(null);
   const firstLoad = useRef(true);
@@ -48,7 +62,12 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
       setError(null);
 
       try {
-        const qs = cur ? `?cursor=${cur}` : "";
+        const params = new URLSearchParams();
+        if (cur) params.set("cursor", String(cur));
+        if (orientationRef.current) {
+          params.set("orientation", orientationRef.current);
+        }
+        const qs = params.toString() ? `?${params.toString()}` : "";
         const res = await fetch(`/api/archive-prints${qs}`);
 
         if (!res.ok) throw new Error("Couldn't load the archive");
@@ -69,6 +88,18 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
     },
     [loading],
   );
+
+  const switchOrientation = (next: Orientation | null) => {
+    if (next === orientation) return;
+    orientationRef.current = next;
+    setOrientation(next);
+    // Reset the feed and pull a fresh first page for the new filter.
+    setItems([]);
+    setCursor(null);
+    setLoadedOnce(false);
+    setError(null);
+    load(null);
+  };
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -158,6 +189,26 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
           </div>
         </div>
 
+        {/* Orientation filter — derived from each image, no tagging needed. */}
+        <div className="shrink-0 border-b border-line bg-cream px-6 md:px-8">
+          <div className="flex gap-x-6 py-3">
+            {FILTERS.map((f) => (
+              <button
+                key={f.label}
+                type="button"
+                onClick={() => switchOrientation(f.id)}
+                className={`text-[12px] uppercase tracking-widest pb-1 border-b transition-colors ${
+                  orientation === f.id
+                    ? "text-ink border-ink font-medium"
+                    : "text-ink-soft hover:text-ink border-transparent"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Scroll Area */}
         <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6">
           {!loadedOnce && (
@@ -170,7 +221,9 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
             <div className="py-20 text-center">
               <p className="display-italic text-2xl">Nothing here yet</p>
               <p className="text-sm text-muted mt-2">
-                New designs are added all the time — check back soon.
+                {orientation
+                  ? `No ${orientation} designs yet — try another orientation.`
+                  : "New designs are added all the time — check back soon."}
               </p>
             </div>
           )}

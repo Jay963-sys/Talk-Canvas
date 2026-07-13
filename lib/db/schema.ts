@@ -225,6 +225,13 @@ export const archivePrints = pgTable("archive_prints", {
   imagePublicId: varchar("image_public_id", { length: 255 }).notNull(),
   width: integer("width").notNull(),
   height: integer("height").notNull(),
+
+  // Derived from width/height at upload — never entered by hand. Stored rather
+  // than computed per query so the filter can use an index as the archive grows.
+  orientation: varchar("orientation", { length: 10 })
+    .default("portrait")
+    .notNull(),
+
   collection: varchar("collection", { length: 100 }),
   displayOrder: integer("display_order").default(0).notNull(),
   isVisible: boolean("is_visible").default(true).notNull(),

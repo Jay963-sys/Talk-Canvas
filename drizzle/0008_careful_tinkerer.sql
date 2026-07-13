@@ -1,0 +1,1 @@
+ALTER TABLE "archive_prints" ADD COLUMN "orientation" varchar(10) DEFAULT 'portrait' NOT NULL;
