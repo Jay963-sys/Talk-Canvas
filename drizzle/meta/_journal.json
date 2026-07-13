@@ -64,6 +64,13 @@
       "when": 1783954050581,
       "tag": "0008_careful_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1783969414256,
+      "tag": "0009_productive_rictor",
+      "breakpoints": true
     }
   ]
 }

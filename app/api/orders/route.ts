@@ -10,6 +10,8 @@ import { fulfillOrder } from "@/lib/orders/fulfillment";
 import { checkCode } from "@/lib/db/queries/affiliates";
 import type { Original, NewOrderItem } from "@/lib/db/schema";
 import { SHIPPING_CONFIG } from "@/data/shipping";
+import { quoteDelivery, type DeliverablePiece } from "@/lib/deliveryCalc";
+import { OUTSIDE_LAGOS_ID } from "@/data/delivery";
 
 /** Mirror of the cart's ceiling. Never trust the client's number. */
 const MAX_QUANTITY = 99;
@@ -63,6 +65,8 @@ interface OrderBody {
   items: OrderItemInput[];
   notes?: string;
   affiliateCode?: string;
+  /** Lagos LGA id, or "outside-lagos". Required when deliveryMethod is "delivery". */
+  deliveryZone?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -253,8 +257,47 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const computedShipping =
-      deliveryMethod === "pickup" ? 0 : SHIPPING_CONFIG.delivery.fee;
+    // ── Delivery ───────────────────────────────────────────────────
+    // Recomputed from the DB-trusted items and the chosen zone. The client
+    // sends a zone id, never a fee.
+    let computedShipping = 0;
+    let deliveryVehicle: string | null = null;
+    let deliveryQuotePending = false;
+
+    if (deliveryMethod === "delivery") {
+      if (!body.deliveryZone) {
+        return NextResponse.json(
+          { error: "Please choose your delivery area." },
+          { status: 400 },
+        );
+      }
+
+      const pieces: DeliverablePiece[] = itemRows.map((i) => ({
+        sizeId: i.sizeId ?? null,
+        widthInches:
+          i.originalId != null
+            ? (originalsMap.get(i.originalId)?.widthInches ?? null)
+            : null,
+        heightInches:
+          i.originalId != null
+            ? (originalsMap.get(i.originalId)?.heightInches ?? null)
+            : null,
+        quantity: i.quantity ?? 1,
+      }));
+
+      const quote = quoteDelivery(body.deliveryZone, pieces);
+      if (!quote) {
+        return NextResponse.json(
+          { error: "We don't recognise that delivery area." },
+          { status: 400 },
+        );
+      }
+
+      computedShipping = quote.fee;
+      deliveryVehicle = quote.vehicle;
+      deliveryQuotePending = quote.quoteOnRequest;
+    }
+
     const computedTotal = computedSubtotal - discountAmount + computedShipping;
 
     const paymentReference = paystackEnabled()
@@ -280,6 +323,9 @@ export async function POST(req: NextRequest) {
         country: deliveryMethod === "delivery" ? address!.country : null,
         subtotal: computedSubtotal,
         shipping: computedShipping,
+        deliveryZone: deliveryMethod === "delivery" ? body.deliveryZone! : null,
+        deliveryVehicle,
+        deliveryQuotePending,
         affiliateId,
         affiliateCode,
         discountPercent,

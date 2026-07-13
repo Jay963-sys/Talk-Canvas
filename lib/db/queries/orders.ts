@@ -137,3 +137,29 @@ export async function markOrderPaidByReference(
 export async function getAllOrders(): Promise<Order[]> {
   return await db.select().from(orders).orderBy(desc(orders.createdAt));
 }
+
+// ─────────────────────────────────────────────────────────────────
+// ADD THIS to lib/db/queries/orders.ts
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Record the delivery fee the gallery agreed with an outside-Lagos customer.
+ * Clears the pending flag so the order stops showing as unquoted.
+ */
+export async function setDeliveryQuote(
+  id: number,
+  shipping: number,
+  total: number,
+): Promise<Order | undefined> {
+  const [updated] = await db
+    .update(orders)
+    .set({
+      shipping,
+      total,
+      deliveryQuotePending: false,
+      updatedAt: new Date(),
+    })
+    .where(eq(orders.id, id))
+    .returning();
+  return updated;
+}

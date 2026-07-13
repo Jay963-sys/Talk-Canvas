@@ -11,6 +11,8 @@ import { sendEmail } from "@/lib/email";
 import OrderConfirmation from "@/lib/email/templates/OrderConfirmation";
 import OrderNotification from "@/lib/email/templates/OrderNotification";
 import { SHIPPING_CONFIG } from "@/data/shipping";
+import { getZone, OUTSIDE_LAGOS_ID } from "@/data/delivery";
+import { VEHICLE_LABELS } from "@/lib/deliveryCalc";
 
 /** Runs exactly once per confirmed order: mark one-of-one originals sold + send emails. */
 export async function fulfillOrder(order: OrderWithItems): Promise<void> {
@@ -89,6 +91,18 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
         ? `Production: ${timelineParts[0]}.`
         : `Production times vary by piece: ${timelineParts.join("; ")}.`;
 
+  // Delivery context for the emails. An outside-Lagos order ships at zero and
+  // must be quoted by hand — surface that loudly or it gets shipped for free.
+  const deliveryQuotePending = order.deliveryQuotePending ?? false;
+  const deliveryZoneLabel =
+    order.deliveryZone === OUTSIDE_LAGOS_ID
+      ? "Outside Lagos"
+      : (getZone(order.deliveryZone ?? "")?.label ?? null);
+  const deliveryVehicleLabel = order.deliveryVehicle
+    ? (VEHICLE_LABELS[order.deliveryVehicle as keyof typeof VEHICLE_LABELS] ??
+      null)
+    : null;
+
   const galleryEmail = process.env.GALLERY_EMAIL;
 
   const emailJobs: Promise<unknown>[] = [
@@ -107,6 +121,8 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
         shipping: order.shipping,
         total: order.total,
         deliveryMethod: order.deliveryMethod as "pickup" | "delivery",
+        deliveryZoneLabel,
+        deliveryQuotePending,
         pickupAddress: SHIPPING_CONFIG.pickup.address,
         pickupDays: SHIPPING_CONFIG.pickup.days,
         pickupHours: SHIPPING_CONFIG.pickup.hours,
@@ -121,7 +137,9 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
     emailJobs.push(
       sendEmail({
         to: galleryEmail,
-        subject: `New order #${orderNumber} — ${order.customerName}`,
+        subject: deliveryQuotePending
+          ? `New order #${orderNumber} — ${order.customerName} — DELIVERY QUOTE NEEDED`
+          : `New order #${orderNumber} — ${order.customerName}`,
         react: OrderNotification({
           orderNumber,
           customer: {
@@ -137,6 +155,9 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
           shipping: order.shipping,
           total: order.total,
           deliveryMethod: order.deliveryMethod as "pickup" | "delivery",
+          deliveryZoneLabel,
+          deliveryVehicleLabel,
+          deliveryQuotePending,
           shippingAddress: shippingAddressForEmail,
           notes: order.notes,
         }),

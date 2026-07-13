@@ -143,6 +143,16 @@ export const orders = pgTable("orders", {
   subtotal: integer("subtotal").notNull(),
   shipping: integer("shipping").notNull(),
 
+  // Delivery pricing is per-LGA and depends on the vehicle the order needs.
+  // Snapshotted so a later price-list change never rewrites past orders.
+  deliveryZone: varchar("delivery_zone", { length: 50 }),
+  deliveryVehicle: varchar("delivery_vehicle", { length: 20 }),
+  // Outside Lagos isn't in the price list — shipping is 0 here and the gallery
+  // contacts the customer with a quote.
+  deliveryQuotePending: boolean("delivery_quote_pending")
+    .default(false)
+    .notNull(),
+
   // Affiliate/discount snapshot. Frozen at order time so editing a code's rate
   // later never rewrites historical orders. discountAmount is the naira taken
   // off; it only ever applies to prints + recreatable Talk Canvas designs.

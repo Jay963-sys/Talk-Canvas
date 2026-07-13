@@ -12,6 +12,12 @@ import {
 } from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
 import { SHIPPING_CONFIG } from "@/data/shipping";
+import {
+  LAGOS_ZONES,
+  OUTSIDE_LAGOS_ID,
+  OUTSIDE_LAGOS_NOTE,
+} from "@/data/delivery";
+import { quoteDelivery, VEHICLE_LABELS } from "@/lib/deliveryCalc";
 import Image from "next/image";
 
 type DeliveryMethod = "delivery" | "pickup";
@@ -29,6 +35,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [deliveryMethod, setDeliveryMethod] =
     useState<DeliveryMethod>("delivery");
+  const [deliveryZone, setDeliveryZone] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -96,9 +103,21 @@ export default function CheckoutPage() {
   const subtotal = cartSubtotal(items);
   const eligible = discountableSubtotal(items);
   const discount = applied ? discountFor(items, applied.discountPercent) : 0;
-  const shipping =
-    deliveryMethod === "pickup" ? 0 : SHIPPING_CONFIG.delivery.fee;
+  // Same calculator the server uses, so the preview matches the charge.
+  const quote =
+    deliveryMethod === "delivery" && deliveryZone
+      ? quoteDelivery(
+          deliveryZone,
+          items.map((i) => ({
+            sizeId: i.type === "print" ? i.sizeId : null,
+            quantity: i.quantity,
+          })),
+        )
+      : null;
+
+  const shipping = deliveryMethod === "pickup" ? 0 : (quote?.fee ?? 0);
   const total = subtotal - discount + shipping;
+  const awaitingZone = deliveryMethod === "delivery" && !deliveryZone;
 
   // True when the cart is nothing but one-of-one artist works — a code would
   // validate but take nothing off, so say so rather than show "−₦0".
@@ -203,6 +222,8 @@ export default function CheckoutPage() {
           total,
           // The server re-validates this code and recomputes the discount from
           // scratch — nothing we send about price is trusted.
+          deliveryZone:
+            deliveryMethod === "delivery" ? deliveryZone : undefined,
           affiliateCode: applied?.code,
           notes: notes.trim() !== "" ? notes : undefined,
         }),
@@ -265,7 +286,11 @@ export default function CheckoutPage() {
                   onClick={() => setDeliveryMethod("delivery")}
                   title="Delivery"
                   description="Door-to-door"
-                  fee={formatNaira(SHIPPING_CONFIG.delivery.fee)}
+                  fee={
+                    quote && !quote.quoteOnRequest
+                      ? formatNaira(quote.fee)
+                      : "By area"
+                  }
                 />
                 <DeliveryOption
                   selected={deliveryMethod === "pickup"}
@@ -292,9 +317,48 @@ export default function CheckoutPage() {
               )}
 
               {deliveryMethod === "delivery" && (
-                <p className="text-[13px] text-ink-soft mt-4 leading-relaxed">
-                  {SHIPPING_CONFIG.delivery.description}
-                </p>
+                <div className="mt-6">
+                  <label
+                    htmlFor="deliveryZone"
+                    className="block text-[10px] uppercase tracking-widest text-ink-soft font-semibold mb-2"
+                  >
+                    Delivery area
+                  </label>
+                  <select
+                    id="deliveryZone"
+                    required
+                    value={deliveryZone}
+                    onChange={(e) => setDeliveryZone(e.target.value)}
+                    className="w-full px-4 py-3 bg-transparent border border-line focus:border-ink outline-none transition-colors text-[14px] text-ink"
+                  >
+                    <option value="" disabled>
+                      Select your area…
+                    </option>
+                    <optgroup label="Lagos">
+                      {LAGOS_ZONES.map((z) => (
+                        <option key={z.id} value={z.id}>
+                          {z.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <option value={OUTSIDE_LAGOS_ID}>Outside Lagos</option>
+                  </select>
+
+                  {quote && !quote.quoteOnRequest && (
+                    <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
+                      Delivered by {VEHICLE_LABELS[quote.vehicle].toLowerCase()}
+                      , based on the size and number of pieces in your order.
+                    </p>
+                  )}
+
+                  {quote?.quoteOnRequest && (
+                    <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
+                      <p className="text-[13px] text-ink leading-relaxed">
+                        {OUTSIDE_LAGOS_NOTE}
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
             </section>
 
@@ -482,10 +546,14 @@ export default function CheckoutPage() {
             <div className="md:hidden pt-4">
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || awaitingZone}
                 className="w-full py-4 bg-ink hover:bg-ink-soft text-cream text-[12px] uppercase tracking-widest font-medium transition-colors disabled:opacity-60"
               >
-                {submitting ? "Processing..." : `Pay ${formatNaira(total)}`}
+                {submitting
+                  ? "Processing..."
+                  : awaitingZone
+                    ? "Choose a delivery area"
+                    : `Pay ${formatNaira(total)}`}
               </button>
               {error && (
                 <p className="text-[13px] text-red-600 text-center mt-3">
@@ -564,7 +632,15 @@ export default function CheckoutPage() {
                 )}
                 <SummaryLine
                   label={deliveryMethod === "pickup" ? "Pickup" : "Delivery"}
-                  value={shipping === 0 ? "Free" : formatNaira(shipping)}
+                  value={
+                    deliveryMethod === "pickup"
+                      ? "Free"
+                      : awaitingZone
+                        ? "—"
+                        : quote?.quoteOnRequest
+                          ? "Quoted after order"
+                          : formatNaira(shipping)
+                  }
                 />
               </div>
 
@@ -581,10 +657,14 @@ export default function CheckoutPage() {
               <div className="hidden md:block mt-10">
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || awaitingZone}
                   className="w-full py-4 bg-ink hover:bg-ink-soft text-cream text-[12px] uppercase tracking-widest font-medium transition-colors disabled:opacity-60"
                 >
-                  {submitting ? "Processing..." : `Pay ${formatNaira(total)}`}
+                  {submitting
+                    ? "Processing..."
+                    : awaitingZone
+                      ? "Choose a delivery area"
+                      : `Pay ${formatNaira(total)}`}
                 </button>
                 {error && (
                   <p className="text-[13px] text-red-600 text-center mt-4">
