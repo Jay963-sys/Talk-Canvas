@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2, Camera, Rotate3d } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { generateFrameGLB } from "@/lib/frameModel";
@@ -33,6 +34,15 @@ export default function OriginalARModal({
   const [iosUrl, setIosUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState("Preparing your preview…");
+
+  // Portal to <body> so the overlay escapes any ancestor with a transform,
+  // filter or animation (e.g. `.fade-in`, the film-grain layer). Such an
+  // ancestor creates a stacking context that traps our z-index inside it —
+  // which is why the sticky header was painting over the model.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -144,13 +154,15 @@ export default function OriginalARModal({
   const label = `${original.title} · ${sizeLabel}`;
   const arUrl = modelUrl ? buildArUrl(modelUrl, iosUrl, label) : null;
 
-  return (
+  if (!mounted) return null;
+
+  const modal = (
     <div
       onClick={onClose}
-      className="fade-in fixed inset-x-0 top-0 z-[100] h-[100dvh] overflow-y-auto bg-black/90 flex flex-col items-center justify-center p-6"
+      className="fade-in fixed inset-x-0 top-0 z-[200] h-[100dvh] overflow-y-auto overscroll-contain bg-black/90 flex flex-col items-center justify-start py-10 px-6"
     >
       <div onClick={(e) => e.stopPropagation()} className="max-w-4xl w-full">
-        <div className="relative aspect-[4/3] bg-[#1a1814] overflow-hidden">
+        <div className="relative aspect-[3/4] md:aspect-[4/3] bg-[#1a1814] overflow-hidden">
           {modelUrl && (
             <div className="absolute top-4 left-4 z-10 inline-flex items-center gap-2 bg-black/40 backdrop-blur-sm text-cream/90 rounded-full px-3 py-1.5">
               <Rotate3d size={14} strokeWidth={1.5} />
@@ -234,4 +246,6 @@ export default function OriginalARModal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
