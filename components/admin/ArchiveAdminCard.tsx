@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Trash2, Loader2 } from "lucide-react";
-import { ARCHIVE_COLLECTIONS } from "@/data/collections";
 
 interface Props {
   item: {
@@ -21,7 +20,6 @@ function thumb(url: string, width = 400): string {
 export default function ArchiveAdminCard({ item }: Props) {
   const router = useRouter();
   const [visible, setVisible] = useState(item.isVisible);
-  const [collection, setCollection] = useState(item.collection ?? "");
   const [busy, setBusy] = useState(false);
 
   const toggle = async () => {
@@ -33,24 +31,6 @@ export default function ArchiveAdminCard({ item }: Props) {
         body: JSON.stringify({ isVisible: !visible }),
       });
       if (res.ok) setVisible(!visible);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const changeCollection = async (next: string) => {
-    const prev = collection;
-    setCollection(next); // optimistic
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/admin/archive-prints/${item.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ collection: next || null }),
-      });
-      if (!res.ok) setCollection(prev); // revert on failure
-    } catch {
-      setCollection(prev);
     } finally {
       setBusy(false);
     }
@@ -83,12 +63,18 @@ export default function ArchiveAdminCard({ item }: Props) {
         className="w-full h-full object-cover"
       />
 
-      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 group-hover:bg-black/40 opacity-0 group-hover:opacity-100 transition-all">
+      {/*
+        Controls are always visible on touch (no hover there), and fall back to
+        the cleaner hover reveal on desktop. The scrim behind them keeps the
+        icons legible over these vivid images and follows the same rule.
+      */}
+      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/30 opacity-100 transition-all md:bg-black/0 md:opacity-0 md:group-hover:bg-black/40 md:group-hover:opacity-100">
         <button
           onClick={toggle}
           disabled={busy}
           title={visible ? "Hide from archive" : "Show in archive"}
-          className="bg-cream/90 p-2 rounded-full hover:bg-cream disabled:opacity-60"
+          aria-label={visible ? "Hide from archive" : "Show in archive"}
+          className="bg-cream/90 p-2.5 rounded-full hover:bg-cream disabled:opacity-60"
         >
           {busy ? (
             <Loader2 size={16} className="animate-spin" />
@@ -102,30 +88,11 @@ export default function ArchiveAdminCard({ item }: Props) {
           onClick={remove}
           disabled={busy}
           title="Delete"
-          className="bg-cream/90 p-2 rounded-full hover:bg-red-100 text-red-600 disabled:opacity-60"
+          aria-label="Delete print"
+          className="bg-cream/90 p-2.5 rounded-full hover:bg-red-100 text-red-600 disabled:opacity-60"
         >
           <Trash2 size={16} />
         </button>
-      </div>
-
-      {/* Collection select — always visible (not hover-only), pinned bottom */}
-      <div
-        className="absolute bottom-0 inset-x-0 p-1.5 bg-gradient-to-t from-black/70 to-transparent"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <select
-          value={collection}
-          onChange={(e) => changeCollection(e.target.value)}
-          disabled={busy}
-          className="w-full text-[11px] bg-cream/90 border-0 px-1.5 py-1 disabled:opacity-60"
-        >
-          <option value="">Uncategorized</option>
-          {ARCHIVE_COLLECTIONS.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
       </div>
 
       {!visible && (
