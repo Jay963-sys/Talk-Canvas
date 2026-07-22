@@ -149,10 +149,12 @@ export default async function OrdersPage({
         </div>
       ) : (
         <div className="overflow-x-auto border border-line">
-          <table className="w-full border-collapse text-left">
+          {/* Added a min-width to ensure columns have enough room to breathe on mobile, triggering the scroll */}
+          <table className="w-full min-w-[950px] xl:min-w-full border-collapse text-left">
             <thead>
               <tr className="bg-paper text-[10px] uppercase tracking-widest text-ink-soft">
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">
+                {/* Made the Order header sticky */}
+                <th className="sticky left-0 z-20 bg-paper px-4 py-3 font-semibold whitespace-nowrap border-r border-line md:border-r-0">
                   Order
                 </th>
                 <th className="px-4 py-3 font-semibold whitespace-nowrap">
@@ -178,9 +180,10 @@ export default async function OrdersPage({
               {orders.map((order) => (
                 <tr
                   key={order.id}
-                  className="border-t border-line hover:bg-paper transition-colors"
+                  className="group bg-white hover:bg-paper border-t border-line transition-colors"
                 >
-                  <td className="px-4 py-4 whitespace-nowrap align-top">
+                  {/* Made the Order cell sticky. It matches the row's hover state using group-hover */}
+                  <td className="sticky left-0 z-10 bg-white group-hover:bg-paper transition-colors px-4 py-4 whitespace-nowrap align-top border-r border-line md:border-r-0">
                     <Link
                       href={`/admin/orders/${order.id}`}
                       className="display-italic text-base hover:underline"
