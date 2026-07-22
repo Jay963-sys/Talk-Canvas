@@ -257,6 +257,18 @@ export default function OrderConfirmation({
             </Text>
           )}
 
+          {/* Lagos deliveries carry a computed fee — reassure the customer that
+              any later change to it comes with a heads-up, per gallery policy. */}
+          {deliveryMethod === "delivery" &&
+            !deliveryQuotePending &&
+            shipping > 0 && (
+              <Text style={{ ...styles.metaText, marginTop: "8px" }}>
+                Your delivery fee is based on your area and the size and number
+                of pieces in your order. If anything changes it, we&apos;ll
+                contact you before dispatch.
+              </Text>
+            )}
+
           {deliveryMethod === "pickup" && pickupAddress && (
             <>
               <Text style={styles.sectionLabel}>Pickup details</Text>
