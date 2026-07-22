@@ -344,12 +344,21 @@ export default function CheckoutPage() {
                     <option value={OUTSIDE_LAGOS_ID}>Outside Lagos</option>
                   </select>
 
-                  {quote && !quote.quoteOnRequest && (
-                    <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
-                      Delivered by {VEHICLE_LABELS[quote.vehicle].toLowerCase()}
-                      , based on the size and number of pieces in your order.
-                    </p>
+                                   {quote && !quote.quoteOnRequest && (
+                    <>
+                      <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
+                        Delivered by{" "}
+                        {VEHICLE_LABELS[quote.vehicle].toLowerCase()}, based on
+                        the size and number of pieces in your order.
+                      </p>
+                      <p className="text-[12px] text-ink-soft mt-2 leading-relaxed">
+                        This fee can shift with your exact location or any change
+                        to your order — we&apos;ll contact you before dispatch if
+                        it does.
+                      </p>
+                    </>
                   )}
+
 
                   {quote?.quoteOnRequest && (
                     <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
