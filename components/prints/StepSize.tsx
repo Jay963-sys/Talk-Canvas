@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import {
   SIZES,
   SIZE_CATEGORIES,
@@ -9,6 +10,7 @@ import {
 } from "@/data/sizes";
 import { useConfigurator, formatNaira } from "@/lib/store";
 import { getPrice } from "@/data/pricing";
+import { bestDpi, PRINT_DPI_GOOD, PRINT_DPI_MIN } from "@/lib/crop";
 
 export default function StepSize() {
   const { image, frame, glass, size, setSize } = useConfigurator();
@@ -19,6 +21,7 @@ export default function StepSize() {
   // Sizes are stored portrait; a landscape design gets them rotated so the
   // artwork isn't squeezed into an upright frame.
   const orientation = orientationOf(image);
+  const natural = image ? { w: image.width, h: image.height } : null;
 
   return (
     <div className="fade-in">
@@ -44,6 +47,11 @@ export default function StepSize() {
             {SIZES.filter((s) => s.category === cat.id).map((s) => {
               const price = getPrice(frame, glass, s);
               const available = price !== null;
+              // Best case, using the whole image — steers people away from
+              // sizes their file simply can't fill sharply, before they commit.
+              const dpi = natural ? bestDpi(natural, s, orientation) : null;
+              const lowRes = dpi !== null && dpi < PRINT_DPI_MIN;
+              const okRes = dpi !== null && !lowRes && dpi < PRINT_DPI_GOOD;
               return (
                 <button
                   key={s.id}
@@ -60,6 +68,17 @@ export default function StepSize() {
                   <p className="text-[13px] font-medium">
                     {available ? formatNaira(price!) : "Unavailable"}
                   </p>
+                  {available && lowRes && (
+                    <p className="text-[11px] text-amber-700 mt-1.5 flex items-center gap-1">
+                      <AlertTriangle size={11} strokeWidth={1.6} />
+                      Low resolution for this size
+                    </p>
+                  )}
+                  {available && okRes && (
+                    <p className="text-[11px] text-ink-soft mt-1.5">
+                      ~{dpi} DPI
+                    </p>
+                  )}
                 </button>
               );
             })}

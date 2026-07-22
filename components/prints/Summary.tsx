@@ -4,12 +4,14 @@ import { useConfigurator, formatNaira } from "@/lib/store";
 import { useCart } from "@/lib/cartStore";
 import { getPrice } from "@/data/pricing";
 import { formatInches, orientationOf } from "@/data/sizes";
+import { withCrop, FULL_CROP } from "@/lib/crop";
 import { ArrowLeft } from "lucide-react";
 
 const STEP_NAMES = ["Upload", "Frame", "Size", "Review"];
 
 export default function Summary() {
-  const { step, setStep, image, frame, glass, size, reset } = useConfigurator();
+  const { step, setStep, image, frame, glass, size, crop, reset } =
+    useConfigurator();
   const { addItem, setOpen: setCartOpen } = useCart();
 
   const totalPrice = frame && size ? (getPrice(frame, glass, size) ?? 0) : 0;
@@ -28,9 +30,16 @@ export default function Summary() {
 
   const handleAddToCart = () => {
     if (!image || !frame || !size) return;
+    const natural = { w: image.width, h: image.height };
+    const activeCrop = crop ?? FULL_CROP;
     addItem({
-      imageUrl: image.url,
+      // Bake the approved crop into the URL. Every downstream consumer — cart
+      // thumbnail, order record, confirmation email, the file the gallery
+      // prints — then shows exactly what the customer signed off on, with no
+      // extra upload and no schema change. imagePublicId stays the base asset.
+      imageUrl: withCrop(image.url, activeCrop, natural),
       imagePublicId: image.publicId,
+      crop: activeCrop,
       frameId: frame.id,
       frameName: frame.name,
       glass,

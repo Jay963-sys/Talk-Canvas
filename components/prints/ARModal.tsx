@@ -9,16 +9,9 @@ import { generateFrameGLB } from "@/lib/frameModel";
 import { generateFrameUSDZ } from "@/lib/frameUSDZ";
 import { uploadModelToCloudinary, uploadUSDZToCloudinary } from "@/lib/upload";
 import { formatInches, orientCm, orientationOf } from "@/data/sizes";
+import { cloudinaryChain, cropTransform, isFullCrop } from "@/lib/crop";
 import ARViewer from "./ARViewer";
 import { USE_CUSTOM_USDZ } from "@/lib/arConfig";
-
-function getDownsizedUrl(originalUrl: string, maxWidth = 1200): string {
-  if (originalUrl.startsWith("blob:")) return originalUrl;
-  return originalUrl.replace(
-    "/upload/",
-    `/upload/w_${maxWidth},c_fit,q_auto,f_jpg/`,
-  );
-}
 
 function buildArUrl(glb: string, usdz: string | null, label: string) {
   if (typeof window === "undefined") return null;
@@ -30,7 +23,7 @@ function buildArUrl(glb: string, usdz: string | null, label: string) {
 }
 
 export default function ARModal() {
-  const { image, frame, glass, size, setArOpen } = useConfigurator();
+  const { image, frame, glass, size, crop, setArOpen } = useConfigurator();
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [iosUrl, setIosUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,8 +64,21 @@ export default function ARModal() {
         const orientation = orientationOf(image);
         const oriented = orientCm(size, orientation);
         const dims = { w: oriented.w / 100, h: oriented.h / 100 };
+
+        // Texture = the approved crop, then downsized. The crop MUST precede the
+        // resize in the chain, or its pixel coordinates target the wrong space.
+        const natural = { w: image.width, h: image.height };
+        const cropParts =
+          crop && !isFullCrop(crop) ? [cropTransform(crop, natural)] : [];
+        const textureUrl = image.url.startsWith("blob:")
+          ? image.url
+          : cloudinaryChain(image.url, [
+              ...cropParts,
+              "w_1200,c_fit,q_auto,f_jpg",
+            ]);
+
         const opts = {
-          imageUrl: getDownsizedUrl(image.url, 1200),
+          imageUrl: textureUrl,
           frameColor: frame.swatchColor,
           artWidth: dims.w,
           artHeight: dims.h,
@@ -82,6 +88,12 @@ export default function ARModal() {
         };
 
         const isLocalBlob = image.url.startsWith("blob:");
+        // Fold the crop into the key so a re-crop regenerates instead of
+        // serving a stale model of the old composition.
+        const cropSig =
+          crop && !isFullCrop(crop)
+            ? `${Math.round(crop.x * 1000)},${Math.round(crop.y * 1000)},${Math.round(crop.w * 1000)},${Math.round(crop.h * 1000)}`
+            : "full";
         const cacheKey = [
           image.publicId || "custom",
           frame.style,
@@ -91,6 +103,7 @@ export default function ARModal() {
           oriented.h,
           orientation,
           glass ? "g" : "n",
+          cropSig,
         ].join("|");
 
         // --- 1. Cache lookup (Cloudinary-hosted only; skip local blobs)
@@ -170,7 +183,7 @@ export default function ARModal() {
       cancelled = true;
       if (localGlbUrl) URL.revokeObjectURL(localGlbUrl);
     };
-  }, [image, frame, size, glass]);
+  }, [image, frame, size, glass, crop]);
 
   if (!image || !frame || !size) return null;
 

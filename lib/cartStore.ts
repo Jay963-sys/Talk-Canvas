@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { Crop } from "@/lib/crop";
 
 /** Generous ceiling — guards against runaway input, not real customers. */
 export const MAX_QUANTITY = 99;
@@ -25,6 +26,12 @@ export interface PrintCartItem {
    * through to the order so the gallery frames the piece the right way round.
    */
   orientation: "portrait" | "landscape";
+  /**
+   * The crop the customer approved, as fractions of the source image. imageUrl
+   * already has it baked in — this is kept for the record and for telling two
+   * different crops of the same design apart.
+   */
+  crop: Crop;
   price: number;
   quantity: number;
   addedAt: string;
@@ -79,7 +86,22 @@ function genId(): string {
     : `cart_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-/** Two prints are the same line if image + frame + glass + size all match. */
+/** Same crop to the nearest 0.1% — avoids float noise splitting a line. */
+function sameCrop(a: Crop, b: Crop): boolean {
+  const r = (n: number) => Math.round(n * 1000);
+  return (
+    r(a.x) === r(b.x) &&
+    r(a.y) === r(b.y) &&
+    r(a.w) === r(b.w) &&
+    r(a.h) === r(b.h)
+  );
+}
+
+/**
+ * Two prints are the same line if image + frame + glass + size + orientation +
+ * crop all match. A different crop of the same design is a different product,
+ * so it gets its own line.
+ */
 function samePrint(
   a: PrintCartItem,
   b: Omit<PrintCartItem, "id" | "addedAt" | "type" | "quantity">,
@@ -89,7 +111,8 @@ function samePrint(
     a.frameId === b.frameId &&
     a.glass === b.glass &&
     a.sizeId === b.sizeId &&
-    a.orientation === b.orientation
+    a.orientation === b.orientation &&
+    sameCrop(a.crop, b.crop)
   );
 }
 
@@ -204,10 +227,10 @@ export const useCart = create<CartState>()(
     }),
     {
       name: "talk-canvas-cart",
-      version: 5, // bumped — print items gained `orientation`
+      version: 6, // bumped — print items gained `crop`
       migrate: (persistedState, version) => {
-        // Older carts have no quantity/oneOfOne. Rather than guess, start clean.
-        if (version < 5) return { items: [] };
+        // Older carts predate quantity/oneOfOne/crop. Rather than guess, start clean.
+        if (version < 6) return { items: [] };
         return persistedState as { items: CartItem[] };
       },
       partialize: (state) => ({ items: state.items }),
