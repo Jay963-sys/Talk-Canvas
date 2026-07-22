@@ -7,7 +7,7 @@ import {
   type NewOrder,
   type NewOrderItem,
 } from "../schema";
-import { eq, desc, inArray, and, ne } from "drizzle-orm";
+import { eq, desc, inArray, and, ne, gte, lte } from "drizzle-orm";
 import { type OrderStatus } from "../../constants";
 
 /**
@@ -40,6 +40,24 @@ export async function getAllOrdersWithItems(): Promise<OrderWithItems[]> {
     ...o,
     items: itemsByOrderId.get(o.id) ?? [],
   }));
+}
+
+/**
+ * Order-level rows for the admin transactions table and the CSV export.
+ * No items joined — the table shows transaction details (customer, amount,
+ * reference, status), not artwork. `from`/`to` bound createdAt inclusively;
+ * omit either side for an open range, both for everything.
+ */
+export async function getOrdersFiltered(range?: {
+  from?: Date;
+  to?: Date;
+}): Promise<Order[]> {
+  const conds = [];
+  if (range?.from) conds.push(gte(orders.createdAt, range.from));
+  if (range?.to) conds.push(lte(orders.createdAt, range.to));
+  const where = conds.length ? and(...conds) : undefined;
+
+  return db.select().from(orders).where(where).orderBy(desc(orders.createdAt));
 }
 
 export async function updateOrderStatus(
@@ -134,13 +152,10 @@ export async function markOrderPaidByReference(
     .returning();
   return updated;
 }
+
 export async function getAllOrders(): Promise<Order[]> {
   return await db.select().from(orders).orderBy(desc(orders.createdAt));
 }
-
-// ─────────────────────────────────────────────────────────────────
-// ADD THIS to lib/db/queries/orders.ts
-// ─────────────────────────────────────────────────────────────────
 
 /**
  * Record the delivery fee the gallery agreed with an outside-Lagos customer.
