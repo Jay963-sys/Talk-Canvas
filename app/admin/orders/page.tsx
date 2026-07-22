@@ -148,31 +148,24 @@ export default async function OrdersPage({
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto border border-line">
+        <div className="max-w-[100rem] mx-auto px-6 md:px-10 py-12">
+          {" "}
           {/* Added a min-width to ensure columns have enough room to breathe on mobile, triggering the scroll */}
           <table className="w-full min-w-[950px] xl:min-w-full border-collapse text-left">
             <thead>
               <tr className="bg-paper text-[10px] uppercase tracking-widest text-ink-soft">
-                {/* Made the Order header sticky */}
                 <th className="sticky left-0 z-20 bg-paper px-4 py-3 font-semibold whitespace-nowrap border-r border-line md:border-r-0">
                   Order
                 </th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">
-                  Date
-                </th>
+                {/* Removed whitespace-nowrap so headers can dictate dynamic column widths */}
+                <th className="px-4 py-3 font-semibold">Date</th>
                 <th className="px-4 py-3 font-semibold">Customer</th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">
-                  Reference
-                </th>
+                <th className="px-4 py-3 font-semibold">Reference</th>
                 <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">
                   Amount
                 </th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">
-                  Payment
-                </th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">
-                  Status
-                </th>
+                <th className="px-4 py-3 font-semibold">Payment</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -182,7 +175,6 @@ export default async function OrdersPage({
                   key={order.id}
                   className="group bg-white hover:bg-paper border-t border-line transition-colors"
                 >
-                  {/* Made the Order cell sticky. It matches the row's hover state using group-hover */}
                   <td className="sticky left-0 z-10 bg-white group-hover:bg-paper transition-colors px-4 py-4 whitespace-nowrap align-top border-r border-line md:border-r-0">
                     <Link
                       href={`/admin/orders/${order.id}`}
@@ -212,6 +204,7 @@ export default async function OrdersPage({
                   </td>
 
                   <td className="px-4 py-4 align-top">
+                    {/* Kept break-all so long ID strings wrap cleanly instead of stretching the column */}
                     <span className="text-[11px] font-mono text-ink-soft break-all">
                       {order.paymentReference ?? "—"}
                     </span>
@@ -221,7 +214,7 @@ export default async function OrdersPage({
                     {formatNaira(order.total)}
                   </td>
 
-                  <td className="px-4 py-4 whitespace-nowrap align-top text-[10px] uppercase tracking-wider">
+                  <td className="px-4 py-4 align-top text-[10px] uppercase tracking-wider">
                     {order.paymentStatus === "paid" ? (
                       <span className="text-green-600">Paid</span>
                     ) : (
@@ -229,7 +222,7 @@ export default async function OrdersPage({
                     )}
                   </td>
 
-                  <td className="px-4 py-4 whitespace-nowrap align-top">
+                  <td className="px-4 py-4 align-top">
                     <OrderStatusBadge status={order.status} />
                   </td>
 
