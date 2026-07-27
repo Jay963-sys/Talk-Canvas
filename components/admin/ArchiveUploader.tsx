@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Upload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/upload";
 import { downscaleImage } from "@/lib/image";
-import { ARCHIVE_COLLECTIONS } from "@/data/collections";
+import { ARCHIVE_CATEGORIES, type ArchiveCategory } from "@/data/collections";
 
 type Status =
   | "pending"
@@ -33,7 +33,9 @@ export default function ArchiveUploader() {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
-  const [collection, setCollection] = useState<string>("");
+  // Required, and deliberately not defaulted to a real category — an unset
+  // select is a visible prompt, whereas a pre-filled one gets uploaded past.
+  const [category, setCategory] = useState<ArchiveCategory | "">("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const addFiles = (fileList: FileList | null) => {
@@ -57,6 +59,7 @@ export default function ArchiveUploader() {
     );
 
   const uploadAll = async () => {
+    if (!category) return;
     setBusy(true);
     for (let i = 0; i < jobs.length; i++) {
       if (jobs[i].status === "done" || jobs[i].status === "error") continue;
@@ -79,7 +82,7 @@ export default function ArchiveUploader() {
             imagePublicId: result.publicId,
             width: result.width,
             height: result.height,
-            collection: collection || undefined,
+            category,
           }),
         });
         if (!res.ok) throw new Error("Couldn't save this image");
@@ -104,22 +107,30 @@ export default function ArchiveUploader() {
   return (
     <div>
       <div className="mb-6">
-        <label className="text-xs uppercase tracking-[0.1em] text-muted block mb-2">
-          Collection (applies to this batch)
+        <label
+          htmlFor="archive-category"
+          className="text-xs uppercase tracking-[0.1em] text-muted block mb-2"
+        >
+          Category (applies to this batch)
         </label>
         <select
-          value={collection}
-          onChange={(e) => setCollection(e.target.value)}
+          id="archive-category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as ArchiveCategory | "")}
           disabled={busy}
           className="border border-line bg-paper px-3 py-2 text-sm w-full sm:w-64"
         >
-          <option value="">Uncategorized</option>
-          {ARCHIVE_COLLECTIONS.map((c) => (
-            <option key={c} value={c}>
-              {c}
+          <option value="">Choose a category…</option>
+          {ARCHIVE_CATEGORIES.map((c) => (
+            <option key={c.slug} value={c.slug}>
+              {c.label}
             </option>
           ))}
         </select>
+        <p className="text-xs text-ink-soft mt-2 max-w-sm">
+          Upload one category at a time. Portrait and landscape are read from
+          each image automatically — you never tag them.
+        </p>
       </div>
 
       <div
@@ -201,15 +212,22 @@ export default function ArchiveUploader() {
 
           <div className="flex items-center gap-4 mt-6">
             {!allSettled ? (
-              <button
-                onClick={uploadAll}
-                disabled={busy || pendingCount === 0}
-                className="bg-ink text-cream px-5 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50"
-              >
-                {busy
-                  ? "Working…"
-                  : `Upload ${pendingCount} image${pendingCount === 1 ? "" : "s"}`}
-              </button>
+              <>
+                <button
+                  onClick={uploadAll}
+                  disabled={busy || pendingCount === 0 || !category}
+                  className="bg-ink text-cream px-5 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50"
+                >
+                  {busy
+                    ? "Working…"
+                    : `Upload ${pendingCount} image${pendingCount === 1 ? "" : "s"}`}
+                </button>
+                {!category && (
+                  <span className="text-xs text-ink-soft">
+                    Choose a category first
+                  </span>
+                )}
+              </>
             ) : (
               anyDone && (
                 <button
