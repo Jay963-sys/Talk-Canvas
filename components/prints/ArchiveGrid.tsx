@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import ArchiveCard from "./ArchiveCard";
+import type { ArchiveCategory } from "@/data/collections";
 
 export interface ArchiveItem {
   id: number;
@@ -16,14 +18,14 @@ export interface ArchiveItem {
 interface Props {
   initialItems: ArchiveItem[];
   initialCursor: number | null;
-  collection?: string;
+  category?: ArchiveCategory;
   orientation?: "portrait" | "landscape";
 }
 
 export default function ArchiveGrid({
   initialItems,
   initialCursor,
-  collection,
+  category,
   orientation,
 }: Props) {
   const [items, setItems] = useState<ArchiveItem[]>(initialItems);
@@ -32,12 +34,12 @@ export default function ArchiveGrid({
   const [error, setError] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
 
-  // Reset the grid whenever the selected collection changes.
+  // Reset the grid whenever either filter changes.
   useEffect(() => {
     setItems(initialItems);
     setCursor(initialCursor);
     setError(null);
-  }, [initialItems, initialCursor, orientation, collection]);
+  }, [initialItems, initialCursor, orientation, category]);
 
   const loadMore = useCallback(async () => {
     if (loading || cursor === null) return;
@@ -46,7 +48,8 @@ export default function ArchiveGrid({
     try {
       const params = new URLSearchParams();
       params.set("cursor", String(cursor));
-      if (collection) params.set("collection", collection);
+      // Both filters ride along, or page 2 quietly widens back to everything.
+      if (category) params.set("category", category);
       if (orientation) params.set("orientation", orientation);
       const res = await fetch(`/api/archive-prints?${params.toString()}`);
       if (!res.ok) throw new Error("Couldn't load more pieces");
@@ -59,7 +62,7 @@ export default function ArchiveGrid({
     } finally {
       setLoading(false);
     }
-  }, [cursor, loading, collection, orientation]);
+  }, [cursor, loading, category, orientation]);
 
   useEffect(() => {
     const node = sentinel.current;
@@ -75,12 +78,26 @@ export default function ArchiveGrid({
   }, [loadMore, cursor]);
 
   if (items.length === 0) {
+    // With two filters live, most empty states are a narrow combination rather
+    // than an empty archive — say which, and offer the way out.
+    const filtered = Boolean(category || orientation);
     return (
       <div className="border-[1.5px] border-dashed border-line py-24 text-center">
         <p className="display-italic text-2xl">Nothing here yet</p>
         <p className="text-sm text-muted mt-2">
-          New pieces are added all the time — check back soon.
+          {filtered
+            ? "No designs match this combination of style and shape."
+            : "New pieces are added all the time — check back soon."}
         </p>
+        {filtered && (
+          <Link
+            href="/prints/archive"
+            scroll={false}
+            className="inline-block mt-4 text-sm underline text-ink hover:text-accent"
+          >
+            Show everything
+          </Link>
+        )}
       </div>
     );
   }
