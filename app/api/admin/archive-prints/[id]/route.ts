@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   setArchiveVisibility,
-  setArchiveCollection,
+  setArchiveCategory,
   deleteArchivePrint,
 } from "@/lib/db/queries/archivePrints";
 // ⚠️ AUTH: align with app/api/admin/originals/[id]/route.ts.
 import { requireSession } from "@/lib/auth-server";
+import { isArchiveCategory } from "@/data/collections";
 
 export async function PATCH(
   req: NextRequest,
@@ -23,15 +24,23 @@ export async function PATCH(
   }
 
   const body = await req.json().catch(() => null);
-  const hasVisibility = typeof body?.isVisible === "boolean";
-  const hasCollection =
-    body &&
-    "collection" in body &&
-    (body.collection === null || typeof body.collection === "string");
 
-  if (!hasVisibility && !hasCollection) {
+  const hasVisibility = typeof body?.isVisible === "boolean";
+
+  // Categories are a closed set now, so an unknown slug is rejected rather than
+  // written. A typo used to become a silent one-off category that showed up in
+  // the filter bar; now it fails loudly at the edge.
+  const hasCategory = body && "category" in body;
+  if (hasCategory && !isArchiveCategory(body.category)) {
     return NextResponse.json(
-      { error: "isVisible (boolean) or collection (string | null) required" },
+      { error: "Unknown category" },
+      { status: 400 },
+    );
+  }
+
+  if (!hasVisibility && !hasCategory) {
+    return NextResponse.json(
+      { error: "isVisible (boolean) or category (known slug) required" },
       { status: 400 },
     );
   }
@@ -40,8 +49,8 @@ export async function PATCH(
   if (hasVisibility) {
     row = await setArchiveVisibility(numId, body.isVisible);
   }
-  if (hasCollection) {
-    row = await setArchiveCollection(numId, body.collection);
+  if (hasCategory) {
+    row = await setArchiveCategory(numId, body.category);
   }
 
   if (!row) {
