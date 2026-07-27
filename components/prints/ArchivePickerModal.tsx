@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2 } from "lucide-react";
+import { ARCHIVE_CATEGORIES, type ArchiveCategory } from "@/data/collections";
 
 type Orientation = "portrait" | "landscape";
 
@@ -25,11 +26,19 @@ function thumb(url: string, width = 500) {
   return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
 }
 
-const FILTERS: { id: Orientation | null; label: string }[] = [
-  { id: null, label: "All" },
+const ORIENTATIONS: { id: Orientation | null; label: string }[] = [
+  { id: null, label: "All shapes" },
   { id: "portrait", label: "Portrait" },
   { id: "landscape", label: "Landscape" },
 ];
+
+/** The two filters the feed can be narrowed by. Both are optional and combine. */
+interface Filters {
+  category: ArchiveCategory | null;
+  orientation: Orientation | null;
+}
+
+const NO_FILTERS: Filters = { category: null, orientation: null };
 
 export default function ArchivePickerModal({ onSelect, onClose }: Props) {
   const [items, setItems] = useState<ArchiveItem[]>([]);
@@ -38,10 +47,10 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [orientation, setOrientation] = useState<Orientation | null>(null);
-  // Ref mirror so `load` reads the active filter without being re-created
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  // Ref mirror so `load` reads the active filters without being re-created
   // (which would re-subscribe the infinite-scroll observer on every change).
-  const orientationRef = useRef<Orientation | null>(null);
+  const filtersRef = useRef<Filters>(NO_FILTERS);
 
   const sentinel = useRef<HTMLDivElement>(null);
   const firstLoad = useRef(true);
@@ -64,8 +73,11 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
       try {
         const params = new URLSearchParams();
         if (cur) params.set("cursor", String(cur));
-        if (orientationRef.current) {
-          params.set("orientation", orientationRef.current);
+        if (filtersRef.current.category) {
+          params.set("category", filtersRef.current.category);
+        }
+        if (filtersRef.current.orientation) {
+          params.set("orientation", filtersRef.current.orientation);
         }
         const qs = params.toString() ? `?${params.toString()}` : "";
         const res = await fetch(`/api/archive-prints${qs}`);
@@ -89,11 +101,17 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
     [loading],
   );
 
-  const switchOrientation = (next: Orientation | null) => {
-    if (next === orientation) return;
-    orientationRef.current = next;
-    setOrientation(next);
-    // Reset the feed and pull a fresh first page for the new filter.
+  /** Change one axis, keep the other, and pull a fresh first page. */
+  const applyFilter = (patch: Partial<Filters>) => {
+    const next = { ...filtersRef.current, ...patch };
+    if (
+      next.category === filters.category &&
+      next.orientation === filters.orientation
+    ) {
+      return;
+    }
+    filtersRef.current = next;
+    setFilters(next);
     setItems([]);
     setCursor(null);
     setLoadedOnce(false);
@@ -137,6 +155,13 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
   }, [cursor, load]);
 
   if (!mounted) return null;
+
+  const filterPill = (active: boolean) =>
+    `text-[12px] uppercase tracking-widest whitespace-nowrap pb-1 border-b transition-colors ${
+      active
+        ? "text-ink border-ink font-medium"
+        : "text-ink-soft hover:text-ink border-transparent"
+    }`;
 
   const modal = (
     <div
@@ -189,19 +214,36 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
           </div>
         </div>
 
-        {/* Orientation filter — derived from each image, no tagging needed. */}
+        {/* Filters — style is tagged by the gallery, shape is derived from each
+            image. Independent axes, so they combine rather than replace. The
+            style row scrolls sideways on narrow screens instead of wrapping the
+            panel into a tall header. */}
         <div className="shrink-0 border-b border-line bg-cream px-6 md:px-8">
-          <div className="flex gap-x-6 py-3">
-            {FILTERS.map((f) => (
+          <div className="flex gap-x-5 overflow-x-auto py-3 -mx-1 px-1">
+            {[{ slug: null, label: "All styles" }, ...ARCHIVE_CATEGORIES].map(
+              (c) => {
+                const slug = c.slug as ArchiveCategory | null;
+                return (
+                  <button
+                    key={c.label}
+                    type="button"
+                    onClick={() => applyFilter({ category: slug })}
+                    className={filterPill(filters.category === slug)}
+                  >
+                    {c.label}
+                  </button>
+                );
+              },
+            )}
+          </div>
+
+          <div className="flex gap-x-6 pb-3 border-t border-line pt-3">
+            {ORIENTATIONS.map((f) => (
               <button
                 key={f.label}
                 type="button"
-                onClick={() => switchOrientation(f.id)}
-                className={`text-[12px] uppercase tracking-widest pb-1 border-b transition-colors ${
-                  orientation === f.id
-                    ? "text-ink border-ink font-medium"
-                    : "text-ink-soft hover:text-ink border-transparent"
-                }`}
+                onClick={() => applyFilter({ orientation: f.id })}
+                className={filterPill(filters.orientation === f.id)}
               >
                 {f.label}
               </button>
@@ -221,10 +263,19 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
             <div className="py-20 text-center">
               <p className="display-italic text-2xl">Nothing here yet</p>
               <p className="text-sm text-muted mt-2">
-                {orientation
-                  ? `No ${orientation} designs yet — try another orientation.`
+                {filters.category || filters.orientation
+                  ? "No designs match this combination — try another style or shape."
                   : "New designs are added all the time — check back soon."}
               </p>
+              {(filters.category || filters.orientation) && (
+                <button
+                  type="button"
+                  onClick={() => applyFilter(NO_FILTERS)}
+                  className="mt-4 underline text-sm hover:text-accent"
+                >
+                  Show everything
+                </button>
+              )}
             </div>
           )}
 
