@@ -1,6 +1,10 @@
 import { db } from "@/lib/db";
 import { archivePrints } from "@/lib/db/schema";
-import { and, desc, eq, lt, isNotNull } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
+import {
+  DEFAULT_ARCHIVE_CATEGORY,
+  type ArchiveCategory,
+} from "@/data/collections";
 
 const PAGE_SIZE = 24;
 
@@ -21,17 +25,20 @@ export interface ArchivePage {
 
 /**
  * Public grid feed — visible only, newest first, cursor-paginated by id.
- * Optionally scoped to a collection and/or an orientation.
+ *
+ * Category and orientation are independent filters and combine freely: passing
+ * both narrows to designs that are in that category *and* that shape. Neither
+ * one nests inside the other.
  */
 export async function getArchivePage(
   cursor?: number,
   pageSize = PAGE_SIZE,
-  collection?: string,
+  category?: ArchiveCategory,
   orientation?: ArchiveOrientation,
 ): Promise<ArchivePage> {
   const conditions = [eq(archivePrints.isVisible, true)];
   if (cursor) conditions.push(lt(archivePrints.id, cursor));
-  if (collection) conditions.push(eq(archivePrints.collection, collection));
+  if (category) conditions.push(eq(archivePrints.collection, category));
   if (orientation) {
     conditions.push(eq(archivePrints.orientation, orientation));
   }
@@ -50,18 +57,34 @@ export async function getArchivePage(
   return { items, nextCursor };
 }
 
-/** Distinct collection names currently in use, for building the filter UI. */
-export async function getArchiveCollections(): Promise<string[]> {
+/**
+ * How many visible designs sit in each category, optionally within one
+ * orientation. Used to dim categories the gallery hasn't filled yet, so an
+ * empty tab reads as "nothing here yet" rather than as a broken filter.
+ */
+export async function getArchiveCategoryCounts(
+  orientation?: ArchiveOrientation,
+): Promise<Record<string, number>> {
+  const conditions = [eq(archivePrints.isVisible, true)];
+  if (orientation) {
+    conditions.push(eq(archivePrints.orientation, orientation));
+  }
+
   const rows = await db
-    .selectDistinct({ collection: archivePrints.collection })
+    .select({
+      category: archivePrints.collection,
+      count: sql<number>`count(*)::int`,
+    })
     .from(archivePrints)
-    .where(
-      and(
-        eq(archivePrints.isVisible, true),
-        isNotNull(archivePrints.collection),
-      ),
-    );
-  return rows.map((r) => r.collection as string).sort();
+    .where(and(...conditions))
+    .groupBy(archivePrints.collection);
+
+  const counts: Record<string, number> = {};
+  for (const row of rows) {
+    const key = row.category ?? DEFAULT_ARCHIVE_CATEGORY;
+    counts[key] = (counts[key] ?? 0) + row.count;
+  }
+  return counts;
 }
 
 export async function getArchivePrint(id: number) {
@@ -83,12 +106,17 @@ export async function createArchivePrint(input: {
   imagePublicId: string;
   width: number;
   height: number;
-  collection?: string;
+  category?: ArchiveCategory;
 }) {
+  const { category, ...rest } = input;
+
   const [row] = await db
     .insert(archivePrints)
     .values({
-      ...input,
+      ...rest,
+      // Categories are chosen at upload; anything unset lands in Others rather
+      // than dropping out of every filtered view.
+      collection: category ?? DEFAULT_ARCHIVE_CATEGORY,
       // Set automatically — the admin never picks this.
       orientation: deriveOrientation(input.width, input.height),
     })
@@ -109,13 +137,14 @@ export async function deleteArchivePrint(id: number) {
   await db.delete(archivePrints).where(eq(archivePrints.id, id));
 }
 
-export async function setArchiveCollection(
+/** Recategorize a single design from the admin grid. */
+export async function setArchiveCategory(
   id: number,
-  collection: string | null,
+  category: ArchiveCategory,
 ) {
   const [row] = await db
     .update(archivePrints)
-    .set({ collection, updatedAt: new Date() })
+    .set({ collection: category, updatedAt: new Date() })
     .where(eq(archivePrints.id, id))
     .returning();
   return row ?? null;
