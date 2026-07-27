@@ -16,7 +16,7 @@ export default function NewArchivePrintsPage() {
 
       <h1 className="text-2xl font-medium mb-2">Add archive prints</h1>
       <p className="text-sm text-ink-soft mb-8 max-w-xl">
-        Drop in one image or many.
+        Pick a category, then drop in one image or many — upload one category at a time.
       </p>
 
       <ArchiveUploader />
