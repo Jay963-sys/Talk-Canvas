@@ -5,6 +5,7 @@ import { useConfigurator } from "@/lib/store";
 import { orientationOf } from "@/data/sizes";
 import { coverKeptFraction, targetAspect } from "@/lib/crop";
 import FrameCropper from "./FrameCropper";
+import FramedPreview from "./FramedPreview";
 
 export default function StepReview() {
   const { image, set, frame, glass, size, setArOpen } = useConfigurator();
@@ -25,6 +26,11 @@ export default function StepReview() {
   const shapeWarn = keptPct < 60;
 
   const isSet = set !== null;
+  const panels = set?.pieces.length ?? 0;
+
+  // Divide the preview area between panels so three pieces still read as three
+  // framed objects rather than three thumbnails.
+  const panelWidth = isSet ? Math.max(150, Math.floor(760 / panels) - 24) : 380;
 
   return (
     <div className="slide-up">
@@ -34,7 +40,7 @@ export default function StepReview() {
       <p className="text-sm text-ink-soft mb-6">
         {isSet ? (
           <>
-            All {set.pieces.length} pieces in {frame.name.toLowerCase()}
+            All {panels} pieces in {frame.name.toLowerCase()}
             {frame.shape === "box" && glass ? " with glass" : ""}, at the same
             size. Use AR to see the scale on your wall.
           </>
@@ -54,20 +60,19 @@ export default function StepReview() {
             aligned by the gallery — recropping one of them independently would
             pull the piece out of register. Each panel gets the same centred
             fit against the chosen size instead.
+
+            FramedPreview, not a bare <img>: the customer has just chosen a
+            frame, and showing the panels unframed makes every set look like a
+            plain white mount whatever they picked.
           */
-          <div className="flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
+          <div className="flex justify-center items-start gap-4 sm:gap-6 flex-wrap">
             {set.pieces.map((piece, i) => (
-              <div
+              <FramedPreview
                 key={i}
-                className="bg-cream p-2 shadow-sm"
-                style={{ maxWidth: `${Math.floor(90 / set.pieces.length)}%` }}
-              >
-                <img
-                  src={piece.url}
-                  alt={`Piece ${i + 1} of ${set.pieces.length}`}
-                  className="max-h-[380px] w-full object-contain"
-                />
-              </div>
+                image={piece.url}
+                frame={frame}
+                maxWidth={panelWidth}
+              />
             ))}
           </div>
         ) : (
@@ -112,8 +117,8 @@ export default function StepReview() {
           letting someone size a triptych off a single panel. */}
       {isSet && (
         <p className="mt-2 text-[12px] text-ink-soft text-center">
-          AR shows one piece of the set at actual size — allow roughly{" "}
-          {set.pieces.length}× the width, plus spacing, for the full hang.
+          AR shows one piece of the set at actual size — allow roughly {panels}×
+          the width, plus spacing, for the full hang.
         </p>
       )}
     </div>

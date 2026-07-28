@@ -27,6 +27,8 @@ interface Props {
   initialCursor: number | null;
   category?: ArchiveCategory;
   orientation?: "portrait" | "landscape";
+  /** Restrict the feed to sets — used by /prints/sets. */
+  setsOnly?: boolean;
 }
 
 export default function ArchiveGrid({
@@ -34,6 +36,7 @@ export default function ArchiveGrid({
   initialCursor,
   category,
   orientation,
+  setsOnly,
 }: Props) {
   const [items, setItems] = useState<ArchiveItem[]>(initialItems);
   const [cursor, setCursor] = useState<number | null>(initialCursor);
@@ -41,12 +44,12 @@ export default function ArchiveGrid({
   const [error, setError] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
 
-  // Reset the grid whenever either filter changes.
+  // Reset the grid whenever any filter changes.
   useEffect(() => {
     setItems(initialItems);
     setCursor(initialCursor);
     setError(null);
-  }, [initialItems, initialCursor, orientation, category]);
+  }, [initialItems, initialCursor, orientation, category, setsOnly]);
 
   const loadMore = useCallback(async () => {
     if (loading || cursor === null) return;
@@ -55,9 +58,10 @@ export default function ArchiveGrid({
     try {
       const params = new URLSearchParams();
       params.set("cursor", String(cursor));
-      // Both filters ride along, or page 2 quietly widens back to everything.
+      // Every filter rides along, or page 2 quietly widens back to everything.
       if (category) params.set("category", category);
       if (orientation) params.set("orientation", orientation);
+      if (setsOnly) params.set("setsOnly", "1");
       const res = await fetch(`/api/archive-prints?${params.toString()}`);
       if (!res.ok) throw new Error("Couldn't load more pieces");
       const data: { items: ArchiveItem[]; nextCursor: number | null } =
@@ -69,7 +73,7 @@ export default function ArchiveGrid({
     } finally {
       setLoading(false);
     }
-  }, [cursor, loading, category, orientation]);
+  }, [cursor, loading, category, orientation, setsOnly]);
 
   useEffect(() => {
     const node = sentinel.current;
@@ -85,20 +89,24 @@ export default function ArchiveGrid({
   }, [loadMore, cursor]);
 
   if (items.length === 0) {
-    // With two filters live, most empty states are a narrow combination rather
+    // With filters live, most empty states are a narrow combination rather
     // than an empty archive — say which, and offer the way out.
     const filtered = Boolean(category || orientation);
     return (
       <div className="border-[1.5px] border-dashed border-line py-24 text-center">
         <p className="display-italic text-2xl">Nothing here yet</p>
         <p className="text-sm text-muted mt-2">
-          {filtered
-            ? "No designs match this combination of style and shape."
-            : "New pieces are added all the time — check back soon."}
+          {setsOnly
+            ? filtered
+              ? "No sets in this shape yet."
+              : "No sets in the archive yet — check back soon."
+            : filtered
+              ? "No designs match this combination of style and shape."
+              : "New pieces are added all the time — check back soon."}
         </p>
         {filtered && (
           <Link
-            href="/prints/archive"
+            href={setsOnly ? "/prints/sets" : "/prints/archive"}
             scroll={false}
             className="inline-block mt-4 text-sm underline text-ink hover:text-accent"
           >

@@ -1,6 +1,17 @@
 import { db } from "@/lib/db";
 import { archivePrints } from "@/lib/db/schema";
-import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  sql,
+} from "drizzle-orm";
 import {
   DEFAULT_ARCHIVE_CATEGORY,
   type ArchiveCategory,
@@ -45,6 +56,8 @@ export async function getArchivePage(
   pageSize = PAGE_SIZE,
   category?: ArchiveCategory,
   orientation?: ArchiveOrientation,
+  /** Restrict to sets — the /prints/sets feed. */
+  setsOnly?: boolean,
 ): Promise<ArchivePage> {
   const conditions = [eq(archivePrints.isVisible, true), IS_FEED_VISIBLE];
   if (cursor) conditions.push(lt(archivePrints.id, cursor));
@@ -52,6 +65,9 @@ export async function getArchivePage(
   if (orientation) {
     conditions.push(eq(archivePrints.orientation, orientation));
   }
+  // Combined with IS_FEED_VISIBLE this yields one row per set, not one per
+  // panel — the page shows sets, not the pieces inside them.
+  if (setsOnly) conditions.push(isNotNull(archivePrints.setId));
 
   const rows = await db
     .select()

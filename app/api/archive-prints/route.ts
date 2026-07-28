@@ -26,6 +26,16 @@ export async function GET(req: NextRequest) {
   const orientation: ArchiveOrientation | undefined =
     o === "portrait" || o === "landscape" ? o : undefined;
 
-  const page = await getArchivePage(cursor, undefined, category, orientation);
+  // Feeds the /prints/sets grid, including its infinite scroll — without this
+  // page two of that page would quietly widen back to the whole archive.
+  const setsOnly = req.nextUrl.searchParams.get("setsOnly") === "1";
+
+  const page = await getArchivePage(
+    cursor,
+    undefined,
+    category,
+    orientation,
+    setsOnly,
+  );
   return NextResponse.json(page);
 }
