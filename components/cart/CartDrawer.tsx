@@ -7,6 +7,8 @@ import {
   useCart,
   cartSubtotal,
   cartCount,
+  cartHasSet,
+  piecesPerUnit,
   MAX_QUANTITY,
   type CartItem,
 } from "@/lib/cartStore";
@@ -43,6 +45,7 @@ export default function CartDrawer() {
 
   const subtotal = cartSubtotal(items);
   const pieceCount = cartCount(items);
+  const hasSet = cartHasSet(items);
 
   // One-of-one works are fixed at a single piece — no stepper.
   const isFixed = (item: CartItem) => item.type === "original" && item.oneOfOne;
@@ -110,104 +113,131 @@ export default function CartDrawer() {
             </div>
           ) : (
             <div className="flex flex-col gap-8">
-              {items.map((item) => (
-                <div key={item.id} className="flex gap-5">
-                  {/* Strict 4/5 Aspect Ratio for Cart Images */}
-                  <div className="w-[75px] relative aspect-[4/5] bg-paper shrink-0 rounded-sm overflow-hidden border border-line/40">
-                    <img
-                      src={item.imageUrl}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col py-0.5 min-w-0">
-                    {item.type === "original" ? (
-                      <>
-                        <p className="display text-[15px] leading-tight text-ink mb-1">
-                          {item.title}
-                        </p>
-                        <p className="text-[12px] text-ink-soft">
-                          {item.artist} · {item.year}
-                        </p>
-                        <p className="text-[12px] text-ink-soft mt-0.5">
-                          {item.frameName} · {item.sizeLabel}
-                        </p>
-                        {item.oneOfOne && (
-                          <p className="text-[11px] uppercase tracking-widest text-ink-soft mt-1.5">
-                            One of one
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <p className="display text-[15px] leading-tight text-ink mb-1">
-                          Custom Print
-                        </p>
-                        <p className="text-[12px] text-ink-soft">
-                          {item.frameName}
-                          {item.glass ? " · Glass" : ""}
-                        </p>
-                        <p className="text-[12px] text-ink-soft mt-0.5">
-                          {item.sizeLabel}
-                        </p>
-                      </>
-                    )}
+              {items.map((item) => {
+                const panels = piecesPerUnit(item);
+                const isSet = item.type === "print" && item.set !== null;
 
-                    {/* Quantity + line total */}
-                    <div className="mt-auto flex items-end justify-between pt-3 gap-3">
-                      {isFixed(item) ? (
-                        <span className="text-[12px] text-ink-soft">Qty 1</span>
+                return (
+                  <div key={item.id} className="flex gap-5">
+                    {/* Strict 4/5 Aspect Ratio for Cart Images */}
+                    <div className="w-[75px] relative aspect-[4/5] bg-paper shrink-0 rounded-sm overflow-hidden border border-line/40">
+                      <img
+                        src={item.imageUrl}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      {/* A strip of 75px-wide panel thumbnails would be
+                          illegible, so the set announces itself with a count
+                          badge over the leading panel instead. */}
+                      {isSet && (
+                        <span className="absolute bottom-0 right-0 bg-ink text-cream text-[10px] leading-none px-1.5 py-1 tabular-nums">
+                          ×{panels}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col py-0.5 min-w-0">
+                      {item.type === "original" ? (
+                        <>
+                          <p className="display text-[15px] leading-tight text-ink mb-1">
+                            {item.title}
+                          </p>
+                          <p className="text-[12px] text-ink-soft">
+                            {item.artist} · {item.year}
+                          </p>
+                          <p className="text-[12px] text-ink-soft mt-0.5">
+                            {item.frameName} · {item.sizeLabel}
+                          </p>
+                          {item.oneOfOne && (
+                            <p className="text-[11px] uppercase tracking-widest text-ink-soft mt-1.5">
+                              One of one
+                            </p>
+                          )}
+                        </>
                       ) : (
-                        <div className="flex items-center border border-line">
-                          <button
-                            type="button"
-                            onClick={() => decrement(item.id)}
-                            disabled={item.quantity <= 1}
-                            aria-label="Decrease quantity"
-                            className="w-8 h-8 flex items-center justify-center text-ink hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                          >
-                            <Minus size={13} strokeWidth={1.5} />
-                          </button>
-                          <span className="w-8 text-center text-[13px] font-medium text-ink tabular-nums">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => increment(item.id)}
-                            disabled={item.quantity >= MAX_QUANTITY}
-                            aria-label="Increase quantity"
-                            className="w-8 h-8 flex items-center justify-center text-ink hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                          >
-                            <Plus size={13} strokeWidth={1.5} />
-                          </button>
-                        </div>
+                        <>
+                          <p className="display text-[15px] leading-tight text-ink mb-1">
+                            {isSet ? `Set of ${panels}` : "Custom Print"}
+                          </p>
+                          <p className="text-[12px] text-ink-soft">
+                            {item.frameName}
+                            {item.glass ? " · Glass" : ""}
+                          </p>
+                          {/* "each piece" matters: the customer is buying N
+                              frames at this size, not one split across N. */}
+                          <p className="text-[12px] text-ink-soft mt-0.5">
+                            {item.sizeLabel}
+                            {isSet ? " each piece" : ""}
+                          </p>
+                          {isSet && (
+                            <p className="text-[11px] uppercase tracking-widest text-ink-soft mt-1.5">
+                              Sold as a set
+                            </p>
+                          )}
+                        </>
                       )}
 
-                      <div className="text-right shrink-0">
-                        <p className="text-[13px] font-medium text-ink">
-                          {formatNaira(item.price * item.quantity)}
-                        </p>
-                        {item.quantity > 1 && (
-                          <p className="text-[11px] text-ink-soft mt-0.5">
-                            {formatNaira(item.price)} each
-                          </p>
+                      {/* Quantity + line total */}
+                      <div className="mt-auto flex items-end justify-between pt-3 gap-3">
+                        {isFixed(item) ? (
+                          <span className="text-[12px] text-ink-soft">
+                            Qty 1
+                          </span>
+                        ) : (
+                          <div className="flex items-center border border-line">
+                            <button
+                              type="button"
+                              onClick={() => decrement(item.id)}
+                              disabled={item.quantity <= 1}
+                              aria-label="Decrease quantity"
+                              className="w-8 h-8 flex items-center justify-center text-ink hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                            >
+                              <Minus size={13} strokeWidth={1.5} />
+                            </button>
+                            <span className="w-8 text-center text-[13px] font-medium text-ink tabular-nums">
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => increment(item.id)}
+                              disabled={item.quantity >= MAX_QUANTITY}
+                              aria-label="Increase quantity"
+                              className="w-8 h-8 flex items-center justify-center text-ink hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                            >
+                              <Plus size={13} strokeWidth={1.5} />
+                            </button>
+                          </div>
                         )}
+
+                        <div className="text-right shrink-0">
+                          <p className="text-[13px] font-medium text-ink">
+                            {formatNaira(item.price * item.quantity)}
+                          </p>
+                          {/* item.price is the whole-set price, so the unit
+                              line has to say "per set" or it reads as the
+                              price of one panel. */}
+                          {item.quantity > 1 && (
+                            <p className="text-[11px] text-ink-soft mt-0.5">
+                              {formatNaira(item.price)}{" "}
+                              {isSet ? "per set" : "each"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.id)}
+                          className="text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink flex items-center gap-1.5 transition-colors"
+                        >
+                          <Trash2 size={12} strokeWidth={1.5} />
+                          Remove
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex justify-end pt-2">
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.id)}
-                        className="text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink flex items-center gap-1.5 transition-colors"
-                      >
-                        <Trash2 size={12} strokeWidth={1.5} />
-                        Remove
-                      </button>
-                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -223,8 +253,12 @@ export default function CartDrawer() {
                 {formatNaira(subtotal)}
               </span>
             </div>
+            {/* Said here, not just at checkout: every other product shows a
+                computed Lagos fee, so silence on a set reads as free delivery. */}
             <p className="text-[12px] text-ink-soft mb-6">
-              Shipping calculated at checkout.
+              {hasSet
+                ? "Sets are delivered by arrangement — we'll quote the cost after you order."
+                : "Shipping calculated at checkout."}
             </p>
             <Link
               href="/checkout"
