@@ -44,14 +44,21 @@ const menuVars: Variants = {
   initial: { opacity: 0 },
   animate: {
     opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
+    // Decreased stagger and delay from 0.1 to 0.04 for a much faster sequence
+    transition: { staggerChildren: 0.04, delayChildren: 0.04 },
   },
-  exit: { opacity: 0, transition: { duration: 0.3 } },
+  // Decreased exit fade from 0.3 to 0.15 so it closes faster
+  exit: { opacity: 0, transition: { duration: 0.15 } },
 };
 
 const linkVars: Variants = {
-  initial: { y: 20, opacity: 0 },
-  animate: { y: 0, opacity: 1, transition: { ease: "easeOut", duration: 0.4 } },
+  initial: { y: 15, opacity: 0 }, // Slightly reduced the starting Y distance (from 20 to 15)
+  animate: { 
+    y: 0, 
+    opacity: 1, 
+    // Decreased link slide-in duration from 0.4 to 0.2
+    transition: { ease: "easeOut", duration: 0.2 } 
+  },
 };
 
 // Animation for the search bar slide-down
@@ -247,38 +254,79 @@ export default function Header() {
           </nav>
         </div>
 
-        {/* Slide-down Search Bar */}
-        <AnimatePresence>
-          {searchOpen && (
-            <motion.div
-              variants={searchVars}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="overflow-hidden border-t border-line bg-cream"
-            >
-              <div className="max-w-2xl mx-auto px-6 md:px-10 py-6">
-                <form
-                  onSubmit={handleSearch}
-                  className="relative flex items-center"
+              {/* Full-screen animated mobile menu */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            variants={menuVars}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            // CHANGED: Removed `justify-center`, `mt-[100px]`. 
+            // Added `pt-[140px]` to clear the header, and `overflow-y-auto` for smaller screens.
+            className="md:hidden fixed inset-0 z-40 flex flex-col bg-cream px-8 pt-[140px] pb-10 overflow-y-auto"
+          >
+            {/* CHANGED: Removed `-mt-20` which was pulling the list upward */}
+            <div className="flex flex-col gap-8">
+              {NAV.map((item) => {
+                const isActive = isActivePath(item.href, pathname);
+
+                return (
+                  <motion.div
+                    key={item.href}
+                    variants={linkVars}
+                    className="flex flex-col gap-4"
+                  >
+                    <Link
+                      href={item.href}
+                      // CHANGED: Removed `!item.dropdown &&` so all parent links close the menu
+                      onClick={() => setOpen(false)}
+                      className={clsx(
+                        "display text-4xl tracking-tight transition-colors flex items-center gap-4",
+                        isActive ? "text-ink" : "text-ink-soft hover:text-ink",
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+
+                    {/* Mobile Dropdown Items */}
+                    {item.dropdown && (
+                      <div className="flex flex-col gap-4 pl-4 border-l-2 border-line/50 ml-2 mt-1">
+                        {item.dropdown.map((drop) => (
+                          <Link
+                            key={drop.href}
+                            href={drop.href}
+                            onClick={() => setOpen(false)}
+                            className="text-xl tracking-tight text-ink-soft hover:text-ink transition-colors"
+                          >
+                            {drop.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+
+              {/* Mobile Account Link */}
+              <motion.div
+                variants={linkVars}
+                className="mt-4 pt-8 border-t border-line"
+              >
+                <Link
+                  href="/admin/login"
+                  onClick={() => setOpen(false)}
+                  className="text-ink-soft text-lg flex items-center gap-3"
                 >
-                  <Search
-                    size={18}
-                    strokeWidth={2}
-                    className="absolute left-4 text-ink-soft"
-                  />
-                  <input
-                    type="text"
-                    name="q"
-                    placeholder="Search artists, prints, or collections..."
-                    autoFocus
-                    className="w-full bg-paper border border-line rounded-full py-3 pl-12 pr-4 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:border-ink transition-colors"
-                  />
-                </form>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  <User size={20} strokeWidth={1.5} />
+                  Account
+                </Link>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       </header>
 
       {/* Full-screen animated mobile menu */}
