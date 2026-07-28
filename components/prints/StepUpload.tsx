@@ -7,13 +7,25 @@ import { uploadToCloudinary, validateFile } from "@/lib/upload";
 import { downscaleImage } from "@/lib/image";
 import ArchivePickerModal, { ArchiveItem } from "./ArchivePickerModal";
 
+/** Shape of GET /api/archive-sets/[setId]. */
+interface SetResponse {
+  setId: number;
+  pieces: {
+    imageUrl: string;
+    imagePublicId: string;
+    width: number;
+    height: number;
+  }[];
+}
+
 export default function StepUpload() {
-  const { image, setImage } = useConfigurator();
+  const { image, set, setImage, selectSet } = useConfigurator();
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [loadingSet, setLoadingSet] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File | undefined) => {
@@ -49,15 +61,46 @@ export default function StepUpload() {
     }
   };
 
-  const handleArchiveSelect = (item: ArchiveItem) => {
+  const handleArchiveSelect = async (item: ArchiveItem) => {
     setError(null);
-    setImage({
-      url: item.imageUrl,
-      publicId: item.imagePublicId,
-      width: item.width,
-      height: item.height,
-    });
-    setPickerOpen(false);
+
+    if (!item.setId) {
+      setImage({
+        url: item.imageUrl,
+        publicId: item.imagePublicId,
+        width: item.width,
+        height: item.height,
+      });
+      setPickerOpen(false);
+      return;
+    }
+
+    // The grid only carries the leading panel, so the rest are fetched here —
+    // and from the server, never assembled client-side, so the pieces the
+    // customer configures are the pieces the order will contain.
+    setLoadingSet(true);
+    try {
+      const res = await fetch(`/api/archive-sets/${item.setId}`);
+      if (!res.ok) throw new Error("That set is no longer available.");
+      const data: SetResponse = await res.json();
+      selectSet({
+        setId: data.setId,
+        pieces: data.pieces.map((p) => ({
+          url: p.imageUrl,
+          publicId: p.imagePublicId,
+          width: p.width,
+          height: p.height,
+        })),
+      });
+      setPickerOpen(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Couldn't load that set.",
+      );
+      setPickerOpen(false);
+    } finally {
+      setLoadingSet(false);
+    }
   };
 
   const borderColor = dragging
@@ -65,6 +108,8 @@ export default function StepUpload() {
     : error
       ? "border-red-400 bg-red-50/30"
       : "border-line/60 bg-paper";
+
+  const busy = uploading || loadingSet;
 
   return (
     <div className="fade-in">
@@ -77,17 +122,17 @@ export default function StepUpload() {
       <div
         onDragOver={(e) => {
           e.preventDefault();
-          if (!uploading) setDragging(true);
+          if (!busy) setDragging(true);
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
-          if (!uploading) handleFile(e.dataTransfer.files[0]);
+          if (!busy) handleFile(e.dataTransfer.files[0]);
         }}
-        onClick={() => !uploading && fileRef.current?.click()}
+        onClick={() => !busy && fileRef.current?.click()}
         className={`border text-center rounded-2xl min-h-[400px] flex flex-col items-center justify-center transition-all ${
-          uploading ? "cursor-wait" : "cursor-pointer hover:border-ink/50"
+          busy ? "cursor-wait" : "cursor-pointer hover:border-ink/50"
         } ${borderColor}`}
       >
         {uploading ? (
@@ -106,6 +151,33 @@ export default function StepUpload() {
             </div>
             <p className="text-[12px] uppercase tracking-widest text-ink-soft font-medium mt-4">
               {progress}%
+            </p>
+          </>
+        ) : loadingSet ? (
+          <>
+            <Loader2
+              size={28}
+              className="animate-spin text-ink mb-5"
+              strokeWidth={1.5}
+            />
+            <p className="display text-xl text-ink">Loading the set…</p>
+          </>
+        ) : set ? (
+          <>
+            {/* All panels, so it's obvious at a glance how many pieces are
+                being bought — the price about to appear is for all of them. */}
+            <div className="flex items-center justify-center gap-3 p-6 flex-wrap">
+              {set.pieces.map((piece, i) => (
+                <img
+                  key={i}
+                  src={piece.url}
+                  alt=""
+                  className="max-h-64 max-w-[30%] object-contain"
+                />
+              ))}
+            </div>
+            <p className="text-[12px] text-ink-soft mt-2">
+              Set of {set.pieces.length} — click to choose something else
             </p>
           </>
         ) : image ? (
@@ -155,6 +227,14 @@ export default function StepUpload() {
         />
       </div>
 
+      {set && (
+        <p className="mt-4 text-[13px] text-ink-soft leading-relaxed">
+          This design comes as a set of {set.pieces.length}. Every piece takes
+          the same frame and size, and they&apos;re sold together — delivery is
+          arranged separately and we&apos;ll quote it after you order.
+        </p>
+      )}
+
       <div className="flex items-center gap-4 my-8">
         <div className="flex-1 h-px bg-line/60" />
         <span className="text-[10px] uppercase tracking-widest text-ink-soft font-semibold">
@@ -166,7 +246,7 @@ export default function StepUpload() {
       <button
         type="button"
         onClick={() => setPickerOpen(true)}
-        disabled={uploading}
+        disabled={busy}
         className="w-full border border-line py-4 text-[12px] uppercase tracking-widest font-medium hover:border-ink transition-colors disabled:opacity-50"
       >
         {image
