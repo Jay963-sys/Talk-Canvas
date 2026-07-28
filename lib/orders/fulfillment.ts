@@ -65,6 +65,10 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
     title: i.title,
     artist: i.artist,
     year: i.year,
+    // Set membership drives the grouping in both templates: the customer sees
+    // one "Set of 3" line, the gallery sees every panel as a picking list.
+    setId: i.setId ?? null,
+    setPosition: i.setPosition ?? null,
   }));
 
   // Production times differ by piece type, so the customer email shouldn't
@@ -91,8 +95,9 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
         ? `Production: ${timelineParts[0]}.`
         : `Production times vary by piece: ${timelineParts.join("; ")}.`;
 
-  // Delivery context for the emails. An outside-Lagos order ships at zero and
-  // must be quoted by hand — surface that loudly or it gets shipped for free.
+  // Delivery context for the emails. Two things ship at zero and must be quoted
+  // by hand — an outside-Lagos address, and any order containing a set. Surface
+  // it loudly either way or it gets shipped for free.
   const deliveryQuotePending = order.deliveryQuotePending ?? false;
   const deliveryZoneLabel =
     order.deliveryZone === OUTSIDE_LAGOS_ID
