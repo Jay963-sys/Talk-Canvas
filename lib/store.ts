@@ -11,19 +11,35 @@ export interface UploadedImage {
   height: number;
 }
 
+/**
+ * A set the customer picked from the archive. `pieces[0]` is also held in
+ * `image`, so every existing step — frame, size, AR — keeps working off a
+ * single canonical panel without knowing sets exist.
+ */
+export interface ConfiguratorSet {
+  setId: number;
+  pieces: UploadedImage[];
+}
+
 interface ConfiguratorState {
   step: number;
   image: UploadedImage | null;
+  /** Null for an upload or a loose archive print. */
+  set: ConfiguratorSet | null;
   frame: Frame | null;
   glass: boolean;
   size: PrintSize | null;
   // The crop the customer sets on the Review step. Null until seeded — the
   // cropper computes a centred default from the size's aspect ratio.
+  //
+  // Sets never carry one: the panels of a split artwork are aligned by the
+  // gallery, and recropping one panel would break the piece. See StepReview.
   crop: Crop | null;
   arOpen: boolean;
 
   setStep: (step: number) => void;
   setImage: (image: UploadedImage | null) => void;
+  selectSet: (set: ConfiguratorSet) => void;
   setFrame: (frame: Frame | null) => void;
   setGlass: (glass: boolean) => void;
   setSize: (size: PrintSize | null) => void;
@@ -46,6 +62,7 @@ function clearSizeIfInvalid(
 export const useConfigurator = create<ConfiguratorState>((set) => ({
   step: 0,
   image: null,
+  set: null,
   frame: null,
   glass: false,
   size: null,
@@ -53,8 +70,13 @@ export const useConfigurator = create<ConfiguratorState>((set) => ({
   arOpen: false,
 
   setStep: (step) => set({ step }),
-  // A new image is a new artwork — the previous crop no longer means anything.
-  setImage: (image) => set({ image, crop: null }),
+  // A new image is a new artwork — the previous crop no longer means anything,
+  // and it's no longer part of whatever set was selected before.
+  setImage: (image) => set({ image, crop: null, set: null }),
+  // Picking a set replaces any single selection. The canonical panel drives the
+  // frame preview and AR; the rest ride along on `set`.
+  selectSet: (value) =>
+    set({ set: value, image: value.pieces[0] ?? null, crop: null }),
   setFrame: (frame) =>
     set((state) => {
       // Glass only available on regular box; force off otherwise
@@ -76,6 +98,7 @@ export const useConfigurator = create<ConfiguratorState>((set) => ({
     set({
       step: 0,
       image: null,
+      set: null,
       frame: null,
       glass: false,
       size: null,
