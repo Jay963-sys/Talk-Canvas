@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { archivePrints } from "@/lib/db/schema";
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import {
   DEFAULT_ARCHIVE_CATEGORY,
   type ArchiveCategory,
@@ -18,25 +18,35 @@ export function deriveOrientation(
   return width > height ? "landscape" : "portrait";
 }
 
+export type ArchiveRow = typeof archivePrints.$inferSelect;
+
 export interface ArchivePage {
-  items: (typeof archivePrints.$inferSelect)[];
+  items: ArchiveRow[];
   nextCursor: number | null;
 }
 
 /**
- * Public grid feed — visible only, newest first, cursor-paginated by id.
+ * Sets are modelled on archive_prints itself rather than in a separate table,
+ * because the public feed is cursor-paginated by id — interleaving two entity
+ * types in one cursor feed is where this gets fragile.
  *
- * Category and orientation are independent filters and combine freely: passing
- * both narrows to designs that are in that category *and* that shape. Neither
- * one nests inside the other.
+ * The piece at setPosition 1 is canonical: it represents the set in the grid,
+ * and its category and visibility are the set's. Members 2..n are hidden from
+ * the feed and inherit those values, which the admin mutations below enforce
+ * so the two can't drift apart.
  */
+const IS_FEED_VISIBLE = or(
+  isNull(archivePrints.setId),
+  eq(archivePrints.setPosition, 1),
+);
+
 export async function getArchivePage(
   cursor?: number,
   pageSize = PAGE_SIZE,
   category?: ArchiveCategory,
   orientation?: ArchiveOrientation,
 ): Promise<ArchivePage> {
-  const conditions = [eq(archivePrints.isVisible, true)];
+  const conditions = [eq(archivePrints.isVisible, true), IS_FEED_VISIBLE];
   if (cursor) conditions.push(lt(archivePrints.id, cursor));
   if (category) conditions.push(eq(archivePrints.collection, category));
   if (orientation) {
@@ -58,14 +68,25 @@ export async function getArchivePage(
 }
 
 /**
- * How many visible designs sit in each category, optionally within one
- * orientation. Used to dim categories the gallery hasn't filled yet, so an
- * empty tab reads as "nothing here yet" rather than as a broken filter.
+ * Every piece of a set, in hanging order. The configurator needs all of them:
+ * the customer picks one frame and size, and it applies to the whole set.
+ */
+export async function getArchiveSet(setId: number): Promise<ArchiveRow[]> {
+  return db
+    .select()
+    .from(archivePrints)
+    .where(eq(archivePrints.setId, setId))
+    .orderBy(asc(archivePrints.setPosition));
+}
+
+/**
+ * Counts for the filter bar. Only canonical rows are counted, so a set of
+ * three reads as one item — matching what the customer actually sees.
  */
 export async function getArchiveCategoryCounts(
   orientation?: ArchiveOrientation,
 ): Promise<Record<string, number>> {
-  const conditions = [eq(archivePrints.isVisible, true)];
+  const conditions = [eq(archivePrints.isVisible, true), IS_FEED_VISIBLE];
   if (orientation) {
     conditions.push(eq(archivePrints.orientation, orientation));
   }
@@ -96,7 +117,7 @@ export async function getArchivePrint(id: number) {
   return row ?? null;
 }
 
-/** Admin — everything regardless of visibility, newest first. */
+/** Admin — everything regardless of visibility or set membership. */
 export async function getAllArchivePrints() {
   return db.select().from(archivePrints).orderBy(desc(archivePrints.id));
 }
@@ -114,10 +135,7 @@ export async function createArchivePrint(input: {
     .insert(archivePrints)
     .values({
       ...rest,
-      // Categories are chosen at upload; anything unset lands in Others rather
-      // than dropping out of every filtered view.
       collection: category ?? DEFAULT_ARCHIVE_CATEGORY,
-      // Set automatically — the admin never picks this.
       orientation: deriveOrientation(input.width, input.height),
     })
     .returning();
@@ -125,6 +143,19 @@ export async function createArchivePrint(input: {
 }
 
 export async function setArchiveVisibility(id: number, isVisible: boolean) {
+  const target = await getArchivePrint(id);
+  if (!target) return null;
+
+  // Hiding one piece of a set would leave the rest orderable without it, which
+  // the gallery's all-or-nothing rule forbids. Visibility moves as a unit.
+  if (target.setId) {
+    await db
+      .update(archivePrints)
+      .set({ isVisible, updatedAt: new Date() })
+      .where(eq(archivePrints.setId, target.setId));
+    return { ...target, isVisible };
+  }
+
   const [row] = await db
     .update(archivePrints)
     .set({ isVisible, updatedAt: new Date() })
@@ -134,18 +165,116 @@ export async function setArchiveVisibility(id: number, isVisible: boolean) {
 }
 
 export async function deleteArchivePrint(id: number) {
+  const target = await getArchivePrint(id);
+  if (!target) return;
+
+  // Deleting one panel of a triptych leaves an unsellable pair. The set goes
+  // together or not at all.
+  if (target.setId) {
+    await db.delete(archivePrints).where(eq(archivePrints.setId, target.setId));
+    return;
+  }
+
   await db.delete(archivePrints).where(eq(archivePrints.id, id));
 }
 
-/** Recategorize a single design from the admin grid. */
 export async function setArchiveCategory(
   id: number,
   category: ArchiveCategory,
 ) {
+  const target = await getArchivePrint(id);
+  if (!target) return null;
+
+  if (target.setId) {
+    await db
+      .update(archivePrints)
+      .set({ collection: category, updatedAt: new Date() })
+      .where(eq(archivePrints.setId, target.setId));
+    return { ...target, collection: category };
+  }
+
   const [row] = await db
     .update(archivePrints)
     .set({ collection: category, updatedAt: new Date() })
     .where(eq(archivePrints.id, id))
     .returning();
   return row ?? null;
+}
+
+/**
+ * Group loose prints into a set, in the order given. The first id becomes the
+ * canonical piece and lends the set its category and visibility.
+ *
+ * Mixed orientations are rejected: all pieces take one frame and one size, so a
+ * portrait panel beside a landscape one can't be satisfied by a single
+ * selection. Better to fail here than at checkout.
+ */
+export async function createArchiveSet(ids: number[]): Promise<number> {
+  if (ids.length < 2) {
+    throw new Error("A set needs at least two pieces");
+  }
+  if (new Set(ids).size !== ids.length) {
+    throw new Error("The same piece was listed twice");
+  }
+
+  const rows = await db
+    .select()
+    .from(archivePrints)
+    .where(inArray(archivePrints.id, ids));
+
+  if (rows.length !== ids.length) {
+    throw new Error("Some pieces no longer exist");
+  }
+  if (rows.some((r) => r.setId)) {
+    throw new Error("Some pieces already belong to a set");
+  }
+  if (new Set(rows.map((r) => r.orientation)).size > 1) {
+    throw new Error(
+      "All pieces in a set must share the same orientation — they take one frame and size",
+    );
+  }
+
+  // The canonical piece's own id doubles as the set id: already unique, and it
+  // makes a set easy to identify in orders and support conversations.
+  const setId = ids[0];
+  const setSize = ids.length;
+  const canonical = rows.find((r) => r.id === setId)!;
+
+  // Neon's HTTP driver has no transactions, so these land one at a time.
+  // Position 1 is written last: until it exists, IS_FEED_VISIBLE matches none
+  // of these rows, so a half-applied grouping hides the pieces rather than
+  // putting a partial set on sale.
+  for (let i = 1; i < ids.length; i++) {
+    await db
+      .update(archivePrints)
+      .set({
+        setId,
+        setPosition: i + 1,
+        setSize,
+        collection: canonical.collection,
+        isVisible: canonical.isVisible,
+        updatedAt: new Date(),
+      })
+      .where(eq(archivePrints.id, ids[i]));
+  }
+
+  await db
+    .update(archivePrints)
+    .set({ setId, setPosition: 1, setSize, updatedAt: new Date() })
+    .where(eq(archivePrints.id, setId));
+
+  return setId;
+}
+
+/** Break a set back into loose prints. */
+export async function dissolveArchiveSet(setId: number) {
+  await db
+    .update(archivePrints)
+    .set({
+      setId: null,
+      setPosition: null,
+      setSize: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(archivePrints.setId, setId));
 }

@@ -71,6 +71,13 @@
       "when": 1783969414256,
       "tag": "0009_productive_rictor",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785236431976,
+      "tag": "0010_opposite_famine",
+      "breakpoints": true
     }
   ]
 }

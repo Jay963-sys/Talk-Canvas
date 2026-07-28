@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createOrder } from "@/lib/db/queries/orders";
 import { getOriginalsByIds } from "@/lib/db/queries/originals";
+import { getArchiveSet } from "@/lib/db/queries/archivePrints";
 import { getFrame } from "@/data/frames";
 import { getSize, formatInches, type Orientation } from "@/data/sizes";
 import { getPrice } from "@/data/pricing";
 import { paystackEnabled, initializeTransaction } from "@/lib/paystack";
 import { fulfillOrder } from "@/lib/orders/fulfillment";
 import { checkCode } from "@/lib/db/queries/affiliates";
-import type { Original, NewOrderItem } from "@/lib/db/schema";
+import type { Original, ArchivePrint, NewOrderItem } from "@/lib/db/schema";
 import { SHIPPING_CONFIG } from "@/data/shipping";
 import { quoteDelivery, type DeliverablePiece } from "@/lib/deliveryCalc";
 import { OUTSIDE_LAGOS_ID } from "@/data/delivery";
@@ -34,6 +35,13 @@ interface PrintItemInput {
   orientation?: Orientation;
   price: number;
   quantity?: number;
+  /**
+   * Present when this line is a set. Only the id is read — the panels, their
+   * images and their count all come from the database, exactly like originals.
+   * A client that could name its own panels could name a cheap set and receive
+   * an expensive one.
+   */
+  setId?: number;
 }
 interface OriginalItemInput {
   type: "original";
@@ -133,6 +141,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── Validate sets against the DB ───────────────────────────────
+    // A set is all-or-nothing, so it's resolved from the database before
+    // anything is priced: the panels, their order and their number are facts
+    // about the archive, not something the basket gets to assert.
+    const setIds = [
+      ...new Set(
+        items
+          .filter((i): i is PrintItemInput => i.type !== "original")
+          .map((i) => i.setId)
+          .filter((id): id is number => typeof id === "number"),
+      ),
+    ];
+    const setsMap = new Map<number, ArchivePrint[]>();
+    for (const setId of setIds) {
+      const pieces = await getArchiveSet(setId);
+      if (pieces.length < 2 || pieces.some((p) => !p.isVisible)) {
+        return NextResponse.json(
+          {
+            error:
+              "One of the sets in your cart is no longer available. Please remove it and try again.",
+          },
+          { status: 409 },
+        );
+      }
+      setsMap.set(setId, pieces);
+    }
+
     // Build item rows with server-trusted prices AND quantities
     const itemRows: Omit<NewOrderItem, "id" | "orderId">[] = [];
     // Discounts apply to prints + recreatable Talk Canvas designs only —
@@ -162,6 +197,8 @@ export async function POST(req: NextRequest) {
           title: dbOrig.title,
           artist: dbOrig.artist,
           year: dbOrig.year,
+          setId: null,
+          setPosition: null,
         });
         continue;
       }
@@ -187,12 +224,52 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
+
+      const printQuantity = clampQuantity(item.quantity);
+      const setPieces =
+        typeof item.setId === "number" ? setsMap.get(item.setId)! : null;
+
       // Sizes are stored portrait; a landscape design rotates them. Trust the
       // orientation flag but never the client's label — derive it ourselves,
-      // or the gallery frames a landscape print as a portrait one.
-      const orientation: Orientation =
-        item.orientation === "landscape" ? "landscape" : "portrait";
-      const printQuantity = clampQuantity(item.quantity);
+      // or the gallery frames a landscape print as a portrait one. For a set
+      // the orientation comes off the panels, which are guaranteed to agree.
+      const orientation: Orientation = setPieces
+        ? setPieces[0].orientation === "landscape"
+          ? "landscape"
+          : "portrait"
+        : item.orientation === "landscape"
+          ? "landscape"
+          : "portrait";
+
+      if (setPieces) {
+        // One cart line becomes one row PER PANEL. The gallery prints and
+        // frames each panel individually, so a single row saying "triptych"
+        // would leave staff guessing at the picking list. `price` stays the
+        // unit price — the set costs N frames, which is what N rows expresses.
+        for (const piece of setPieces) {
+          itemRows.push({
+            type: "print",
+            imageUrl: piece.imageUrl,
+            imagePublicId: piece.imagePublicId,
+            price,
+            quantity: printQuantity,
+            frameName: item.frameName,
+            glass: effectiveGlass,
+            sizeLabel: formatInches(size, orientation),
+            frameId: item.frameId,
+            sizeId: item.sizeId,
+            originalId: null,
+            title: null,
+            artist: null,
+            year: null,
+            setId: item.setId!,
+            setPosition: piece.setPosition,
+          });
+        }
+        discountableSubtotal += price * printQuantity * setPieces.length;
+        continue;
+      }
+
       discountableSubtotal += price * printQuantity;
       itemRows.push({
         type: "print",
@@ -209,10 +286,13 @@ export async function POST(req: NextRequest) {
         title: null,
         artist: null,
         year: null,
+        setId: null,
+        setPosition: null,
       });
     }
 
     // Quantity-aware subtotal, computed server-side from trusted values.
+    // Sets need no special case here: they're already N rows of unit price.
     const computedSubtotal = itemRows.reduce(
       (sum, i) => sum + i.price * (i.quantity ?? 1),
       0,
@@ -283,6 +363,9 @@ export async function POST(req: NextRequest) {
             ? (originalsMap.get(i.originalId)?.heightInches ?? null)
             : null,
         quantity: i.quantity ?? 1,
+        // Panels are already one row each by this point, so setSize stays 1 —
+        // only the quote flag is needed here.
+        isSet: i.setId != null,
       }));
 
       const quote = quoteDelivery(body.deliveryZone, pieces);

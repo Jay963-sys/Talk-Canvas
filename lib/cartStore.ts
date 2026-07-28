@@ -11,6 +11,13 @@ export function clampQuantity(n: unknown): number {
   return Math.min(q, MAX_QUANTITY);
 }
 
+/** One panel of a set. Frame, glass and size live on the line, not here — the
+ *  gallery's rule is that every piece takes the same ones. */
+export interface SetPiece {
+  imageUrl: string;
+  imagePublicId: string;
+}
+
 export interface PrintCartItem {
   id: string;
   type: "print";
@@ -32,6 +39,22 @@ export interface PrintCartItem {
    * different crops of the same design apart.
    */
   crop: Crop;
+  /**
+   * Set membership, or null for an ordinary single print.
+   *
+   * A set is ONE line, not one line per panel: the gallery sells them
+   * all-or-nothing, and separate lines would let a customer delete one panel
+   * and check out with two-thirds of a triptych. `pieces` carries every panel
+   * so the order can be expanded into individual items for printing, and
+   * `imageUrl` above stays the canonical panel for thumbnails.
+   *
+   * `price` on this line is the whole-set price (unit price × pieces.length),
+   * which keeps quantity meaning what it always meant: how many sets.
+   */
+  set: {
+    setId: number;
+    pieces: SetPiece[];
+  } | null;
   price: number;
   quantity: number;
   addedAt: string;
@@ -101,11 +124,16 @@ function sameCrop(a: Crop, b: Crop): boolean {
  * Two prints are the same line if image + frame + glass + size + orientation +
  * crop all match. A different crop of the same design is a different product,
  * so it gets its own line.
+ *
+ * Sets compare on setId: two lines of the same set in the same frame and size
+ * are the same product, and a set never merges with a loose print even when
+ * the canonical panel's image matches.
  */
 function samePrint(
   a: PrintCartItem,
   b: Omit<PrintCartItem, "id" | "addedAt" | "type" | "quantity">,
 ): boolean {
+  if ((a.set?.setId ?? null) !== (b.set?.setId ?? null)) return false;
   return (
     a.imageUrl === b.imageUrl &&
     a.frameId === b.frameId &&
@@ -114,6 +142,14 @@ function samePrint(
     a.orientation === b.orientation &&
     sameCrop(a.crop, b.crop)
   );
+}
+
+/** Panels in one unit of this line: 3 for a triptych, 1 for a single print. */
+export function piecesPerUnit(item: CartItem): number {
+  if (item.type === "print" && item.set) {
+    return Math.max(1, item.set.pieces.length);
+  }
+  return 1;
 }
 
 export const useCart = create<CartState>()(
@@ -227,10 +263,11 @@ export const useCart = create<CartState>()(
     }),
     {
       name: "talk-canvas-cart",
-      version: 6, // bumped — print items gained `crop`
+      version: 7, // bumped — print items gained `set`
       migrate: (persistedState, version) => {
-        // Older carts predate quantity/oneOfOne/crop. Rather than guess, start clean.
-        if (version < 6) return { items: [] };
+        // Older carts predate quantity/oneOfOne/crop/set. Rather than guess,
+        // start clean.
+        if (version < 7) return { items: [] };
         return persistedState as { items: CartItem[] };
       },
       partialize: (state) => ({ items: state.items }),
@@ -238,7 +275,7 @@ export const useCart = create<CartState>()(
   ),
 );
 
-/** Line total for one cart item. */
+/** Line total for one cart item. For a set, `price` is already the set price. */
 export function lineTotal(item: CartItem): number {
   return item.price * item.quantity;
 }
@@ -269,7 +306,15 @@ export function discountFor(items: CartItem[], percent: number): number {
   return Math.max(0, Math.min(Math.floor((base * percent) / 100), base));
 }
 
-/** Total number of pieces (not lines) — for the header badge. */
+/**
+ * Total number of framed pieces — for the header badge. A triptych counts as
+ * three, because three frames are what turn up at the door.
+ */
 export function cartCount(items: CartItem[]): number {
-  return items.reduce((sum, i) => sum + i.quantity, 0);
+  return items.reduce((sum, i) => sum + piecesPerUnit(i) * i.quantity, 0);
+}
+
+/** True when the cart holds a set, so delivery has to be quoted by hand. */
+export function cartHasSet(items: CartItem[]): boolean {
+  return items.some((i) => i.type === "print" && i.set !== null);
 }

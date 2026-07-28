@@ -187,6 +187,9 @@ export const orderItems = pgTable("order_items", {
   imageUrl: text("image_url").notNull(),
   imagePublicId: varchar("image_public_id", { length: 255 }),
   price: integer("price").notNull(),
+  // order_items
+  setId: integer("set_id"),
+  setPosition: integer("set_position"),
 
   // Unit price is `price`; the line total is price * quantity. One-of-one
   // works are always 1.
@@ -235,6 +238,9 @@ export const archivePrints = pgTable("archive_prints", {
   imagePublicId: varchar("image_public_id", { length: 255 }).notNull(),
   width: integer("width").notNull(),
   height: integer("height").notNull(),
+  setId: integer("set_id"),
+  setPosition: integer("set_position"),
+  setSize: integer("set_size"),
 
   // Derived from width/height at upload — never entered by hand. Stored rather
   // than computed per query so the filter can use an index as the archive grows.
