@@ -13,6 +13,13 @@ export interface ArchiveItem {
   width: number;
   height: number;
   collection?: string | null;
+  /**
+   * Set membership. The feed returns only the leading panel of a set, so a
+   * tile with a setId stands for `setSize` framed pieces — ArchiveCard fetches
+   * the rest when it's chosen.
+   */
+  setId?: number | null;
+  setSize?: number | null;
 }
 
 interface Props {
