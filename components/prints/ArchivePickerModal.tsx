@@ -15,6 +15,13 @@ export interface ArchiveItem {
   height: number;
   orientation: Orientation;
   collection: string | null;
+  /**
+   * Set membership. The feed only returns the leading panel of a set, so a
+   * tile with a setId stands for several pieces — StepUpload fetches the rest
+   * once it's chosen.
+   */
+  setId: number | null;
+  setSize: number | null;
 }
 
 interface Props {
@@ -281,21 +288,37 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
 
           {items.length > 0 && (
             <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
-              {items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => onSelect(item)}
-                  className="group mb-4 block w-full break-inside-avoid overflow-hidden bg-paper"
-                  style={{ aspectRatio: `${item.width}/${item.height}` }}
-                >
-                  <img
-                    src={thumb(item.imageUrl)}
-                    alt=""
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  />
-                </button>
-              ))}
+              {items.map((item) => {
+                const panels = item.setId ? (item.setSize ?? 0) : 0;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onSelect(item)}
+                    aria-label={
+                      panels > 1
+                        ? `Choose this set of ${panels}`
+                        : "Choose this design"
+                    }
+                    className="group relative mb-4 block w-full break-inside-avoid overflow-hidden bg-paper"
+                    style={{ aspectRatio: `${item.width}/${item.height}` }}
+                  >
+                    <img
+                      src={thumb(item.imageUrl)}
+                      alt=""
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    />
+                    {/* The tile shows one panel, so the badge is the only thing
+                        telling a customer they're picking several pieces —
+                        and, once priced, several frames. */}
+                    {panels > 1 && (
+                      <span className="absolute top-2 left-2 bg-ink text-cream text-[10px] uppercase tracking-widest px-2 py-1">
+                        Set of {panels}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
 
