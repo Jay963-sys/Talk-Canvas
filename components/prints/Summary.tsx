@@ -10,11 +10,15 @@ import { ArrowLeft } from "lucide-react";
 const STEP_NAMES = ["Upload", "Frame", "Size", "Review"];
 
 export default function Summary() {
-  const { step, setStep, image, frame, glass, size, crop, reset } =
+  const { step, setStep, image, set, frame, glass, size, crop, reset } =
     useConfigurator();
   const { addItem, setOpen: setCartOpen } = useCart();
 
-  const totalPrice = frame && size ? (getPrice(frame, glass, size) ?? 0) : 0;
+  const panels = set ? set.pieces.length : 1;
+  const unitPrice = frame && size ? (getPrice(frame, glass, size) ?? 0) : 0;
+  // The gallery's rule: a set costs N frames at the chosen size. No bundle
+  // rate, no discount — just the same price, N times.
+  const totalPrice = unitPrice * panels;
 
   // Sizes are stored portrait; a landscape design uses them rotated. The label
   // must record the orientation actually bought — it's what the gallery frames.
@@ -31,7 +35,10 @@ export default function Summary() {
   const handleAddToCart = () => {
     if (!image || !frame || !size) return;
     const natural = { w: image.width, h: image.height };
-    const activeCrop = crop ?? FULL_CROP;
+    // Sets are never cropped — panels are pre-aligned by the gallery, so they
+    // go in whole and the cropper is skipped on the Review step.
+    const activeCrop = set ? FULL_CROP : (crop ?? FULL_CROP);
+
     addItem({
       // Bake the approved crop into the URL. Every downstream consumer — cart
       // thumbnail, order record, confirmation email, the file the gallery
@@ -46,6 +53,18 @@ export default function Summary() {
       sizeId: size.id,
       sizeLabel: formatInches(size, orientation),
       orientation,
+      // One line for the whole set: the pieces travel together so the order can
+      // expand them into individual printable rows, and the customer can't
+      // delete a single panel out of a triptych.
+      set: set
+        ? {
+            setId: set.setId,
+            pieces: set.pieces.map((p) => ({
+              imageUrl: p.url,
+              imagePublicId: p.publicId,
+            })),
+          }
+        : null,
       price: totalPrice,
     });
     reset();
@@ -59,12 +78,26 @@ export default function Summary() {
       </p>
 
       <div className="space-y-1 mb-2">
-        <SummaryRow label="Design" value={image ? "Uploaded ✓" : "—"} />
+        <SummaryRow
+          label="Design"
+          value={set ? `Set of ${panels} ✓` : image ? "Uploaded ✓" : "—"}
+        />
         <SummaryRow
           label="Frame"
           value={frame ? frame.name + (glass ? " · with glass" : "") : "—"}
         />
-        <SummaryRow label="Size" value={sizeLabel ?? "—"} />
+        <SummaryRow
+          label="Size"
+          value={sizeLabel ? sizeLabel + (set ? " each" : "") : "—"}
+        />
+        {/* Shown only for sets, and only once a price exists — it's the line
+            that explains why the total is three times the size's price. */}
+        {set && unitPrice > 0 && (
+          <SummaryRow
+            label="Pieces"
+            value={`${panels} × ${formatNaira(unitPrice)}`}
+          />
+        )}
       </div>
 
       <div className="mt-8 pt-6 border-t border-line/60">
@@ -77,7 +110,9 @@ export default function Summary() {
           </span>
         </div>
         <p className="text-[12px] text-ink-soft">
-          Shipping calculated at checkout.
+          {set
+            ? "Delivery for sets is quoted after you order."
+            : "Shipping calculated at checkout."}
         </p>
       </div>
 
@@ -100,7 +135,7 @@ export default function Summary() {
             onClick={handleAddToCart}
             className="w-full py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
           >
-            Add to cart — {formatNaira(totalPrice)}
+            Add {set ? "set" : ""} to cart — {formatNaira(totalPrice)}
           </button>
         )}
         {step > 0 && (
