@@ -112,7 +112,26 @@ export default async function PrintsPage() {
           </div>
         </section>
       )}
-
+      {/* Sets entry CTA — Styled as a dark companion banner */}
+      <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24 md:pb-32">
+        <div className="bg-ink text-cream rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
+          <div className="max-w-xl">
+            <h2 className="display text-3xl mb-4">Hang Together</h2>
+            <p className="text-[15px] text-ink-soft mb-0">
+              Some pieces are made to hang as a group. Explore our curated
+              sets—artworks designed to share the same space and framed to
+              match.
+            </p>
+          </div>
+          <Link
+            href="/prints/sets"
+            className="shrink-0 inline-flex items-center gap-2 px-8 py-3.5 bg-cream text-ink text-[12px] uppercase tracking-widest font-medium hover:bg-paper transition-colors"
+          >
+            Shop Sets
+            <ArrowRight size={14} strokeWidth={1.5} />
+          </Link>
+        </div>
+      </section>
       {/* See it in your space */}
       <div className="py-10">
         <RoomGallery />

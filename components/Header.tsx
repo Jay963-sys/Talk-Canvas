@@ -3,15 +3,30 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingBag, Menu, X, Search, User } from "lucide-react";
+import { ShoppingBag, Menu, X, Search, User, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import clsx from "clsx";
 import { useCart } from "@/lib/cartStore";
 
-const NAV = [
+type NavItem = {
+  href: string;
+  label: string;
+  dropdown?: { href: string; label: string }[];
+};
+
+const NAV: NavItem[] = [
   { href: "/", label: "Home" },
   { href: "/originals", label: "Originals" },
-  { href: "/prints", label: "Prints" },
+  {
+    href: "/prints",
+    label: "Prints",
+    dropdown: [
+      { href: "/prints", label: "Gallery Walls" },
+      { href: "/prints/archive", label: "Archive" },
+      { href: "/prints/sets", label: "Sets" },
+      { href: "/prints/custom", label: "Custom" },
+    ],
+  },
   { href: "/artists", label: "Artists" },
   { href: "/about", label: "About us" },
   { href: "/contact", label: "Contact us" },
@@ -190,20 +205,44 @@ export default function Header() {
           </div>
 
           {/* Desktop Navigation Row */}
-          <nav className="hidden md:flex items-center justify-center gap-10 text-[13px] text-ink font-normal pb-5">
+          <nav className="hidden md:flex items-center justify-center gap-10 text-[13px] text-ink font-normal pb-5 relative">
             {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={clsx(
-                  "relative transition-colors hover:text-ink-soft",
-                  isActivePath(item.href, pathname)
-                    ? "text-ink border-b border-ink/30 pb-0.5"
-                    : "text-ink",
+              <div key={item.label} className="relative group">
+                <Link
+                  href={item.href}
+                  className={clsx(
+                    "relative transition-colors hover:text-ink-soft flex items-center gap-1.5 py-2",
+                    isActivePath(item.href, pathname) && !item.dropdown
+                      ? "text-ink border-b border-ink/30 pb-0.5"
+                      : "text-ink",
+                  )}
+                >
+                  {item.label}
+                  {item.dropdown && (
+                    <ChevronDown
+                      size={14}
+                      className="opacity-60 group-hover:rotate-180 transition-transform duration-200"
+                    />
+                  )}
+                </Link>
+
+                {/* Dropdown Menu */}
+                {item.dropdown && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 pt-1 opacity-0 translate-y-2 invisible group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200 z-50">
+                    <div className="bg-cream border border-line rounded-xl shadow-sm py-2 min-w-[160px] flex flex-col">
+                      {item.dropdown.map((drop) => (
+                        <Link
+                          key={drop.href}
+                          href={drop.href}
+                          className="px-6 py-2.5 hover:bg-paper transition-colors text-[11px] uppercase tracking-widest text-ink text-center"
+                        >
+                          {drop.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              >
-                {item.label}
-              </Link>
+              </div>
             ))}
           </nav>
         </div>
@@ -257,10 +296,14 @@ export default function Header() {
                 const isActive = isActivePath(item.href, pathname);
 
                 return (
-                  <motion.div key={item.href} variants={linkVars}>
+                  <motion.div
+                    key={item.href}
+                    variants={linkVars}
+                    className="flex flex-col gap-4"
+                  >
                     <Link
                       href={item.href}
-                      onClick={() => setOpen(false)}
+                      onClick={() => !item.dropdown && setOpen(false)}
                       className={clsx(
                         "display text-4xl tracking-tight transition-colors flex items-center gap-4",
                         isActive ? "text-ink" : "text-ink-soft hover:text-ink",
@@ -268,6 +311,22 @@ export default function Header() {
                     >
                       {item.label}
                     </Link>
+
+                    {/* Mobile Dropdown Items */}
+                    {item.dropdown && (
+                      <div className="flex flex-col gap-4 pl-4 border-l-2 border-line/50 ml-2 mt-1">
+                        {item.dropdown.map((drop) => (
+                          <Link
+                            key={drop.href}
+                            href={drop.href}
+                            onClick={() => setOpen(false)}
+                            className="text-xl tracking-tight text-ink-soft hover:text-ink transition-colors"
+                          >
+                            {drop.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 );
               })}
