@@ -26,7 +26,39 @@ interface Item {
   title?: string | null;
   artist?: string | null;
   year?: number | null;
+  /** Set membership. Panels of one set arrive as consecutive rows. */
+  setId?: number | null;
+  setPosition?: number | null;
 }
+
+/**
+ * Unlike the customer's confirmation, panels stay listed individually here —
+ * this email IS the picking list, and staff need to see and print every panel.
+ * The grouping only adds a wrapper saying they ship together, so nobody
+ * dispatches two thirds of a triptych.
+ */
+type Group =
+  | { kind: "single"; item: Item }
+  | { kind: "set"; setId: number; items: Item[] };
+
+function groupItems(items: Item[]): Group[] {
+  const groups: Group[] = [];
+  for (const item of items) {
+    if (item.setId == null) {
+      groups.push({ kind: "single", item });
+      continue;
+    }
+    const last = groups[groups.length - 1];
+    if (last && last.kind === "set" && last.setId === item.setId) {
+      last.items.push(item);
+    } else {
+      groups.push({ kind: "set", setId: item.setId, items: [item] });
+    }
+  }
+  return groups;
+}
+
+const lineTotal = (i: Item) => i.price * (i.quantity ?? 1);
 
 interface Props {
   orderNumber: string;
@@ -42,6 +74,7 @@ interface Props {
   discountPercent?: number | null;
   // Delivery is priced per Lagos LGA, by the vehicle the order needs. Outside
   // Lagos isn't in the price list — nothing is charged and the gallery quotes.
+  // Orders containing a set are quoted too, wherever they're going.
   deliveryZoneLabel?: string | null;
   deliveryVehicleLabel?: string | null;
   deliveryQuotePending?: boolean;
@@ -71,6 +104,73 @@ export default function OrderNotification({
   deliveryVehicleLabel,
   deliveryQuotePending,
 }: Props) {
+  const groups = groupItems(items);
+  const hasSet = groups.some((g) => g.kind === "set");
+
+  const renderItemRow = (item: Item, key: number, panelLabel?: string) => (
+    <Section key={key} style={{ marginBottom: "16px" }}>
+      <Row>
+        <Column style={{ width: "70px", verticalAlign: "top" }}>
+          <Img src={thumb(item.imageUrl)} style={styles.itemImage} alt="" />
+        </Column>
+        <Column style={{ verticalAlign: "top", paddingLeft: "16px" }}>
+          {item.type === "original" ? (
+            <>
+              <Text style={{ ...styles.infoText, fontStyle: "italic" }}>
+                {item.title}
+              </Text>
+              <Text style={styles.metaText}>
+                {item.artist}
+                {item.year ? ` · ${item.year}` : ""}
+              </Text>
+              <Text style={styles.metaText}>
+                {item.frameName} · {item.sizeLabel}
+              </Text>
+              {item.oneOfOne && (
+                <Text
+                  style={{
+                    ...styles.metaText,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    fontSize: "10px",
+                  }}
+                >
+                  One of one — now sold
+                </Text>
+              )}
+            </>
+          ) : (
+            <>
+              <Text style={{ ...styles.infoText, fontStyle: "italic" }}>
+                {panelLabel ?? "Custom print"}
+              </Text>
+              <Text style={styles.metaText}>
+                {item.frameName}
+                {item.glass ? " · with glass" : ""} · {item.sizeLabel}
+              </Text>
+            </>
+          )}
+        </Column>
+        <Column
+          style={{
+            verticalAlign: "top",
+            textAlign: "right",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Text style={{ ...styles.infoText, fontWeight: 500 }}>
+            {formatNaira(lineTotal(item))}
+          </Text>
+          {(item.quantity ?? 1) > 1 && (
+            <Text style={styles.metaText}>
+              {item.quantity} × {formatNaira(item.price)}
+            </Text>
+          )}
+        </Column>
+      </Row>
+    </Section>
+  );
+
   return (
     <Html>
       <Head />
@@ -88,8 +188,8 @@ export default function OrderNotification({
             <strong>{formatNaira(total)}</strong>.
           </Text>
 
-          {/* Outside Lagos: shipped at zero until a fee is agreed. Loud, because
-              the body would otherwise read "Delivery: Free". */}
+          {/* Shipped at zero until a fee is agreed. Loud, because the body
+              would otherwise read "Delivery: Free". */}
           {deliveryQuotePending && (
             <Section
               style={{
@@ -103,7 +203,9 @@ export default function OrderNotification({
                 Delivery quote needed
               </Text>
               <Text style={{ ...styles.metaText, marginTop: "4px" }}>
-                This order is outside Lagos — no delivery fee was charged.
+                {hasSet
+                  ? "This order contains a set, which is delivered by arrangement — no delivery fee was charged."
+                  : "This order is outside Lagos — no delivery fee was charged."}{" "}
                 Contact the customer with a price, then record it on the order
                 in the admin.
               </Text>
@@ -127,73 +229,45 @@ export default function OrderNotification({
           )}
 
           <Text style={styles.sectionLabel}>Items</Text>
-          {items.map((item, i) => (
-            <Section key={i} style={{ marginBottom: "16px" }}>
-              <Row>
-                <Column style={{ width: "70px", verticalAlign: "top" }}>
-                  <Img
-                    src={thumb(item.imageUrl)}
-                    style={styles.itemImage}
-                    alt=""
-                  />
-                </Column>
-                <Column style={{ verticalAlign: "top", paddingLeft: "16px" }}>
-                  {item.type === "original" ? (
-                    <>
-                      <Text style={{ ...styles.infoText, fontStyle: "italic" }}>
-                        {item.title}
-                      </Text>
-                      <Text style={styles.metaText}>
-                        {item.artist}
-                        {item.year ? ` · ${item.year}` : ""}
-                      </Text>
-                      <Text style={styles.metaText}>
-                        {item.frameName} · {item.sizeLabel}
-                      </Text>
-                      {item.oneOfOne && (
-                        <Text
-                          style={{
-                            ...styles.metaText,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.1em",
-                            fontSize: "10px",
-                          }}
-                        >
-                          One of one — now sold
-                        </Text>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <Text style={{ ...styles.infoText, fontStyle: "italic" }}>
-                        Custom print
-                      </Text>
-                      <Text style={styles.metaText}>
-                        {item.frameName}
-                        {item.glass ? " · with glass" : ""} · {item.sizeLabel}
-                      </Text>
-                    </>
-                  )}
-                </Column>
-                <Column
+          {groups.map((group, i) => {
+            if (group.kind === "single") {
+              return renderItemRow(group.item, i);
+            }
+
+            const panels = group.items.length;
+            const sets = group.items[0].quantity ?? 1;
+
+            return (
+              <Section
+                key={i}
+                style={{
+                  borderLeft: `3px solid ${colors.line}`,
+                  paddingLeft: "12px",
+                  marginBottom: "16px",
+                }}
+              >
+                <Text
                   style={{
-                    verticalAlign: "top",
-                    textAlign: "right",
-                    whiteSpace: "nowrap",
+                    ...styles.metaText,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    fontSize: "10px",
+                    marginBottom: "8px",
                   }}
                 >
-                  <Text style={{ ...styles.infoText, fontWeight: 500 }}>
-                    {formatNaira(item.price * (item.quantity ?? 1))}
-                  </Text>
-                  {(item.quantity ?? 1) > 1 && (
-                    <Text style={styles.metaText}>
-                      {item.quantity} × {formatNaira(item.price)}
-                    </Text>
-                  )}
-                </Column>
-              </Row>
-            </Section>
-          ))}
+                  Set of {panels} · same frame and size · ships together
+                  {sets > 1 ? ` · ${sets} sets ordered` : ""}
+                </Text>
+                {group.items.map((panel, j) =>
+                  renderItemRow(
+                    panel,
+                    j,
+                    `Set piece ${panel.setPosition ?? j + 1} of ${panels}`,
+                  ),
+                )}
+              </Section>
+            );
+          })}
 
           <Hr style={styles.divider} />
 
