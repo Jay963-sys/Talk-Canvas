@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getAllArchivePrints } from "@/lib/db/queries/archivePrints";
-import ArchiveAdminCard from "@/components/admin/ArchiveAdminCard";
+import ArchiveAdminGrid from "@/components/admin/ArchiveAdminGrid";
+import type { AdminArchiveItem } from "@/components/admin/ArchiveAdminCard";
 import {
   ARCHIVE_CATEGORIES,
   DEFAULT_ARCHIVE_CATEGORY,
@@ -34,7 +35,7 @@ export default async function AdminArchivePage({
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
 
-  const items = category
+  const filtered = category
     ? all.filter((item) => {
         const key = isArchiveCategory(item.collection)
           ? item.collection
@@ -42,6 +43,19 @@ export default async function AdminArchivePage({
         return key === category;
       })
     : all;
+
+  // Unlike the public feed, admin shows every panel of a set, not just the
+  // leading one — staff need to see and manage each piece.
+  const items: AdminArchiveItem[] = filtered.map((i) => ({
+    id: i.id,
+    imageUrl: i.imageUrl,
+    isVisible: i.isVisible,
+    orientation: i.orientation,
+    collection: i.collection,
+    setId: i.setId,
+    setPosition: i.setPosition,
+    setSize: i.setSize,
+  }));
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-8">
@@ -65,7 +79,7 @@ export default async function AdminArchivePage({
       {/* Filter — the working tool for clearing out "Others" after a bulk
           upload, so counts are shown rather than hidden. */}
       {all.length > 0 && (
-        <div className="flex flex-wrap gap-x-5 gap-y-2 border-b border-line pb-3 mb-8">
+        <div className="flex flex-wrap gap-x-5 gap-y-2 border-b border-line pb-3 mb-6">
           <Link
             href="/admin/archive-prints"
             className={`text-[12px] uppercase tracking-widest pb-1 border-b transition-colors ${
@@ -119,24 +133,7 @@ export default async function AdminArchivePage({
           )}
         </div>
       ) : (
-        // Masonry, not a fixed grid: cards now render at each design's true
-        // aspect ratio, so a rigid grid would either crop them again or leave
-        // ragged gaps between rows.
-        <div className="columns-2 sm:columns-3 md:columns-4 gap-4">
-          {items.map((item) => (
-            <div key={item.id} className="break-inside-avoid mb-4">
-              <ArchiveAdminCard
-                item={{
-                  id: item.id,
-                  imageUrl: item.imageUrl,
-                  isVisible: item.isVisible,
-                  orientation: item.orientation,
-                  collection: item.collection,
-                }}
-              />
-            </div>
-          ))}
-        </div>
+        <ArchiveAdminGrid items={items} />
       )}
     </div>
   );
