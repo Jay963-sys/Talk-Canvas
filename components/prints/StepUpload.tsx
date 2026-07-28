@@ -5,18 +5,10 @@ import { Upload, Loader2, AlertCircle } from "lucide-react";
 import { useConfigurator } from "@/lib/store";
 import { uploadToCloudinary, validateFile } from "@/lib/upload";
 import { downscaleImage } from "@/lib/image";
+import { fetchArchiveSet } from "@/lib/archiveSet";
 import ArchivePickerModal, { ArchiveItem } from "./ArchivePickerModal";
 
-/** Shape of GET /api/archive-sets/[setId]. */
-interface SetResponse {
-  setId: number;
-  pieces: {
-    imageUrl: string;
-    imagePublicId: string;
-    width: number;
-    height: number;
-  }[];
-}
+
 
 export default function StepUpload() {
   const { image, set, setImage, selectSet } = useConfigurator();
@@ -80,23 +72,10 @@ export default function StepUpload() {
     // customer configures are the pieces the order will contain.
     setLoadingSet(true);
     try {
-      const res = await fetch(`/api/archive-sets/${item.setId}`);
-      if (!res.ok) throw new Error("That set is no longer available.");
-      const data: SetResponse = await res.json();
-      selectSet({
-        setId: data.setId,
-        pieces: data.pieces.map((p) => ({
-          url: p.imageUrl,
-          publicId: p.imagePublicId,
-          width: p.width,
-          height: p.height,
-        })),
-      });
+      selectSet(await fetchArchiveSet(item.setId));
       setPickerOpen(false);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Couldn't load that set.",
-      );
+      setError(err instanceof Error ? err.message : "Couldn't load that set.");
       setPickerOpen(false);
     } finally {
       setLoadingSet(false);
