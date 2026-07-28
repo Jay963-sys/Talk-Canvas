@@ -9,6 +9,7 @@ import {
   cartSubtotal,
   discountableSubtotal,
   discountFor,
+  cartHasSet,
 } from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
 import { SHIPPING_CONFIG } from "@/data/shipping";
@@ -109,11 +110,16 @@ export default function CheckoutPage() {
       ? quoteDelivery(
           deliveryZone,
           items.map((i) => ({
-            sizeId: i.type === "print" ? i.sizeId : null,
-            quantity: i.quantity,
-          })),
+  sizeId: i.type === "print" ? i.sizeId : null,
+  quantity: i.quantity,
+  // The cart holds a set as one line, so panels are counted here.
+  setSize: i.type === "print" && i.set ? i.set.pieces.length : 1,
+  isSet: i.type === "print" && i.set !== null,
+})),
         )
       : null;
+
+  const hasSet = cartHasSet(items);
 
   const shipping = deliveryMethod === "pickup" ? 0 : (quote?.fee ?? 0);
   const total = subtotal - discount + shipping;
@@ -360,13 +366,15 @@ export default function CheckoutPage() {
                   )}
 
 
-                  {quote?.quoteOnRequest && (
-                    <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
-                      <p className="text-[13px] text-ink leading-relaxed">
-                        {OUTSIDE_LAGOS_NOTE}
-                      </p>
-                    </div>
-                  )}
+                 {quote?.quoteOnRequest && (
+  <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
+    <p className="text-[13px] text-ink leading-relaxed">
+      {hasSet && deliveryZone !== OUTSIDE_LAGOS_ID
+        ? "Your order includes a set, which we deliver by arrangement. We'll confirm the cost with you after you order — nothing is charged for delivery now."
+        : OUTSIDE_LAGOS_NOTE}
+    </p>
+  </div>
+)}
                 </div>
               )}
             </section>
