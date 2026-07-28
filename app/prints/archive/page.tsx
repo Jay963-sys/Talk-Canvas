@@ -68,13 +68,15 @@ export default async function ArchivePage({
   ]);
 
   const initialItems: ArchiveItem[] = items.map((i) => ({
-    id: i.id,
-    imageUrl: i.imageUrl,
-    imagePublicId: i.imagePublicId,
-    width: i.width,
-    height: i.height,
-    collection: i.collection,
-  }));
+  id: i.id,
+  imageUrl: i.imageUrl,
+  imagePublicId: i.imagePublicId,
+  width: i.width,
+  height: i.height,
+  collection: i.collection,
+  setId: i.setId,
+  setSize: i.setSize,
+}));
 
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
 
