@@ -4,10 +4,16 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Layers, X } from "lucide-react";
 import ArchiveAdminCard, { type AdminArchiveItem } from "./ArchiveAdminCard";
+import ArchiveAdminSetCard from "./ArchiveAdminSetCard";
 
 interface Props {
   items: AdminArchiveItem[];
 }
+
+/** A grid cell: one loose print, or one whole set. */
+type Entry =
+  | { kind: "single"; key: string; item: AdminArchiveItem }
+  | { kind: "set"; key: string; setId: number; panels: AdminArchiveItem[] };
 
 export default function ArchiveAdminGrid({ items }: Props) {
   const router = useRouter();
@@ -18,10 +24,47 @@ export default function ArchiveAdminGrid({ items }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const byId = useMemo(
-    () => new Map(items.map((i) => [i.id, i])),
-    [items],
-  );
+  const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+
+  /**
+   * Collapse each set's panels into one entry, positioned where the set's
+   * first panel appears in the incoming order — so sets stay roughly where
+   * staff uploaded them rather than being herded into a separate section.
+   * Panels are sorted by setPosition here, not left to the id ordering: a set
+   * regrouped after a recategorisation can have ids out of hanging order.
+   */
+  const entries = useMemo<Entry[]>(() => {
+    const bySet = new Map<number, AdminArchiveItem[]>();
+    for (const item of items) {
+      if (item.setId == null) continue;
+      const list = bySet.get(item.setId) ?? [];
+      list.push(item);
+      bySet.set(item.setId, list);
+    }
+    for (const list of bySet.values()) {
+      list.sort((a, b) => (a.setPosition ?? 0) - (b.setPosition ?? 0));
+    }
+
+    const out: Entry[] = [];
+    const done = new Set<number>();
+    for (const item of items) {
+      if (item.setId == null) {
+        out.push({ kind: "single", key: `p${item.id}`, item });
+        continue;
+      }
+      if (done.has(item.setId)) continue;
+      done.add(item.setId);
+      const panels = bySet.get(item.setId) ?? [item];
+      // A set that somehow lost its siblings is shown as a loose print rather
+      // than as a "set of 1", which would be a state nothing can act on.
+      if (panels.length < 2) {
+        out.push({ kind: "single", key: `p${item.id}`, item });
+        continue;
+      }
+      out.push({ kind: "set", key: `s${item.setId}`, setId: item.setId, panels });
+    }
+    return out;
+  }, [items]);
 
   const toggle = (id: number) => {
     setError(null);
@@ -117,17 +160,37 @@ export default function ArchiveAdminGrid({ items }: Props) {
         </p>
       )}
 
-      <div className="columns-2 sm:columns-3 md:columns-4 gap-4">
-        {items.map((item) => (
-          <div key={item.id} className="break-inside-avoid mb-4">
+      {/* CSS grid rather than masonry columns: a set block has to span more
+          than one column to fit its panels side by side, which `columns-*`
+          can't express. Rows are slightly less tightly packed as a result —
+          worth it to see a set as a set. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 items-start">
+        {entries.map((entry) =>
+          entry.kind === "single" ? (
             <ArchiveAdminCard
-              item={item}
+              key={entry.key}
+              item={entry.item}
               selecting={selecting}
-              selectedIndex={selected.indexOf(item.id)}
+              selectedIndex={selected.indexOf(entry.item.id)}
               onToggleSelect={toggle}
             />
-          </div>
-        ))}
+          ) : (
+            <div
+              key={entry.key}
+              className={
+                entry.panels.length >= 3
+                  ? "col-span-2 sm:col-span-3"
+                  : "col-span-2"
+              }
+            >
+              <ArchiveAdminSetCard
+                setId={entry.setId}
+                panels={entry.panels}
+                selecting={selecting}
+              />
+            </div>
+          ),
+        )}
       </div>
     </>
   );
