@@ -32,32 +32,27 @@ const NAV: NavItem[] = [
   { href: "/contact", label: "Contact us" },
 ];
 
-// Home must match exactly — every path startsWith("/"), so the naive check
-// would light up Home as active on every page.
 function isActivePath(href: string, pathname: string | null): boolean {
   if (href === "/") return pathname === "/";
   return !!pathname?.startsWith(href);
 }
 
-// Animation variants for the mobile menu
+// Fast animation variants for the mobile menu
 const menuVars: Variants = {
   initial: { opacity: 0 },
   animate: {
     opacity: 1,
-    // Decreased stagger and delay from 0.1 to 0.04 for a much faster sequence
     transition: { staggerChildren: 0.04, delayChildren: 0.04 },
   },
-  // Decreased exit fade from 0.3 to 0.15 so it closes faster
   exit: { opacity: 0, transition: { duration: 0.15 } },
 };
 
 const linkVars: Variants = {
-  initial: { y: 15, opacity: 0 }, // Slightly reduced the starting Y distance (from 20 to 15)
-  animate: { 
-    y: 0, 
-    opacity: 1, 
-    // Decreased link slide-in duration from 0.4 to 0.2
-    transition: { ease: "easeOut", duration: 0.2 } 
+  initial: { y: 15, opacity: 0 },
+  animate: {
+    y: 0,
+    opacity: 1,
+    transition: { ease: "easeOut", duration: 0.2 },
   },
 };
 
@@ -136,12 +131,12 @@ export default function Header() {
           {/* Main Logo & Icons Row */}
           <div className="flex items-center justify-between py-5 md:py-6">
             {/* Left Area: Hamburger + Search */}
-            <div className="flex-1 flex items-center justify-start gap-3 md:gap-4">
+            <div className="flex-1 flex items-center justify-start gap-3 md:gap-4 relative z-50">
               <button
                 className="md:hidden p-2 -ml-2 text-ink hover:text-ink-soft transition-colors"
                 onClick={() => {
                   setOpen(!open);
-                  setSearchOpen(false); // Close search if opening menu
+                  setSearchOpen(false);
                 }}
                 aria-label="Menu"
               >
@@ -157,7 +152,7 @@ export default function Header() {
                 aria-label="Search"
                 onClick={() => {
                   setSearchOpen(!searchOpen);
-                  setOpen(false); // Close menu if opening search
+                  setOpen(false);
                 }}
               >
                 {searchOpen ? (
@@ -254,7 +249,41 @@ export default function Header() {
           </nav>
         </div>
 
-              {/* Full-screen animated mobile menu */}
+        {/* Slide-down Search Bar */}
+        <AnimatePresence>
+          {searchOpen && (
+            <motion.div
+              variants={searchVars}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="overflow-hidden border-t border-line bg-cream"
+            >
+              <div className="max-w-2xl mx-auto px-6 md:px-10 py-6">
+                <form
+                  onSubmit={handleSearch}
+                  className="relative flex items-center"
+                >
+                  <Search
+                    size={18}
+                    strokeWidth={2}
+                    className="absolute left-4 text-ink-soft"
+                  />
+                  <input
+                    type="text"
+                    name="q"
+                    placeholder="Search artists, prints, or collections..."
+                    autoFocus
+                    className="w-full bg-paper border border-line rounded-full py-3 pl-12 pr-4 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:border-ink transition-colors"
+                  />
+                </form>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+
+      {/* Full-screen animated mobile menu - Now placed safely OUTSIDE the header */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -262,11 +291,8 @@ export default function Header() {
             initial="initial"
             animate="animate"
             exit="exit"
-            // CHANGED: Removed `justify-center`, `mt-[100px]`. 
-            // Added `pt-[140px]` to clear the header, and `overflow-y-auto` for smaller screens.
             className="md:hidden fixed inset-0 z-40 flex flex-col bg-cream px-8 pt-[140px] pb-10 overflow-y-auto"
           >
-            {/* CHANGED: Removed `-mt-20` which was pulling the list upward */}
             <div className="flex flex-col gap-8">
               {NAV.map((item) => {
                 const isActive = isActivePath(item.href, pathname);
@@ -279,79 +305,7 @@ export default function Header() {
                   >
                     <Link
                       href={item.href}
-                      // CHANGED: Removed `!item.dropdown &&` so all parent links close the menu
                       onClick={() => setOpen(false)}
-                      className={clsx(
-                        "display text-4xl tracking-tight transition-colors flex items-center gap-4",
-                        isActive ? "text-ink" : "text-ink-soft hover:text-ink",
-                      )}
-                    >
-                      {item.label}
-                    </Link>
-
-                    {/* Mobile Dropdown Items */}
-                    {item.dropdown && (
-                      <div className="flex flex-col gap-4 pl-4 border-l-2 border-line/50 ml-2 mt-1">
-                        {item.dropdown.map((drop) => (
-                          <Link
-                            key={drop.href}
-                            href={drop.href}
-                            onClick={() => setOpen(false)}
-                            className="text-xl tracking-tight text-ink-soft hover:text-ink transition-colors"
-                          >
-                            {drop.label}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
-
-              {/* Mobile Account Link */}
-              <motion.div
-                variants={linkVars}
-                className="mt-4 pt-8 border-t border-line"
-              >
-                <Link
-                  href="/admin/login"
-                  onClick={() => setOpen(false)}
-                  className="text-ink-soft text-lg flex items-center gap-3"
-                >
-                  <User size={20} strokeWidth={1.5} />
-                  Account
-                </Link>
-              </motion.div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      </header>
-
-      {/* Full-screen animated mobile menu */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            variants={menuVars}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="md:hidden fixed inset-0 z-40 flex flex-col justify-center bg-cream px-8 mt-[100px]"
-          >
-            <div className="flex flex-col gap-8 -mt-20">
-              {NAV.map((item) => {
-                const isActive = isActivePath(item.href, pathname);
-
-                return (
-                  <motion.div
-                    key={item.href}
-                    variants={linkVars}
-                    className="flex flex-col gap-4"
-                  >
-                    <Link
-                      href={item.href}
-                      onClick={() => !item.dropdown && setOpen(false)}
                       className={clsx(
                         "display text-4xl tracking-tight transition-colors flex items-center gap-4",
                         isActive ? "text-ink" : "text-ink-soft hover:text-ink",
