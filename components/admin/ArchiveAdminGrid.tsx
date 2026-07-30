@@ -8,6 +8,12 @@ import ArchiveAdminSetCard from "./ArchiveAdminSetCard";
 
 interface Props {
   items: AdminArchiveItem[];
+  /**
+   * Whether the "group pieces into a set" flow is offered. The sets-only view
+   * passes false: every piece there is already grouped, so the action could
+   * never complete.
+   */
+  allowGrouping?: boolean;
 }
 
 /** A grid cell: one loose print, or one whole set. */
@@ -15,7 +21,10 @@ type Entry =
   | { kind: "single"; key: string; item: AdminArchiveItem }
   | { kind: "set"; key: string; setId: number; panels: AdminArchiveItem[] };
 
-export default function ArchiveAdminGrid({ items }: Props) {
+export default function ArchiveAdminGrid({
+  items,
+  allowGrouping = true,
+}: Props) {
   const router = useRouter();
   const [selecting, setSelecting] = useState(false);
   // An ARRAY, not a Set: click order is hanging order, so the first piece
@@ -112,8 +121,12 @@ export default function ArchiveAdminGrid({ items }: Props) {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        {!selecting ? (
+      <div
+        className={`flex flex-wrap items-center gap-3 ${
+          allowGrouping ? "mb-6" : ""
+        }`}
+      >
+        {!allowGrouping ? null : !selecting ? (
           <button
             onClick={() => setSelecting(true)}
             className="inline-flex items-center gap-2 border border-line px-4 py-2 text-sm hover:border-ink transition-colors"
