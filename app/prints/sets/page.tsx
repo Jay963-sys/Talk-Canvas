@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import {
   getArchivePage,
+  withSetPanels,
   type ArchiveOrientation,
 } from "@/lib/db/queries/archivePrints";
 import ArchiveGrid, { type ArchiveItem } from "@/components/prints/ArchiveGrid";
@@ -42,12 +43,12 @@ export default async function SetsPage({
   // there are far fewer of them — stacking nine style tabs over a short grid
   // would be mostly empty tabs. Shape still matters, since it decides whether
   // a set fits the wall someone has in mind.
-  const { items, nextCursor } = await getArchivePage(
-    undefined,
-    undefined,
-    undefined,
-    orientation,
-    true,
+  //
+  // withSetPanels is what lets each tile show the whole group rather than one
+  // panel and a badge: on this page every row is a set, so fetching panels per
+  // tile would be a request each.
+  const { items, nextCursor } = await withSetPanels(
+    await getArchivePage(undefined, undefined, undefined, orientation, true),
   );
 
   const initialItems: ArchiveItem[] = items.map((i) => ({
@@ -59,6 +60,7 @@ export default async function SetsPage({
     collection: i.collection,
     setId: i.setId,
     setSize: i.setSize,
+    panels: i.panels,
   }));
 
   return (
