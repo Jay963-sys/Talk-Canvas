@@ -43,9 +43,10 @@ export default function FrameCropper() {
   if (!hasCtx) return null;
 
   const active = crop ?? cover;
-  // With the image already matching the frame's shape and no rotation there's
-  // nothing to slide around; a rotation always opens up room to reposition.
-  const canReposition = cover.w < 0.999 || cover.h < 0.999 || deg !== 0;
+  // Zoom is always offered — you can crop tighter into any image. Panning only
+  // has somewhere to go once the crop is smaller than the canvas in some
+  // direction: zoomed in, a shape mismatch, or any rotation all create that.
+  const canPan = active.w < 0.999 || active.h < 0.999;
 
   // ── Rotate / zoom / pan ───────────────────────────────────────────
   const onRotate = (nextDeg: number) => {
@@ -78,7 +79,7 @@ export default function FrameCropper() {
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (!canReposition) return;
+    if (!canPan) return;
     (e.target as Element).setPointerCapture(e.pointerId);
     drag.current = { x: e.clientX, y: e.clientY, crop: active };
   };
@@ -144,7 +145,7 @@ export default function FrameCropper() {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           className={`block w-full bg-paper select-none ${
-            canReposition ? "cursor-grab active:cursor-grabbing touch-none" : ""
+            canPan ? "cursor-grab active:cursor-grabbing touch-none" : ""
           }`}
         >
           <image
@@ -189,29 +190,32 @@ export default function FrameCropper() {
           </button>
         </div>
 
-        {canReposition && (
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase tracking-widest text-ink-soft font-semibold w-14 shrink-0">
-              Zoom
-            </span>
-            <input
-              type="range"
-              min={MIN_ZOOM}
-              max={1}
-              step={0.01}
-              value={zoomVal}
-              onChange={(e) => onZoom(Number(e.target.value))}
-              aria-label="Zoom"
-              className="flex-1 accent-ink"
-            />
-            <span className="w-12" />
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] uppercase tracking-widest text-ink-soft font-semibold w-14 shrink-0">
+            Zoom
+          </span>
+          <input
+            type="range"
+            min={MIN_ZOOM}
+            max={1}
+            step={0.01}
+            value={zoomVal}
+            onChange={(e) => onZoom(Number(e.target.value))}
+            aria-label="Zoom"
+            className="flex-1 accent-ink"
+          />
+          <span className="w-12" />
+        </div>
 
-        {canReposition && (
+        {canPan ? (
           <p className="text-[12px] text-ink-soft leading-relaxed">
             Drag to reposition, rotate to taste. Anything outside the frame is
             trimmed from the print.
+          </p>
+        ) : (
+          <p className="text-[12px] text-ink-soft leading-relaxed">
+            Zoom in or rotate to taste — drag to reposition once there&apos;s
+            room to move.
           </p>
         )}
       </div>
