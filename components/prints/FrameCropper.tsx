@@ -10,7 +10,7 @@ import {
   rotatedCanvas,
   type Crop,
 } from "@/lib/crop";
-import { frameInset } from "./FramedPreview";
+import { frameInset, frameShadow } from "./FramedPreview";
 
 /** How far in the customer may zoom: crop shrinks to 40% of the cover size. */
 const MIN_ZOOM = 0.4;
@@ -129,11 +129,12 @@ export default function FrameCropper() {
           actual framed print, not a generic crop box. Inset is per-shape and
           the art sits flush — no white mat. */}
       <div
-        className="mx-auto shadow-[0_20px_60px_-20px_rgba(0,0,0,0.4),0_8px_20px_-8px_rgba(0,0,0,0.3)]"
+        className="mx-auto"
         style={{
           background: frame!.gradient,
           padding: frameInset(frame!),
           maxWidth: 420,
+          boxShadow: frameShadow(frame!),
         }}
       >
         <svg

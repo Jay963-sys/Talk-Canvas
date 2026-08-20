@@ -191,7 +191,11 @@ export default function ArchiveUploader() {
       }
       try {
         update(i, { status: "optimizing", progress: 0 });
-        const optimized = await downscaleImage(jobs[i].file);
+        // Trim baked-in white margins on individual designs only — set panels
+        // must keep identical dimensions to stay aligned, so they're left as-is.
+        const optimized = await downscaleImage(jobs[i].file, 2400, 0.85, {
+          trim: mode !== "set",
+        });
 
         update(i, { status: "uploading", progress: 0 });
         const result = await uploadToCloudinary(optimized, {
