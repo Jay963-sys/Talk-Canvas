@@ -9,6 +9,8 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
+  X,
 } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/upload";
 import { downscaleImage } from "@/lib/image";
@@ -73,19 +75,26 @@ export default function ArchiveUploader() {
   const [category, setCategory] = useState<ArchiveCategory | "">("");
   const [groupError, setGroupError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // A second, hidden input dedicated to replacing one slot in place. The target
+  // index is stashed here so the change handler knows which tile to swap.
+  const replaceRef = useRef<HTMLInputElement>(null);
+  const replaceIndex = useRef<number | null>(null);
+
+  /** Build a Job (with preview) from a File, running the pre-check. */
+  const makeJob = (file: File): Job => {
+    const err = preCheck(file);
+    return {
+      file,
+      preview: URL.createObjectURL(file),
+      status: err ? "error" : "pending",
+      progress: 0,
+      error: err ?? undefined,
+    };
+  };
 
   const addFiles = async (fileList: FileList | null) => {
     if (!fileList) return;
-    const next: Job[] = Array.from(fileList).map((file) => {
-      const err = preCheck(file);
-      return {
-        file,
-        preview: URL.createObjectURL(file),
-        status: err ? ("error" as Status) : ("pending" as Status),
-        progress: 0,
-        error: err ?? undefined,
-      };
-    });
+    const next: Job[] = Array.from(fileList).map(makeJob);
     setJobs((prev) => [...prev, ...next]);
 
     // Fill in dimensions as they resolve. Doing this up front means a mixed
@@ -119,6 +128,47 @@ export default function ArchiveUploader() {
       [next[i], next[target]] = [next[target], next[i]];
       return next;
     });
+  };
+
+  /** Drop a piece that isn't working before the batch uploads. */
+  const remove = (i: number) => {
+    setJobs((prev) => {
+      const target = prev[i];
+      if (target) URL.revokeObjectURL(target.preview);
+      return prev.filter((_, idx) => idx !== i);
+    });
+    setGroupError(null);
+  };
+
+  /** Open the file picker to swap one slot in place, keeping its position. */
+  const requestReplace = (i: number) => {
+    replaceIndex.current = i;
+    replaceRef.current?.click();
+  };
+
+  const onReplaceFile = async (fileList: FileList | null) => {
+    const i = replaceIndex.current;
+    replaceIndex.current = null;
+    if (replaceRef.current) replaceRef.current.value = "";
+    if (i === null || !fileList || !fileList[0]) return;
+
+    const job = makeJob(fileList[0]);
+    setJobs((prev) => {
+      const old = prev[i];
+      if (old) URL.revokeObjectURL(old.preview);
+      return prev.map((j, idx) => (idx === i ? job : j));
+    });
+    setGroupError(null);
+
+    // Measure the replacement so the set orientation check stays correct.
+    const dims = await readDimensions(job.preview);
+    if (dims) {
+      setJobs((prev) =>
+        prev.map((j, idx) =>
+          idx === i && j.preview === job.preview ? { ...j, ...dims } : j,
+        ),
+      );
+    }
   };
 
   const uploadAll = async () => {
@@ -289,7 +339,8 @@ export default function ArchiveUploader() {
           <p className="text-xs text-ink-soft mt-2 max-w-md">
             Every piece takes the same frame and size, and customers must buy
             them together. Arrange them below in the order they hang, left to
-            right.
+            right — swap out any piece that isn&apos;t connecting before you
+            upload.
           </p>
         )}
       </div>
@@ -322,6 +373,15 @@ export default function ArchiveUploader() {
         />
       </div>
 
+      {/* Dedicated single-file input for in-place replacement. */}
+      <input
+        ref={replaceRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => onReplaceFile(e.target.files)}
+      />
+
       {mixedOrientation && (
         <p className="text-[13px] text-amber-800 bg-amber-50/60 border border-amber-300 px-4 py-3 mt-4">
           These aren&apos;t all the same shape. A set takes one frame and one
@@ -344,87 +404,131 @@ export default function ArchiveUploader() {
       {jobs.length > 0 && (
         <>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-6">
-            {jobs.map((job, i) => (
-              <div key={job.preview}>
-                <div className="relative aspect-square bg-paper overflow-hidden border border-line">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={job.preview}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
+            {jobs.map((job, i) => {
+              // Remove/replace only make sense before a piece is committed —
+              // once it's uploaded, the fix is on the server, not here.
+              const editable =
+                !busy && (job.status === "pending" || job.status === "error");
+              return (
+                <div key={job.preview}>
+                  <div className="relative aspect-square bg-paper overflow-hidden border border-line">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={job.preview}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
 
-                  {/* In set mode the number is the hanging position, so it
-                      stays visible while the batch is being arranged. */}
-                  {mode === "set" && job.status !== "error" && (
-                    <span className="absolute top-1 left-1 w-6 h-6 rounded-full bg-ink text-cream text-[11px] flex items-center justify-center tabular-nums">
-                      {i + 1}
-                    </span>
-                  )}
+                    {/* In set mode the number is the hanging position, so it
+                        stays visible while the batch is being arranged. */}
+                    {mode === "set" && job.status !== "error" && (
+                      <span className="absolute top-1 left-1 w-6 h-6 rounded-full bg-ink text-cream text-[11px] flex items-center justify-center tabular-nums z-20">
+                        {i + 1}
+                      </span>
+                    )}
 
-                  {job.status === "optimizing" && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                      <span className="text-cream text-[10px]">
-                        Optimizing…
-                      </span>
-                    </div>
-                  )}
-                  {job.status === "uploading" && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                      <span className="text-cream text-xs">
-                        {job.progress}%
-                      </span>
-                    </div>
-                  )}
-                  {job.status === "saving" && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                      <Loader2 className="animate-spin text-cream" size={18} />
-                    </div>
-                  )}
-                  {job.status === "done" && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                      <CheckCircle2 className="text-green-400" size={20} />
-                    </div>
-                  )}
-                  {job.status === "error" && (
-                    <div
-                      className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 px-2 text-center"
-                      title={job.error}
-                    >
-                      <AlertCircle className="text-red-400 mb-1" size={18} />
-                      <span className="text-cream text-[10px] leading-tight">
-                        {job.error}
-                      </span>
+                    {/* Drop this piece from the batch. */}
+                    {editable && (
+                      <button
+                        type="button"
+                        onClick={() => remove(i)}
+                        aria-label="Remove this image"
+                        title="Remove"
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-cream flex items-center justify-center hover:bg-black/80 transition-colors z-20"
+                      >
+                        <X size={13} strokeWidth={2} />
+                      </button>
+                    )}
+
+                    {job.status === "optimizing" && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <span className="text-cream text-[10px]">
+                          Optimizing…
+                        </span>
+                      </div>
+                    )}
+                    {job.status === "uploading" && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <span className="text-cream text-xs">
+                          {job.progress}%
+                        </span>
+                      </div>
+                    )}
+                    {job.status === "saving" && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <Loader2
+                          className="animate-spin text-cream"
+                          size={18}
+                        />
+                      </div>
+                    )}
+                    {job.status === "done" && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <CheckCircle2 className="text-green-400" size={20} />
+                      </div>
+                    )}
+                    {job.status === "error" && (
+                      <div
+                        className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 px-2 text-center pointer-events-none"
+                        title={job.error}
+                      >
+                        <AlertCircle className="text-red-400 mb-1" size={18} />
+                        <span className="text-cream text-[10px] leading-tight">
+                          {job.error}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer controls: reorder (set mode) on the left, swap the
+                      slot in place on the right. Arrows rather than
+                      drag-and-drop — this is used on a phone as often as a
+                      laptop, and a two-tap swap needs no library. */}
+                  {(editable ||
+                    (mode === "set" && !busy && jobs.length > 1)) && (
+                    <div className="flex justify-between items-center mt-1 gap-1">
+                      {mode === "set" && !busy && jobs.length > 1 ? (
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => move(i, -1)}
+                            disabled={i === 0}
+                            aria-label="Move earlier"
+                            className="border border-line p-1 disabled:opacity-30 hover:bg-ink hover:text-cream transition-colors"
+                          >
+                            <ChevronLeft size={13} strokeWidth={1.5} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => move(i, 1)}
+                            disabled={i === jobs.length - 1}
+                            aria-label="Move later"
+                            className="border border-line p-1 disabled:opacity-30 hover:bg-ink hover:text-cream transition-colors"
+                          >
+                            <ChevronRight size={13} strokeWidth={1.5} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span />
+                      )}
+
+                      {editable && (
+                        <button
+                          type="button"
+                          onClick={() => requestReplace(i)}
+                          aria-label="Replace this image"
+                          title="Replace"
+                          className="flex items-center gap-1 border border-line px-2 py-1 text-[11px] hover:bg-ink hover:text-cream transition-colors"
+                        >
+                          <RefreshCw size={12} strokeWidth={1.5} />
+                          Swap
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
-
-                {/* Arrows rather than drag-and-drop: this is used on a phone as
-                    often as a laptop, and a two-tap swap needs no library. */}
-                {mode === "set" && !busy && jobs.length > 1 && (
-                  <div className="flex justify-between mt-1">
-                    <button
-                      type="button"
-                      onClick={() => move(i, -1)}
-                      disabled={i === 0}
-                      aria-label="Move earlier"
-                      className="border border-line p-1 disabled:opacity-30 hover:bg-ink hover:text-cream transition-colors"
-                    >
-                      <ChevronLeft size={13} strokeWidth={1.5} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => move(i, 1)}
-                      disabled={i === jobs.length - 1}
-                      aria-label="Move later"
-                      className="border border-line p-1 disabled:opacity-30 hover:bg-ink hover:text-cream transition-colors"
-                    >
-                      <ChevronRight size={13} strokeWidth={1.5} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex flex-wrap items-center gap-4 mt-6">
@@ -460,6 +564,7 @@ export default function ArchiveUploader() {
             {!busy && (
               <button
                 onClick={() => {
+                  jobs.forEach((j) => URL.revokeObjectURL(j.preview));
                   setJobs([]);
                   setGroupError(null);
                 }}

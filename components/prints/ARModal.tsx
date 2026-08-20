@@ -9,7 +9,12 @@ import { generateFrameGLB } from "@/lib/frameModel";
 import { generateFrameUSDZ } from "@/lib/frameUSDZ";
 import { uploadModelToCloudinary, uploadUSDZToCloudinary } from "@/lib/upload";
 import { formatInches, orientCm, orientationOf } from "@/data/sizes";
-import { cloudinaryChain, cropTransform, isFullCrop } from "@/lib/crop";
+import {
+  cloudinaryChain,
+  cropTransform,
+  isFullCrop,
+  normalizeDeg,
+} from "@/lib/crop";
 import ARViewer from "./ARViewer";
 import { USE_CUSTOM_USDZ } from "@/lib/arConfig";
 
@@ -67,6 +72,7 @@ export default function ARModal() {
 
         // Texture = the approved crop, then downsized. The crop MUST precede the
         // resize in the chain, or its pixel coordinates target the wrong space.
+        // cropTransform already emits any rotation (a_<deg>) ahead of the crop.
         const natural = { w: image.width, h: image.height };
         const cropParts =
           crop && !isFullCrop(crop) ? [cropTransform(crop, natural)] : [];
@@ -88,11 +94,11 @@ export default function ARModal() {
         };
 
         const isLocalBlob = image.url.startsWith("blob:");
-        // Fold the crop into the key so a re-crop regenerates instead of
-        // serving a stale model of the old composition.
+        // Fold the crop AND rotation into the key so a re-crop or re-rotate
+        // regenerates instead of serving a stale model of the old composition.
         const cropSig =
           crop && !isFullCrop(crop)
-            ? `${Math.round(crop.x * 1000)},${Math.round(crop.y * 1000)},${Math.round(crop.w * 1000)},${Math.round(crop.h * 1000)}`
+            ? `${Math.round(crop.x * 1000)},${Math.round(crop.y * 1000)},${Math.round(crop.w * 1000)},${Math.round(crop.h * 1000)},r${normalizeDeg(crop.rotation ?? 0)}`
             : "full";
         const cacheKey = [
           image.publicId || "custom",

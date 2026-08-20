@@ -3,47 +3,83 @@
 import { useEffect, useRef } from "react";
 import { useConfigurator } from "@/lib/store";
 import { orientationOf } from "@/data/sizes";
-import { targetAspect, defaultCrop, type Crop } from "@/lib/crop";
+import {
+  targetAspect,
+  coverForRotation,
+  clampCrop,
+  rotatedCanvas,
+  type Crop,
+} from "@/lib/crop";
+import { frameInset } from "./FramedPreview";
 
 /** How far in the customer may zoom: crop shrinks to 40% of the cover size. */
 const MIN_ZOOM = 0.4;
+/** Free rotation range, in whole degrees. */
+const ROT_MIN = -180;
+const ROT_MAX = 180;
 
 export default function FrameCropper() {
   const { image, frame, size, crop, setCrop } = useConfigurator();
-  const windowRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ x: number; y: number; crop: Crop } | null>(null);
 
   const hasCtx = !!(image && frame && size);
   const natural = image ? { w: image.width, h: image.height } : { w: 1, h: 1 };
   const orientation = orientationOf(image);
   const aspect = image && size ? targetAspect(size, orientation) : 1;
-  // The biggest centred crop of the frame's aspect that fits the image. This is
-  // the "zoomed all the way out" state and the ceiling for the zoom slider.
-  const cover = defaultCrop(natural, aspect);
+
+  const deg = crop?.rotation ?? 0;
+  // The biggest centred crop of the frame's aspect that fits the image at the
+  // current angle — the "zoomed all the way out" state and the zoom ceiling.
+  const cover = coverForRotation(natural, aspect, deg);
 
   // Seed a default the first time we reach this size (crop is cleared whenever
   // the size or image changes, so this re-seeds correctly on a size change).
   useEffect(() => {
-    if (hasCtx && !crop) setCrop(cover);
+    if (hasCtx && !crop) setCrop(coverForRotation(natural, aspect, 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCtx, crop, size?.id, image?.url]);
 
   if (!hasCtx) return null;
 
   const active = crop ?? cover;
-  // Nothing to reposition when the image already matches the frame's shape.
-  const canReposition = cover.w < 0.999 || cover.h < 0.999;
+  // With the image already matching the frame's shape and no rotation there's
+  // nothing to slide around; a rotation always opens up room to reposition.
+  const canReposition = cover.w < 0.999 || cover.h < 0.999 || deg !== 0;
 
-  const clamp = (c: Crop): Crop => ({
-    w: c.w,
-    h: c.h,
-    x: Math.min(1 - c.w, Math.max(0, c.x)),
-    y: Math.min(1 - c.h, Math.max(0, c.y)),
-  });
+  // ── Rotate / zoom / pan ───────────────────────────────────────────
+  const onRotate = (nextDeg: number) => {
+    // Preserve how far the customer had zoomed, and roughly where they were
+    // centred, then re-fit and clamp for the new angle.
+    const oldCover = coverForRotation(natural, aspect, deg);
+    const zoom = oldCover.w > 0 ? active.w / oldCover.w : 1;
+    const cov = coverForRotation(natural, aspect, nextDeg);
+    const w = cov.w * zoom;
+    const h = cov.h * zoom;
+    const cx = active.x + active.w / 2;
+    const cy = active.y + active.h / 2;
+    setCrop(
+      clampCrop(
+        { x: cx - w / 2, y: cy - h / 2, w, h, rotation: nextDeg },
+        natural,
+      ),
+    );
+  };
+
+  const onZoom = (val: number) => {
+    // val = 1 is full cover (most zoomed out); smaller crops in around centre.
+    const w = cover.w * val;
+    const h = cover.h * val;
+    const cx = active.x + active.w / 2;
+    const cy = active.y + active.h / 2;
+    setCrop(
+      clampCrop({ x: cx - w / 2, y: cy - h / 2, w, h, rotation: deg }, natural),
+    );
+  };
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!canReposition) return;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.target as Element).setPointerCapture(e.pointerId);
     drag.current = { x: e.clientX, y: e.clientY, crop: active };
   };
 
@@ -53,14 +89,17 @@ export default function FrameCropper() {
     const dx = e.clientX - drag.current.x;
     const dy = e.clientY - drag.current.y;
     const start = drag.current.crop;
-    // The window spans `start.w` of the image's width, so a drag of dx pixels
-    // moves the crop by (dx / windowWidth) * start.w in source fractions.
+    // The window spans `start.w` of the canvas width, so a drag of dx pixels
+    // moves the crop by (dx / windowWidth) * start.w in canvas fractions.
     setCrop(
-      clamp({
-        ...start,
-        x: start.x - (dx / rect.width) * start.w,
-        y: start.y - (dy / rect.height) * start.h,
-      }),
+      clampCrop(
+        {
+          ...start,
+          x: start.x - (dx / rect.width) * start.w,
+          y: start.y - (dy / rect.height) * start.h,
+        },
+        natural,
+      ),
     );
   };
 
@@ -68,59 +107,91 @@ export default function FrameCropper() {
     drag.current = null;
   };
 
-  const onZoom = (val: number) => {
-    // val = 1 is full cover (most zoomed out); smaller crops in around centre.
-    const w = cover.w * val;
-    const h = cover.h * val;
-    const cx = active.x + active.w / 2;
-    const cy = active.y + active.h / 2;
-    setCrop(clamp({ w, h, x: cx - w / 2, y: cy - h / 2 }));
-  };
+  const zoomVal = cover.w > 0 ? active.w / cover.w : 1;
 
-  const zoomVal = active.w / cover.w;
+  // ── Preview geometry ──────────────────────────────────────────────
+  // An SVG viewBox does all the scaling: it shows exactly the `active` window
+  // of the rotated canvas, so no pixel measuring is needed and the preview
+  // matches the baked print. The <image> sits centred in the canvas and is
+  // turned about the canvas centre — the same order Cloudinary bakes.
+  const canvas = rotatedCanvas(natural, deg);
+  const vx = active.x * canvas.w;
+  const vy = active.y * canvas.h;
+  const vw = active.w * canvas.w;
+  const vh = active.h * canvas.h;
+  const imgX = (canvas.w - natural.w) / 2;
+  const imgY = (canvas.h - natural.h) / 2;
 
   return (
     <div className="w-full">
       {/* Frame chrome mirrors FramedPreview so the crop window looks like the
-          actual framed print, not a generic crop box. */}
+          actual framed print, not a generic crop box. Inset is per-shape and
+          the art sits flush — no white mat. */}
       <div
-        className="mx-auto p-[18px] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.4),0_8px_20px_-8px_rgba(0,0,0,0.3)]"
-        style={{ background: frame!.gradient, maxWidth: 420 }}
+        className="mx-auto shadow-[0_20px_60px_-20px_rgba(0,0,0,0.4),0_8px_20px_-8px_rgba(0,0,0,0.3)]"
+        style={{
+          background: frame!.gradient,
+          padding: frameInset(frame!),
+          maxWidth: 420,
+        }}
       >
-        <div className="bg-white p-2">
-          <div
-            ref={windowRef}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            className={`relative overflow-hidden bg-paper ${
-              canReposition
-                ? "cursor-grab active:cursor-grabbing touch-none"
-                : ""
-            }`}
-            style={{ aspectRatio: String(aspect) }}
-          >
-            <img
-              src={image!.url}
-              alt="Your print"
-              draggable={false}
-              className="absolute max-w-none select-none"
-              style={{
-                width: `${100 / active.w}%`,
-                height: `${100 / active.h}%`,
-                left: `${(-100 * active.x) / active.w}%`,
-                top: `${(-100 * active.y) / active.h}%`,
-              }}
-            />
-          </div>
-        </div>
+        <svg
+          ref={windowRef}
+          viewBox={`${vx} ${vy} ${vw} ${vh}`}
+          preserveAspectRatio="xMidYMid meet"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          className={`block w-full bg-paper select-none ${
+            canReposition ? "cursor-grab active:cursor-grabbing touch-none" : ""
+          }`}
+        >
+          <image
+            href={image!.url}
+            x={imgX}
+            y={imgY}
+            width={natural.w}
+            height={natural.h}
+            preserveAspectRatio="none"
+            transform={`rotate(${deg} ${canvas.w / 2} ${canvas.h / 2})`}
+            style={{ pointerEvents: "none" }}
+          />
+        </svg>
       </div>
 
-      {canReposition && (
-        <div className="mx-auto mt-5 max-w-[420px]">
+      <div className="mx-auto mt-5 max-w-[420px] space-y-4">
+        {/* Rotation is always available — it's the whole point for abstract
+            work. Zoom and pan appear once there's room to move. */}
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] uppercase tracking-widest text-ink-soft font-semibold w-14 shrink-0">
+            Rotate
+          </span>
+          <input
+            type="range"
+            min={ROT_MIN}
+            max={ROT_MAX}
+            step={1}
+            value={deg}
+            onChange={(e) => onRotate(Number(e.target.value))}
+            aria-label="Rotate"
+            className="flex-1 accent-ink"
+          />
+          <button
+            type="button"
+            onClick={() => onRotate(0)}
+            disabled={deg === 0}
+            className="text-[11px] tabular-nums text-ink-soft w-12 text-right hover:text-ink disabled:hover:text-ink-soft"
+            aria-label="Reset rotation"
+            title="Reset rotation"
+          >
+            {deg}°
+          </button>
+        </div>
+
+        {canReposition && (
           <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase tracking-widest text-ink-soft font-semibold">
+            <span className="text-[10px] uppercase tracking-widest text-ink-soft font-semibold w-14 shrink-0">
               Zoom
             </span>
             <input
@@ -133,13 +204,17 @@ export default function FrameCropper() {
               aria-label="Zoom"
               className="flex-1 accent-ink"
             />
+            <span className="w-12" />
           </div>
-          <p className="text-[12px] text-ink-soft mt-2 leading-relaxed">
-            Drag to reposition. Anything outside the frame is trimmed from the
-            print.
+        )}
+
+        {canReposition && (
+          <p className="text-[12px] text-ink-soft leading-relaxed">
+            Drag to reposition, rotate to taste. Anything outside the frame is
+            trimmed from the print.
           </p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

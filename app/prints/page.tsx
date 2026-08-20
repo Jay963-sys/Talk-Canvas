@@ -132,6 +132,7 @@ export default async function PrintsPage() {
           </Link>
         </div>
       </section>
+      
       {/* See it in your space */}
       <div className="py-10">
         <RoomGallery />
