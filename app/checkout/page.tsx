@@ -110,12 +110,12 @@ export default function CheckoutPage() {
       ? quoteDelivery(
           deliveryZone,
           items.map((i) => ({
-  sizeId: i.type === "print" ? i.sizeId : null,
-  quantity: i.quantity,
-  // The cart holds a set as one line, so panels are counted here.
-  setSize: i.type === "print" && i.set ? i.set.pieces.length : 1,
-  isSet: i.type === "print" && i.set !== null,
-})),
+            sizeId: i.type === "print" ? i.sizeId : null,
+            quantity: i.quantity,
+            // The cart holds a set as one line, so panels are counted here.
+            setSize: i.type === "print" && i.set ? i.set.pieces.length : 1,
+            isSet: i.type === "print" && i.set !== null,
+          })),
         )
       : null;
 
@@ -221,6 +221,7 @@ export default function CheckoutPage() {
                   orientation: item.orientation,
                   price: item.price,
                   quantity: item.quantity,
+                  setId: item.set?.setId,
                 },
           ),
           subtotal,
@@ -350,7 +351,7 @@ export default function CheckoutPage() {
                     <option value={OUTSIDE_LAGOS_ID}>Outside Lagos</option>
                   </select>
 
-                                   {quote && !quote.quoteOnRequest && (
+                  {quote && !quote.quoteOnRequest && (
                     <>
                       <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
                         Delivered by{" "}
@@ -358,23 +359,22 @@ export default function CheckoutPage() {
                         the size and number of pieces in your order.
                       </p>
                       <p className="text-[12px] text-ink-soft mt-2 leading-relaxed">
-                        This fee can shift with your exact location or any change
-                        to your order — we&apos;ll contact you before dispatch if
-                        it does.
+                        This fee can shift with your exact location or any
+                        change to your order — we&apos;ll contact you before
+                        dispatch if it does.
                       </p>
                     </>
                   )}
 
-
-                 {quote?.quoteOnRequest && (
-  <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
-    <p className="text-[13px] text-ink leading-relaxed">
-      {hasSet && deliveryZone !== OUTSIDE_LAGOS_ID
-        ? "Your order includes a set, which we deliver by arrangement. We'll confirm the cost with you after you order — nothing is charged for delivery now."
-        : OUTSIDE_LAGOS_NOTE}
-    </p>
-  </div>
-)}
+                  {quote?.quoteOnRequest && (
+                    <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
+                      <p className="text-[13px] text-ink leading-relaxed">
+                        {hasSet && deliveryZone !== OUTSIDE_LAGOS_ID
+                          ? "Your order includes a set, which we deliver by arrangement. We'll confirm the cost with you after you order — nothing is charged for delivery now."
+                          : OUTSIDE_LAGOS_NOTE}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
