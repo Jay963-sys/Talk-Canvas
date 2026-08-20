@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getArchivePage,
+  withSetPanels,
   type ArchiveOrientation,
 } from "@/lib/db/queries/archivePrints";
 import { isArchiveCategory, type ArchiveCategory } from "@/data/collections";
@@ -37,5 +38,10 @@ export async function GET(req: NextRequest) {
     orientation,
     setsOnly,
   );
-  return NextResponse.json(page);
+
+  // Panels ride along for every set row, on every feed — the mixed archive
+  // grid shows set tiles too, and a tile that gained a thumbnail strip on the
+  // server page would lose it on page two if this were gated to setsOnly.
+  // Costs one extra query, and only when the page actually contains a set.
+  return NextResponse.json(await withSetPanels(page));
 }

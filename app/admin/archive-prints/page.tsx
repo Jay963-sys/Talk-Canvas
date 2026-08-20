@@ -15,12 +15,13 @@ export const dynamic = "force-dynamic";
 export default async function AdminArchivePage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; sets?: string }>;
 }) {
-  const { category: rawCategory } = await searchParams;
+  const { category: rawCategory, sets: rawSets } = await searchParams;
   const category: ArchiveCategory | undefined = isArchiveCategory(rawCategory)
     ? rawCategory
     : undefined;
+  const setsOnly = rawSets === "1";
 
   const all = await getAllArchivePrints();
 
@@ -35,17 +36,26 @@ export default async function AdminArchivePage({
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
 
-  const filtered = category
-    ? all.filter((item) => {
-        const key = isArchiveCategory(item.collection)
-          ? item.collection
-          : DEFAULT_ARCHIVE_CATEGORY;
-        return key === category;
-      })
-    : all;
+  // Distinct sets, not panels — a triptych is one thing to review, and a tab
+  // reading "Sets (36)" when there are twelve of them would be a lie.
+  const setCount = new Set(
+    all.map((i) => i.setId).filter((id): id is number => id != null),
+  ).size;
+
+  // Category and format are independent axes and combine, the same way they do
+  // for customers: "the Afrocentric sets" is a real thing to want to look at.
+  const filtered = all.filter((item) => {
+    if (setsOnly && item.setId == null) return false;
+    if (!category) return true;
+    const key = isArchiveCategory(item.collection)
+      ? item.collection
+      : DEFAULT_ARCHIVE_CATEGORY;
+    return key === category;
+  });
 
   // Unlike the public feed, admin shows every panel of a set, not just the
-  // leading one — staff need to see and manage each piece.
+  // leading one — staff need to see and manage each piece. ArchiveAdminGrid
+  // regroups them into one block per set.
   const items: AdminArchiveItem[] = filtered.map((i) => ({
     id: i.id,
     imageUrl: i.imageUrl,
@@ -57,14 +67,51 @@ export default async function AdminArchivePage({
     setSize: i.setSize,
   }));
 
+  const shownSets = new Set(
+    filtered.map((i) => i.setId).filter((id): id is number => id != null),
+  ).size;
+
+  /** Keep whichever axis isn't being changed. */
+  function href(next: { category?: ArchiveCategory | null; sets?: boolean }) {
+    const nextCategory =
+      next.category === undefined ? category : (next.category ?? undefined);
+    const nextSets = next.sets === undefined ? setsOnly : next.sets;
+    const params = new URLSearchParams();
+    if (nextCategory) params.set("category", nextCategory);
+    if (nextSets) params.set("sets", "1");
+    const qs = params.toString();
+    return qs ? `/admin/archive-prints?${qs}` : "/admin/archive-prints";
+  }
+
+  const tab = (active: boolean, empty = false) =>
+    `text-[12px] uppercase tracking-widest pb-1 border-b transition-colors ${
+      active
+        ? "text-ink border-ink font-medium"
+        : empty
+          ? "text-muted border-transparent hover:text-ink-soft"
+          : "text-ink-soft hover:text-ink border-transparent"
+    }`;
+
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-medium">Archive prints</h1>
+          <h1 className="text-2xl font-medium">
+            {setsOnly ? "Archive sets" : "Archive prints"}
+          </h1>
           <p className="text-sm text-ink-soft mt-1">
-            {items.length} piece{items.length === 1 ? "" : "s"}
-            {category ? " in this category" : " in the archive"}
+            {setsOnly ? (
+              <>
+                {shownSets} set{shownSets === 1 ? "" : "s"}
+                {category ? " in this category" : " in the archive"}
+                {items.length > 0 && ` · ${items.length} pieces`}
+              </>
+            ) : (
+              <>
+                {items.length} piece{items.length === 1 ? "" : "s"}
+                {category ? " in this category" : " in the archive"}
+              </>
+            )}
           </p>
         </div>
         <Link
@@ -76,18 +123,29 @@ export default async function AdminArchivePage({
         </Link>
       </div>
 
+      {/* Format sits on its own row above style. A set is a shape of listing,
+          not a genre — folding it in beside Abstract and Pop would suggest a
+          piece is either Afrocentric or part of a set, when it's routinely
+          both. */}
+      {all.length > 0 && (
+        <div className="flex flex-wrap gap-x-5 gap-y-2 pb-3 mb-3">
+          <Link href={href({ sets: false })} className={tab(!setsOnly)}>
+            All pieces ({all.length})
+          </Link>
+          <Link
+            href={href({ sets: true })}
+            className={tab(setsOnly, setCount === 0)}
+          >
+            Sets ({setCount})
+          </Link>
+        </div>
+      )}
+
       {/* Filter — the working tool for clearing out "Others" after a bulk
           upload, so counts are shown rather than hidden. */}
       {all.length > 0 && (
         <div className="flex flex-wrap gap-x-5 gap-y-2 border-b border-line pb-3 mb-6">
-          <Link
-            href="/admin/archive-prints"
-            className={`text-[12px] uppercase tracking-widest pb-1 border-b transition-colors ${
-              !category
-                ? "text-ink border-ink font-medium"
-                : "text-ink-soft hover:text-ink border-transparent"
-            }`}
-          >
+          <Link href={href({ category: null })} className={tab(!category)}>
             All ({all.length})
           </Link>
           {ARCHIVE_CATEGORIES.map((c) => {
@@ -96,14 +154,8 @@ export default async function AdminArchivePage({
             return (
               <Link
                 key={c.slug}
-                href={`/admin/archive-prints?category=${c.slug}`}
-                className={`text-[12px] uppercase tracking-widest pb-1 border-b transition-colors ${
-                  active
-                    ? "text-ink border-ink font-medium"
-                    : count === 0
-                      ? "text-muted border-transparent hover:text-ink-soft"
-                      : "text-ink-soft hover:text-ink border-transparent"
-                }`}
+                href={href({ category: c.slug as ArchiveCategory })}
+                className={tab(active, count === 0)}
               >
                 {c.label} ({count})
               </Link>
@@ -114,10 +166,26 @@ export default async function AdminArchivePage({
 
       {items.length === 0 ? (
         <div className="border border-line py-20 text-center text-ink-soft">
-          {category ? (
+          {setsOnly && category ? (
+            <>
+              No sets filed under this category yet.{" "}
+              <Link href={href({ category: null })} className="underline">
+                Show all sets
+              </Link>
+              .
+            </>
+          ) : setsOnly ? (
+            <>
+              No sets yet — group two or more pieces from{" "}
+              <Link href={href({ sets: false })} className="underline">
+                the full archive
+              </Link>
+              .
+            </>
+          ) : category ? (
             <>
               Nothing filed under this category yet.{" "}
-              <Link href="/admin/archive-prints" className="underline">
+              <Link href={href({ category: null })} className="underline">
                 Show all
               </Link>
               .
@@ -133,7 +201,9 @@ export default async function AdminArchivePage({
           )}
         </div>
       ) : (
-        <ArchiveAdminGrid items={items} />
+        // Grouping needs loose pieces to pick from, and this view has none by
+        // definition — the action is hidden rather than offered and rejected.
+        <ArchiveAdminGrid items={items} allowGrouping={!setsOnly} />
       )}
     </div>
   );

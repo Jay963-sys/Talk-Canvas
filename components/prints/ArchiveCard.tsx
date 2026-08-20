@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { useConfigurator } from "@/lib/store";
+import { useConfigurator, type ConfiguratorSet } from "@/lib/store";
 import { fetchArchiveSet } from "@/lib/archiveSet";
+import SetLightbox, { type LightboxPanel } from "./SetLightbox";
 import type { ArchiveItem } from "./ArchiveGrid";
 
 const CONFIGURATOR_ROUTE = "/prints";
@@ -19,10 +20,46 @@ export default function ArchiveCard({ item }: { item: ArchiveItem }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
+  // Opened at a specific panel — tapping the third thumbnail should land on the
+  // third piece, not send the customer stepping back to it.
+  const [openAt, setOpenAt] = useState<number | null>(null);
+  const [framing, setFraming] = useState(false);
+  const [lightboxError, setLightboxError] = useState<string | null>(null);
+  // Cached so the fetch that backs a fallback open isn't repeated when the
+  // customer then chooses to frame the set.
+  const [cachedSet, setCachedSet] = useState<ConfiguratorSet | null>(null);
+
   const panels = item.setId ? (item.setSize ?? 0) : 0;
   const isSet = panels > 1;
 
-  const select = async () => {
+  const feedPanels: LightboxPanel[] | null =
+    item.panels && item.panels.length > 0
+      ? item.panels.map((p) => ({
+          imageUrl: p.imageUrl,
+          width: p.width,
+          height: p.height,
+        }))
+      : null;
+
+  const lightboxPanels: LightboxPanel[] =
+    feedPanels ??
+    (cachedSet
+      ? cachedSet.pieces.map((p) => ({
+          imageUrl: p.url,
+          width: p.width,
+          height: p.height,
+        }))
+      : []);
+
+  const loadSet = async (): Promise<ConfiguratorSet> => {
+    if (cachedSet) return cachedSet;
+    const set = await fetchArchiveSet(item.setId!);
+    setCachedSet(set);
+    return set;
+  };
+
+  /** Single pieces go straight to the configurator; sets open for a look first. */
+  const select = async (index = 0) => {
     if (loading) return;
     setError(false);
 
@@ -39,16 +76,20 @@ export default function ArchiveCard({ item }: { item: ArchiveItem }) {
       return;
     }
 
-    // The grid carries only the leading panel, so the rest are fetched before
-    // navigating — arriving at the configurator with a half-loaded set would
-    // let the customer start choosing a frame for pieces we don't have yet.
+    // With panels in the feed this opens with no network at all. Without them
+    // — a grid whose query wasn't wrapped in withSetPanels — fall back to the
+    // set endpoint so the large view still works.
+    if (feedPanels) {
+      setLightboxError(null);
+      setOpenAt(index);
+      return;
+    }
+
     setLoading(true);
     try {
-      const set = await fetchArchiveSet(item.setId!);
-      reset();
-      selectSet(set);
-      setStep(1);
-      router.push(CONFIGURATOR_ROUTE);
+      await loadSet();
+      setLightboxError(null);
+      setOpenAt(index);
     } catch {
       setError(true);
     } finally {
@@ -56,13 +97,37 @@ export default function ArchiveCard({ item }: { item: ArchiveItem }) {
     }
   };
 
+  /** From the large view into the configurator, with the whole set selected. */
+  const frameSet = async () => {
+    if (framing) return;
+    setFraming(true);
+    setLightboxError(null);
+    try {
+      // Fetched even when the feed gave us panels: the configurator needs the
+      // publicIds and the endpoint's availability check, and a set pulled since
+      // the page loaded should fail here rather than at checkout.
+      const set = await loadSet();
+      reset();
+      selectSet(set);
+      setStep(1);
+      router.push(CONFIGURATOR_ROUTE);
+    } catch {
+      setLightboxError("That set is no longer available.");
+    } finally {
+      setFraming(false);
+    }
+  };
+
   return (
     <div className="mb-4 break-inside-avoid">
       <button
-        onClick={select}
+        onClick={() => select(0)}
         disabled={loading}
-        aria-label={isSet ? `Frame this set of ${panels}` : "Frame this piece"}
+        aria-label={
+          isSet ? `View this set of ${panels}` : "Frame this piece"
+        }
         aria-busy={loading}
+        aria-haspopup={isSet ? "dialog" : undefined}
         className="group relative block w-full overflow-hidden bg-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         style={{ aspectRatio: `${item.width} / ${item.height}` }}
       >
@@ -94,10 +159,49 @@ export default function ArchiveCard({ item }: { item: ArchiveItem }) {
         )}
       </button>
 
+      {/* The rest of the group, in hanging order. The badge says how many; this
+          says what they are — which is what a customer needs before deciding
+          whether the set suits their wall. Kept small so the lead piece stays
+          the tile, and so a set of four doesn't tower over its neighbours in
+          the masonry column. */}
+      {isSet && feedPanels && feedPanels.length > 1 && (
+        <div className="flex gap-1.5 mt-1.5">
+          {feedPanels.map((p, i) => (
+            <button
+              key={p.imageUrl}
+              type="button"
+              onClick={() => select(i)}
+              aria-label={`View piece ${i + 1} of ${panels}`}
+              aria-haspopup="dialog"
+              className="relative flex-1 min-w-0 overflow-hidden bg-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              style={{ aspectRatio: `${p.width} / ${p.height}` }}
+            >
+              <img
+                src={thumb(p.imageUrl, 200)}
+                alt=""
+                loading="lazy"
+                className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+
       {error && (
         <p className="text-[11px] text-red-600 mt-1.5">
           Couldn&apos;t load that set — please try again.
         </p>
+      )}
+
+      {openAt !== null && lightboxPanels.length > 0 && (
+        <SetLightbox
+          panels={lightboxPanels}
+          startIndex={openAt}
+          onClose={() => setOpenAt(null)}
+          onFrame={frameSet}
+          framing={framing}
+          error={lightboxError}
+        />
       )}
     </div>
   );

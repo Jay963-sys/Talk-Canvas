@@ -31,8 +31,25 @@ export function deriveOrientation(
 
 export type ArchiveRow = typeof archivePrints.$inferSelect;
 
+/**
+ * One panel of a set, trimmed to what a thumbnail strip and a large view need.
+ * Deliberately not the whole row: this rides along with every set tile in the
+ * feed, so it carries pixels and position and nothing else.
+ */
+export interface ArchiveSetPanel {
+  id: number;
+  imageUrl: string;
+  imagePublicId: string;
+  width: number;
+  height: number;
+  setPosition: number;
+}
+
+/** A feed row, optionally carrying every panel of its set in hanging order. */
+export type ArchiveFeedRow = ArchiveRow & { panels?: ArchiveSetPanel[] };
+
 export interface ArchivePage {
-  items: ArchiveRow[];
+  items: ArchiveFeedRow[];
   nextCursor: number | null;
 }
 
@@ -81,6 +98,76 @@ export async function getArchivePage(
   const nextCursor = hasMore ? items[items.length - 1].id : null;
 
   return { items, nextCursor };
+}
+
+/**
+ * Attach every panel to each set row in a page, in hanging order.
+ *
+ * The canonical-row feed tells a tile that a set has three pieces but not what
+ * the other two look like, so a tile can only ever show one panel and a badge.
+ * This fills that gap in one extra query for the whole page rather than one per
+ * tile — on /prints/sets every row is a set, so per-tile fetching would mean
+ * twenty-four round trips to draw one screen.
+ *
+ * Wrap any getArchivePage call whose grid should show panels:
+ *
+ *   const page = await withSetPanels(await getArchivePage(...));
+ *
+ * Pages that don't wrap keep working — `panels` is optional, and the tile falls
+ * back to fetching the set when it's opened.
+ */
+export async function withSetPanels(page: ArchivePage): Promise<ArchivePage> {
+  const setIds = Array.from(
+    new Set(
+      page.items
+        .map((i) => i.setId)
+        .filter((id): id is number => typeof id === "number"),
+    ),
+  );
+  if (setIds.length === 0) return page;
+
+  const rows = await db
+    .select({
+      id: archivePrints.id,
+      setId: archivePrints.setId,
+      imageUrl: archivePrints.imageUrl,
+      imagePublicId: archivePrints.imagePublicId,
+      width: archivePrints.width,
+      height: archivePrints.height,
+      setPosition: archivePrints.setPosition,
+    })
+    .from(archivePrints)
+    .where(
+      and(
+        inArray(archivePrints.setId, setIds),
+        eq(archivePrints.isVisible, true),
+      ),
+    )
+    .orderBy(asc(archivePrints.setPosition));
+
+  // Ascending across the whole result stays ascending within each group, so
+  // pushing in order is enough — no per-set sort needed.
+  const bySet = new Map<number, ArchiveSetPanel[]>();
+  for (const r of rows) {
+    if (r.setId === null) continue;
+    const list = bySet.get(r.setId) ?? [];
+    list.push({
+      id: r.id,
+      imageUrl: r.imageUrl,
+      imagePublicId: r.imagePublicId,
+      width: r.width,
+      height: r.height,
+      setPosition: r.setPosition ?? list.length + 1,
+    });
+    bySet.set(r.setId, list);
+  }
+
+  return {
+    ...page,
+    items: page.items.map((item) =>
+      item.setId ? { ...item, panels: bySet.get(item.setId) ?? [] } : item,
+    ),
+  };
 }
 
 /**

@@ -6,6 +6,16 @@ import { Loader2 } from "lucide-react";
 import ArchiveCard from "./ArchiveCard";
 import type { ArchiveCategory } from "@/data/collections";
 
+/** One panel of a set, as the feed sends it. Hanging order, position included. */
+export interface ArchivePanel {
+  id: number;
+  imageUrl: string;
+  imagePublicId: string;
+  width: number;
+  height: number;
+  setPosition: number;
+}
+
 export interface ArchiveItem {
   id: number;
   imageUrl: string;
@@ -20,6 +30,12 @@ export interface ArchiveItem {
    */
   setId?: number | null;
   setSize?: number | null;
+  /**
+   * Every panel of the set, when the caller wrapped its query in withSetPanels.
+   * Optional on purpose: a feed that hasn't been wrapped still renders, and the
+   * card falls back to fetching the set when it's opened.
+   */
+  panels?: ArchivePanel[];
 }
 
 interface Props {

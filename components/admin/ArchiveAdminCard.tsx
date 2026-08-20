@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Trash2, Loader2, Expand, X, Unlink } from "lucide-react";
+import { Eye, EyeOff, Trash2, Loader2, Expand, Unlink } from "lucide-react";
 import {
   ARCHIVE_CATEGORIES,
   DEFAULT_ARCHIVE_CATEGORY,
   isArchiveCategory,
   type ArchiveCategory,
 } from "@/data/collections";
+import AdminLightbox from "./AdminLightbox";
 
 export interface AdminArchiveItem {
   id: number;
@@ -37,58 +37,14 @@ function thumb(url: string, width = 500): string {
   return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
 }
 
-function full(url: string, width = 1600): string {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
-}
-
-function Lightbox({
-  imageUrl,
-  onClose,
-}: {
-  imageUrl: string;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Design preview"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close preview"
-        className="absolute top-4 right-4 flex items-center justify-center w-10 h-10 rounded-full bg-cream/90 text-ink hover:bg-cream"
-      >
-        <X size={20} strokeWidth={1.5} />
-      </button>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={full(imageUrl)}
-        alt=""
-        className="max-w-full max-h-[90dvh] object-contain"
-      />
-    </div>,
-    document.body,
-  );
-}
-
+/**
+ * A loose print in the admin grid.
+ *
+ * Set panels normally arrive here grouped into ArchiveAdminSetCard instead, so
+ * the set branches below are a fallback for a panel that reaches the grid
+ * without its siblings — it still has to be viewable and ungroupable rather
+ * than stranded.
+ */
 export default function ArchiveAdminCard({
   item,
   selecting = false,
@@ -169,8 +125,13 @@ export default function ArchiveAdminCard({
   };
 
   const ungroup = async () => {
-    if (!confirm("Ungroup this set? The pieces stay in the archive as separate prints."))
+    if (
+      !confirm(
+        "Ungroup this set? The pieces stay in the archive as separate prints.",
+      )
+    ) {
       return;
+    }
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/archive-sets/${item.setId}`, {
@@ -233,9 +194,6 @@ export default function ArchiveAdminCard({
             </span>
           )}
 
-          {/* Admin lists every panel, not just the leading one, so each says
-              where it sits — otherwise three near-identical tiles are
-              indistinguishable. */}
           {inSet && (
             <span className="absolute bottom-2 right-2 text-[10px] uppercase tracking-wide bg-ink text-cream px-2 py-0.5">
               Set · {item.setPosition ?? "?"} of {item.setSize ?? "?"}
@@ -323,7 +281,10 @@ export default function ArchiveAdminCard({
       </div>
 
       {preview && (
-        <Lightbox imageUrl={item.imageUrl} onClose={() => setPreview(false)} />
+        <AdminLightbox
+          images={[item.imageUrl]}
+          onClose={() => setPreview(false)}
+        />
       )}
     </>
   );
