@@ -77,6 +77,7 @@ export async function hasEmailUsedCode(
     .where(
       and(
         eq(orders.affiliateId, affiliateId),
+        eq(orders.paymentStatus, "paid"),
         sql`lower(${orders.customerEmail}) = ${email.trim().toLowerCase()}`,
       ),
     );
