@@ -3,17 +3,27 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
-// We've updated this to an array of objects so you can control the exact focal point of each image.
-// 'object-top' pins the top of the image to the top of the screen.
-// 'object-[center_20%]' means center horizontally, and push the focus 20% down from the top.
+// Each slide carries its own focal point per breakpoint. These are wide
+// landscape shots, so on a tall phone `object-cover` crops the sides hard —
+// the mobile focal point keeps the key artwork in frame, and desktop (light
+// crop) resets to centered. Class strings are written out in full so
+// Tailwind's JIT can see them.
 const HERO_IMAGES = [
-  { src: "/10.jpg", position: "object-[center_80%]" },
-  { src: "/11.jpg", position: "object-[center_60%]" },
-  { src: "/2.png", position: "object-[center_25%]" },
-  { src: "/5.png", position: "object-top" },
-  { src: "/8.png", position: "object-[center_40%]" },
-  { src: "/1.png", position: "object-[center_20%]" },
-  { src: "/9.png", position: "object-top" },
+  {
+    src: "/97.jpg",
+    alt: "Talk Canvas gallery hall with framed contemporary prints",
+    position: "object-[55%_center] md:object-center",
+  },
+  {
+    src: "/98.jpg",
+    alt: "Talk Canvas showroom with paintings on easels and the reception desk",
+    position: "object-center",
+  },
+  {
+    src: "/99.jpg",
+    alt: "Talk Canvas lounge with a statement triptych and seating",
+    position: "object-[45%_center] md:object-center",
+  },
 ];
 
 export default function HeroSlideshow() {
@@ -32,7 +42,7 @@ export default function HeroSlideshow() {
         setPrevIndex(prev);
         return (prev + 1) % HERO_IMAGES.length;
       });
-    }, 3000);
+    }, 4000);
 
     return () => clearInterval(timer);
   }, []);
@@ -52,10 +62,11 @@ export default function HeroSlideshow() {
           <Image
             key={img.src}
             src={img.src}
-            alt="Curated Gallery Wall"
+            alt={img.alt}
             fill
             priority={i === 0}
-            // We inject the custom position class here
+            sizes="100vw"
+            quality={90}
             className={`object-cover ${img.position} brightness-[0.70] absolute inset-0 transition-opacity duration-[2000ms] ease-in-out ${visibilityClasses}`}
           />
         );
