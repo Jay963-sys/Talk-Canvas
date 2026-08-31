@@ -93,6 +93,31 @@ export const styles = {
 
 export const formatNaira = (n: number) => `₦${n.toLocaleString("en-NG")}`;
 
-// Shrink Cloudinary images for email thumbnails
-export const thumb = (url: string): string =>
-  url.replace("/upload/", "/upload/w_120,c_fit,q_auto/");
+/**
+ * Shrink a Cloudinary image for an email thumbnail.
+ *
+ * The resize MUST be appended after any transforms already baked into the URL
+ * (a customer's crop/rotation lives in the stored imageUrl as c_crop,…). The
+ * old version prepended w_120 right after /upload/, which put the resize BEFORE
+ * the crop — Cloudinary then tried to crop a 1440×1920 window out of a 120px
+ * image and returned a 404, so the thumbnail vanished. Cropping must happen in
+ * the original pixel space, i.e. first; the resize comes last.
+ */
+export const thumb = (url: string): string => {
+  const THUMB = "w_120,c_fit,q_auto";
+  const marker = "/upload/";
+  const i = url.indexOf(marker);
+  if (i === -1) return url;
+
+  const head = url.slice(0, i + marker.length); // ".../upload/"
+  const tail = url.slice(i + marker.length); // "[transforms/]v123/folder/file.jpg"
+
+  // Separate any existing transform chain from the version + public id.
+  const m = tail.match(/^(.*?\/)?(v\d+\/.*)$/);
+  if (!m) return `${head}${THUMB}/${tail}`; // no version — nothing to order against
+
+  const existing = (m[1] ?? "").replace(/\/$/, "");
+  return existing
+    ? `${head}${existing}/${THUMB}/${m[2]}` // baked crop stays first, resize second
+    : `${head}${THUMB}/${m[2]}`;
+};
