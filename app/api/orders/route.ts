@@ -75,6 +75,8 @@ interface OrderBody {
   affiliateCode?: string;
   /** Lagos LGA id, or "outside-lagos". Required when deliveryMethod is "delivery". */
   deliveryZone?: string;
+  fbp?: string | null;
+  fbc?: string | null;
 }
 
 export async function POST(req: NextRequest) {
@@ -417,6 +419,8 @@ export async function POST(req: NextRequest) {
         notes,
         status: "pending",
         paymentReference,
+        fbp: typeof body.fbp === "string" ? body.fbp : null,
+        fbc: typeof body.fbc === "string" ? body.fbc : null,
       },
       itemRows,
     );

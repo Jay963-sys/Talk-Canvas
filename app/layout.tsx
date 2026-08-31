@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/cart/CartDrawer";
 import PromoPopupGate from "@/components/PromoPopupGate";
+import MetaPixel from "@/components/MetaPixel";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -27,6 +28,13 @@ export const metadata: Metadata = {
     default: "Talk Canvas Gallery",
   },
   description: "Contemporary works & fine-art prints from Lagos.",
+  // Meta (Facebook) Business domain verification. Renders:
+  // <meta name="facebook-domain-verification" content="..." />
+  verification: {
+    other: {
+      "facebook-domain-verification": "90iqrmtamecje9a6vbkbxygb902w1c",
+    },
+  },
   openGraph: {
     title: "Talk Canvas Gallery",
     description: "Contemporary works & fine-art prints from Lagos.",
@@ -62,6 +70,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-screen flex flex-col">
+        <MetaPixel />
         <Header />
         <PromoPopupGate />
         <main className="flex-1">{children}</main>

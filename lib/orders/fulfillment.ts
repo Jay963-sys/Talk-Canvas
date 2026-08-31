@@ -13,6 +13,18 @@ import OrderNotification from "@/lib/email/templates/OrderNotification";
 import { SHIPPING_CONFIG } from "@/data/shipping";
 import { getZone, OUTSIDE_LAGOS_ID } from "@/data/delivery";
 import { VEHICLE_LABELS } from "@/lib/deliveryCalc";
+import { sendPurchase } from "@/lib/meta/capi";
+
+/** Split a stored full name into first / last for Meta's user_data. */
+function splitName(full: string | null | undefined): {
+  first: string;
+  last: string;
+} {
+  const parts = (full ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: "", last: "" };
+  if (parts.length === 1) return { first: parts[0], last: "" };
+  return { first: parts[0], last: parts.slice(1).join(" ") };
+}
 
 /** Runs exactly once per confirmed order: mark one-of-one originals sold + send emails. */
 export async function fulfillOrder(order: OrderWithItems): Promise<void> {
@@ -197,5 +209,39 @@ export async function fulfillPaidOrder(
   if (!transitioned) return "skipped"; // already paid
 
   await fulfillOrder(order);
+
+  // Meta Conversions API — the authoritative, ad-block-proof Purchase.
+  // Reached only when the order just transitioned to paid, so it fires exactly
+  // once per order. `sendPurchase` swallows its own errors, so a Meta outage can
+  // never break fulfilment. `eventId` MUST equal the browser Purchase eventID
+  // (SuccessView sends the same Paystack reference) so Meta de-duplicates.
+  const { first, last } = splitName(order.customerName);
+  await sendPurchase({
+    eventId: reference,
+    value: order.total,
+    contents: order.items.map((i) => ({
+      id:
+        i.type === "original" && i.originalId != null
+          ? `original_${i.originalId}`
+          : "print",
+      quantity: i.quantity ?? 1,
+      item_price: i.price,
+    })),
+    customer: {
+      email: order.customerEmail,
+      phone: order.customerPhone,
+      firstName: first,
+      lastName: last,
+      // Captured at checkout from the customer's browser and stored on the
+      // order — lets Meta match this server event to the same person. Null on
+      // older orders (pre-migration) or when the customer had no pixel cookies.
+      fbp: order.fbp ?? null,
+      fbc: order.fbc ?? null,
+    },
+    eventSourceUrl: process.env.NEXT_PUBLIC_SITE_URL
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success`
+      : undefined,
+  });
+
   return "fulfilled";
 }

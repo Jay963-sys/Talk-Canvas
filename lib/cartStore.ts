@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Crop } from "@/lib/crop";
+import { addToCart as trackAddToCart } from "@/lib/meta/pixel";
 
 /** Generous ceiling — guards against runaway input, not real customers. */
 export const MAX_QUANTITY = 99;
@@ -158,7 +159,14 @@ export const useCart = create<CartState>()(
       items: [],
       isOpen: false,
 
-      addItem: (item) =>
+      addItem: (item) => {
+        // Meta AddToCart — fired at the single choke point every print add goes
+        // through. Guarded internally, so it's a no-op during SSR/hydration.
+        trackAddToCart({
+          id: item.set ? `set_${item.set.setId}` : "print",
+          name: item.frameName,
+          value: item.price,
+        });
         set((state) => {
           // Adding an identical configuration bumps the existing line rather
           // than stacking duplicate rows.
@@ -188,9 +196,15 @@ export const useCart = create<CartState>()(
             ],
             isOpen: true,
           };
-        }),
+        });
+      },
 
-      addOriginal: (item) =>
+      addOriginal: (item) => {
+        trackAddToCart({
+          id: `original_${item.originalId}`,
+          name: item.title,
+          value: item.price,
+        });
         set((state) => {
           const existing = state.items.find(
             (i): i is OriginalCartItem =>
@@ -223,7 +237,8 @@ export const useCart = create<CartState>()(
             ],
             isOpen: true,
           };
-        }),
+        });
+      },
 
       removeItem: (id) =>
         set((state) => ({

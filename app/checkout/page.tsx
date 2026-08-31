@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { getFbCookies, initiateCheckout } from "@/lib/meta/pixel";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, X, Check, Loader2 } from "lucide-react";
@@ -66,6 +67,18 @@ export default function CheckoutPage() {
         "We couldn't confirm your payment. If you were charged, contact us and we'll sort it immediately.",
       );
   }, []);
+
+  const initiateFired = useRef(false);
+  useEffect(() => {
+    if (!mounted || items.length === 0 || initiateFired.current) return;
+    initiateFired.current = true;
+    const contents = items.map((i) => ({
+      id: i.type === "original" ? `original_${i.originalId}` : "print",
+      quantity: i.quantity,
+      item_price: i.price,
+    }));
+    initiateCheckout({ contents, value: cartSubtotal(items) });
+  }, [mounted, items]);
 
   useEffect(() => {
     setMounted(true);
@@ -170,7 +183,7 @@ export default function CheckoutPage() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-
+    const { fbp, fbc } = getFbCookies();
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
@@ -233,6 +246,8 @@ export default function CheckoutPage() {
             deliveryMethod === "delivery" ? deliveryZone : undefined,
           affiliateCode: applied?.code,
           notes: notes.trim() !== "" ? notes : undefined,
+          fbp,
+          fbc,
         }),
       });
 

@@ -11,6 +11,7 @@ import { originalSizeLabel, originalFrameLabel } from "@/lib/originalDisplay";
 import { formatNaira } from "@/lib/store";
 import Image from "next/image";
 import { Metadata } from "next";
+import TrackView from "@/components/TrackView";
 
 export const revalidate = 60;
 
@@ -110,7 +111,11 @@ export default async function WorkDetail({
               )}{" "}
               — {work.year}
             </p>
-
+            <TrackView
+              id={`original_${work.id}`}
+              name={work.title}
+              value={work.price}
+            />
             {/* 2. Title (Removed italics, made standard display font) */}
             <h1 className="display text-4xl md:text-5xl font-normal text-ink leading-tight mb-4">
               {work.title}

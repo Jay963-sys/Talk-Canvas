@@ -18,8 +18,10 @@ export async function GET(req: NextRequest) {
     if (tx.status === "success") {
       await fulfillPaidOrder(reference, tx.amount);
       const order = await getOrderByReference(reference);
+      // reference is forwarded so SuccessView can fire the browser Purchase with
+      // the same event id the CAPI Purchase used — that's what de-dupes them.
       return NextResponse.redirect(
-        `${siteUrl}/checkout/success?id=${order?.id ?? ""}`,
+        `${siteUrl}/checkout/success?id=${order?.id ?? ""}&reference=${encodeURIComponent(reference)}`,
       );
     }
     return NextResponse.redirect(`${siteUrl}/checkout?payment=failed`);

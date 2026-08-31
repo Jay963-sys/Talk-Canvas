@@ -170,6 +170,8 @@ export const orders = pgTable("orders", {
     .default("unpaid")
     .notNull(),
   paymentReference: varchar("payment_reference", { length: 100 }),
+  fbp: text("fbp"),
+  fbc: text("fbc"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
