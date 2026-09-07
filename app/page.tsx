@@ -238,7 +238,7 @@ export default async function Home() {
         <section className="border-t border-line">
           <div className="relative w-full h-[40vh] min-h-[300px] flex items-center justify-center text-center px-6 overflow-hidden bg-ink">
             <Image
-              src="/home/4.jpg"
+              src="/home/5.jpeg"
               alt="Talk Canvas Studio"
               fill
               className="object-cover opacity-50"
