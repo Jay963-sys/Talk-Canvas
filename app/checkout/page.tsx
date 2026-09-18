@@ -13,7 +13,6 @@ import {
   cartHasSet,
 } from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
-import { SHIPPING_CONFIG } from "@/data/shipping";
 import {
   LAGOS_ZONES,
   OUTSIDE_LAGOS_ID,
@@ -21,8 +20,6 @@ import {
 } from "@/data/delivery";
 import { quoteDelivery, VEHICLE_LABELS } from "@/lib/deliveryCalc";
 import Image from "next/image";
-
-type DeliveryMethod = "delivery" | "pickup";
 
 interface AppliedCode {
   code: string;
@@ -35,8 +32,6 @@ export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deliveryMethod, setDeliveryMethod] =
-    useState<DeliveryMethod>("delivery");
   const [deliveryZone, setDeliveryZone] = useState("");
 
   const [form, setForm] = useState({
@@ -105,8 +100,8 @@ export default function CheckoutPage() {
           Explore originals or design a print to get started.
         </p>
         <Link
-          href="/prints"
           className="inline-block px-8 py-3.5 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
+          href="/prints"
         >
           Shop Prints
         </Link>
@@ -117,26 +112,25 @@ export default function CheckoutPage() {
   const subtotal = cartSubtotal(items);
   const eligible = discountableSubtotal(items);
   const discount = applied ? discountFor(items, applied.discountPercent) : 0;
-  // Same calculator the server uses, so the preview matches the charge.
-  const quote =
-    deliveryMethod === "delivery" && deliveryZone
-      ? quoteDelivery(
-          deliveryZone,
-          items.map((i) => ({
-            sizeId: i.type === "print" ? i.sizeId : null,
-            quantity: i.quantity,
-            // The cart holds a set as one line, so panels are counted here.
-            setSize: i.type === "print" && i.set ? i.set.pieces.length : 1,
-            isSet: i.type === "print" && i.set !== null,
-          })),
-        )
-      : null;
+
+  const quote = deliveryZone
+    ? quoteDelivery(
+        deliveryZone,
+        items.map((i) => ({
+          sizeId: i.type === "print" ? i.sizeId : null,
+          quantity: i.quantity,
+          // The cart holds a set as one line, so panels are counted here.
+          setSize: i.type === "print" && i.set ? i.set.pieces.length : 1,
+          isSet: i.type === "print" && i.set !== null,
+        })),
+      )
+    : null;
 
   const hasSet = cartHasSet(items);
 
-  const shipping = deliveryMethod === "pickup" ? 0 : (quote?.fee ?? 0);
+  const shipping = quote?.fee ?? 0;
   const total = subtotal - discount + shipping;
-  const awaitingZone = deliveryMethod === "delivery" && !deliveryZone;
+  const awaitingZone = !deliveryZone;
 
   // True when the cart is nothing but one-of-one artist works — a code would
   // validate but take nothing off, so say so rather than show "−₦0".
@@ -194,18 +188,15 @@ export default function CheckoutPage() {
             email: form.email,
             phone: form.phone,
           },
-          deliveryMethod,
-          address:
-            deliveryMethod === "delivery"
-              ? {
-                  addressLine1: form.addressLine1,
-                  addressLine2: form.addressLine2,
-                  city: form.city,
-                  state: form.state,
-                  postalCode: form.postalCode,
-                  country: form.country,
-                }
-              : null,
+          deliveryMethod: "delivery",
+          address: {
+            addressLine1: form.addressLine1,
+            addressLine2: form.addressLine2,
+            city: form.city,
+            state: form.state,
+            postalCode: form.postalCode,
+            country: form.country,
+          },
           items: items.map((item) =>
             item.type === "original"
               ? {
@@ -240,10 +231,7 @@ export default function CheckoutPage() {
           subtotal,
           shipping,
           total,
-          // The server re-validates this code and recomputes the discount from
-          // scratch — nothing we send about price is trusted.
-          deliveryZone:
-            deliveryMethod === "delivery" ? deliveryZone : undefined,
+          deliveryZone: deliveryZone,
           affiliateCode: applied?.code,
           notes: notes.trim() !== "" ? notes : undefined,
           fbp,
@@ -280,8 +268,8 @@ export default function CheckoutPage() {
       <div className="max-w-7xl mx-auto px-6 md:px-10 py-12 md:py-16">
         {/* Minimalist Header */}
         <Link
-          href="/prints"
           className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors mb-12"
+          href="/prints"
         >
           <ArrowLeft size={14} strokeWidth={1.5} />
           Continue Shopping
@@ -297,101 +285,56 @@ export default function CheckoutPage() {
         >
           {/* Left Column - Forms */}
           <div className="md:col-span-7 space-y-12">
-            {/* Delivery Method */}
+            {/* Delivery Area */}
             <section>
               <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
-                Delivery Method
+                Delivery Area
               </h2>
-              <div className="grid grid-cols-2 gap-4">
-                <DeliveryOption
-                  selected={deliveryMethod === "delivery"}
-                  onClick={() => setDeliveryMethod("delivery")}
-                  title="Delivery"
-                  description="Door-to-door"
-                  fee={
-                    quote && !quote.quoteOnRequest
-                      ? formatNaira(quote.fee)
-                      : "By area"
-                  }
-                />
-                <DeliveryOption
-                  selected={deliveryMethod === "pickup"}
-                  onClick={() => setDeliveryMethod("pickup")}
-                  title="Showroom Pickup"
-                  description="On set days"
-                  fee="Free"
-                />
+              <div>
+                <select
+                  id="deliveryZone"
+                  required
+                  value={deliveryZone}
+                  onChange={(e) => setDeliveryZone(e.target.value)}
+                  className="w-full px-4 py-3 bg-transparent border border-line focus:border-ink outline-none transition-colors text-[14px] text-ink"
+                >
+                  <option value="" disabled>
+                    Select your area…
+                  </option>
+                  <optgroup label="Lagos">
+                    {LAGOS_ZONES.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <option value={OUTSIDE_LAGOS_ID}>Outside Lagos</option>
+                </select>
+
+                {quote && !quote.quoteOnRequest && (
+                  <>
+                    <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
+                      Delivered by {VEHICLE_LABELS[quote.vehicle].toLowerCase()}
+                      , based on the size and number of pieces in your order.
+                    </p>
+                    <p className="text-[12px] text-ink-soft mt-2 leading-relaxed">
+                      This fee can shift with your exact location or any change
+                      to your order — we&apos;ll contact you before dispatch if
+                      it does.
+                    </p>
+                  </>
+                )}
+
+                {quote?.quoteOnRequest && (
+                  <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
+                    <p className="text-[13px] text-ink leading-relaxed">
+                      {hasSet && deliveryZone !== OUTSIDE_LAGOS_ID
+                        ? "Your order includes a set, which we deliver by arrangement. We'll confirm the cost with you after you order — nothing is charged for delivery now."
+                        : OUTSIDE_LAGOS_NOTE}
+                    </p>
+                  </div>
+                )}
               </div>
-
-              {deliveryMethod === "pickup" && (
-                <div className="mt-6 p-6 bg-paper rounded-xl border border-line/40">
-                  <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-3">
-                    Pickup Location
-                  </p>
-                  <p className="text-[14px] leading-relaxed text-ink">
-                    {SHIPPING_CONFIG.pickup.address}
-                  </p>
-                  <p className="text-[13px] text-ink-soft mt-3">
-                    {SHIPPING_CONFIG.pickup.days} ·{" "}
-                    {SHIPPING_CONFIG.pickup.hours}
-                  </p>
-                </div>
-              )}
-
-              {deliveryMethod === "delivery" && (
-                <div className="mt-6">
-                  <label
-                    htmlFor="deliveryZone"
-                    className="block text-[10px] uppercase tracking-widest text-ink-soft font-semibold mb-2"
-                  >
-                    Delivery area
-                  </label>
-                  <select
-                    id="deliveryZone"
-                    required
-                    value={deliveryZone}
-                    onChange={(e) => setDeliveryZone(e.target.value)}
-                    className="w-full px-4 py-3 bg-transparent border border-line focus:border-ink outline-none transition-colors text-[14px] text-ink"
-                  >
-                    <option value="" disabled>
-                      Select your area…
-                    </option>
-                    <optgroup label="Lagos">
-                      {LAGOS_ZONES.map((z) => (
-                        <option key={z.id} value={z.id}>
-                          {z.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <option value={OUTSIDE_LAGOS_ID}>Outside Lagos</option>
-                  </select>
-
-                  {quote && !quote.quoteOnRequest && (
-                    <>
-                      <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
-                        Delivered by{" "}
-                        {VEHICLE_LABELS[quote.vehicle].toLowerCase()}, based on
-                        the size and number of pieces in your order.
-                      </p>
-                      <p className="text-[12px] text-ink-soft mt-2 leading-relaxed">
-                        This fee can shift with your exact location or any
-                        change to your order — we&apos;ll contact you before
-                        dispatch if it does.
-                      </p>
-                    </>
-                  )}
-
-                  {quote?.quoteOnRequest && (
-                    <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
-                      <p className="text-[13px] text-ink leading-relaxed">
-                        {hasSet && deliveryZone !== OUTSIDE_LAGOS_ID
-                          ? "Your order includes a set, which we deliver by arrangement. We'll confirm the cost with you after you order — nothing is charged for delivery now."
-                          : OUTSIDE_LAGOS_NOTE}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
             </section>
 
             {/* Contact */}
@@ -429,59 +372,57 @@ export default function CheckoutPage() {
             </section>
 
             {/* Shipping Address */}
-            {deliveryMethod === "delivery" && (
-              <section>
-                <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
-                  Shipping Address
-                </h2>
-                <div className="space-y-5">
+            <section>
+              <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
+                Shipping Address
+              </h2>
+              <div className="space-y-5">
+                <Field
+                  label="Address"
+                  name="addressLine1"
+                  value={form.addressLine1}
+                  onChange={setField("addressLine1")}
+                  required
+                />
+                <Field
+                  label="Apartment, suite, etc. (optional)"
+                  name="addressLine2"
+                  value={form.addressLine2}
+                  onChange={setField("addressLine2")}
+                />
+                <div className="grid grid-cols-2 gap-5">
                   <Field
-                    label="Address"
-                    name="addressLine1"
-                    value={form.addressLine1}
-                    onChange={setField("addressLine1")}
+                    label="City"
+                    name="city"
+                    value={form.city}
+                    onChange={setField("city")}
                     required
                   />
                   <Field
-                    label="Apartment, suite, etc. (optional)"
-                    name="addressLine2"
-                    value={form.addressLine2}
-                    onChange={setField("addressLine2")}
+                    label="State"
+                    name="state"
+                    value={form.state}
+                    onChange={setField("state")}
+                    required
                   />
-                  <div className="grid grid-cols-2 gap-5">
-                    <Field
-                      label="City"
-                      name="city"
-                      value={form.city}
-                      onChange={setField("city")}
-                      required
-                    />
-                    <Field
-                      label="State"
-                      name="state"
-                      value={form.state}
-                      onChange={setField("state")}
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-5">
-                    <Field
-                      label="Postal code"
-                      name="postalCode"
-                      value={form.postalCode}
-                      onChange={setField("postalCode")}
-                    />
-                    <Field
-                      label="Country"
-                      name="country"
-                      value={form.country}
-                      onChange={setField("country")}
-                      required
-                    />
-                  </div>
                 </div>
-              </section>
-            )}
+                <div className="grid grid-cols-2 gap-5">
+                  <Field
+                    label="Postal code"
+                    name="postalCode"
+                    value={form.postalCode}
+                    onChange={setField("postalCode")}
+                  />
+                  <Field
+                    label="Country"
+                    name="country"
+                    value={form.country}
+                    onChange={setField("country")}
+                    required
+                  />
+                </div>
+              </div>
+            </section>
 
             {/* Discount code */}
             <section>
@@ -520,7 +461,6 @@ export default function CheckoutPage() {
                       setCodeError(null);
                     }}
                     onKeyDown={(e) => {
-                      // Enter inside the checkout form would submit the order.
                       if (e.key === "Enter") {
                         e.preventDefault();
                         applyCode();
@@ -536,7 +476,7 @@ export default function CheckoutPage() {
                     className="px-6 py-3 border border-ink text-ink text-[12px] uppercase tracking-widest font-medium hover:bg-ink hover:text-cream transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink flex items-center gap-2"
                   >
                     {codeChecking ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2 className="animate-spin" size={14} />
                     ) : (
                       "Apply"
                     )}
@@ -607,10 +547,10 @@ export default function CheckoutPage() {
                   <div key={item.id} className="flex gap-4">
                     <div className="w-[70px] relative aspect-[4/5] bg-line overflow-hidden rounded-sm shrink-0">
                       <Image
-                        src={item.imageUrl}
                         alt=""
-                        fill
                         className="object-cover"
+                        fill
+                        src={item.imageUrl}
                       />
                     </div>
                     <div className="flex-1 flex flex-col justify-center">
@@ -663,15 +603,13 @@ export default function CheckoutPage() {
                   />
                 )}
                 <SummaryLine
-                  label={deliveryMethod === "pickup" ? "Pickup" : "Delivery"}
+                  label="Delivery"
                   value={
-                    deliveryMethod === "pickup"
-                      ? "Free"
-                      : awaitingZone
-                        ? "—"
-                        : quote?.quoteOnRequest
-                          ? "Quoted after order"
-                          : formatNaira(shipping)
+                    awaitingZone
+                      ? "—"
+                      : quote?.quoteOnRequest
+                        ? "Quoted after order"
+                        : formatNaira(shipping)
                   }
                 />
               </div>
@@ -712,57 +650,6 @@ export default function CheckoutPage() {
   );
 }
 
-// Restyled for premium UI: rounded corners, soft transitions, and sharp selection states
-function DeliveryOption({
-  selected,
-  onClick,
-  title,
-  description,
-  fee,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  title: string;
-  description: string;
-  fee: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`p-5 text-left transition-all rounded-xl border ${
-        selected
-          ? "border-ink bg-paper shadow-sm"
-          : "border-line bg-transparent hover:border-ink-soft"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <span
-          className={`w-4 h-4 rounded-full border mt-0.5 shrink-0 flex items-center justify-center transition-colors ${
-            selected ? "border-ink" : "border-ink-soft"
-          }`}
-        >
-          {selected && <span className="w-2 h-2 rounded-full bg-ink" />}
-        </span>
-        <div className="flex-1">
-          <p
-            className={`text-[14px] font-medium transition-colors ${selected ? "text-ink" : "text-ink-soft"}`}
-          >
-            {title}
-          </p>
-          <p className="text-[12px] text-ink-soft mt-1">{description}</p>
-        </div>
-      </div>
-      <p
-        className={`text-[13px] font-medium mt-3 ml-7 ${selected ? "text-ink" : "text-ink-soft"}`}
-      >
-        {fee}
-      </p>
-    </button>
-  );
-}
-
-// Refined inputs with transparent backgrounds to let the bg-cream shine through
 function Field({
   label,
   name,

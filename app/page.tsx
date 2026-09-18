@@ -124,6 +124,10 @@ export default async function Home() {
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                     />
                   </div>
+                  {/* Added starting price below the image */}
+                  <p className="mt-4 text-[13px] text-ink-soft font-medium">
+                    From ₦27,000
+                  </p>
                 </Link>
               ))}
 
@@ -254,7 +258,7 @@ export default async function Home() {
             </p>
             <p className="display text-2xl md:text-3xl leading-relaxed text-ink max-w-3xl mx-auto mb-8">
               "We believe a piece of art should mean something before it matches
-              your sofa. Every work here is chosen, not generated—shaping spaces
+              your sofa. Every work here is chosen not generated, shaping spaces
               that feel personal and deeply meaningful."
             </p>
             <Link

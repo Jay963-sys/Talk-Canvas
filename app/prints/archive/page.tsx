@@ -68,15 +68,15 @@ export default async function ArchivePage({
   ]);
 
   const initialItems: ArchiveItem[] = items.map((i) => ({
-  id: i.id,
-  imageUrl: i.imageUrl,
-  imagePublicId: i.imagePublicId,
-  width: i.width,
-  height: i.height,
-  collection: i.collection,
-  setId: i.setId,
-  setSize: i.setSize,
-}));
+    id: i.id,
+    imageUrl: i.imageUrl,
+    imagePublicId: i.imagePublicId,
+    width: i.width,
+    height: i.height,
+    collection: i.collection,
+    setId: i.setId,
+    setSize: i.setSize,
+  }));
 
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
 
@@ -177,9 +177,9 @@ export default async function ArchivePage({
         {/* Materials note */}
         <div className="bg-paper rounded-2xl p-6 md:p-8 mb-16 max-w-3xl mx-auto text-center">
           <p className="text-[14px] text-ink-soft leading-relaxed">
-            Every print in the archive is reproduced on archival-grade paper and
-            finished in the frame style and size you choose — the same materials
-            and process used for custom uploads.
+            Every print in the archive is reproduced on premium grade Canvas
+            Material and finished in the frame style and size you choose. The
+            same materials and process used for custom uploads.
           </p>
         </div>
 
