@@ -11,6 +11,11 @@ export interface FrameModelOptions {
   glass: boolean;
 }
 
+// Default real-world gap between panels in a multi-piece set preview.
+// Purely a 3D-preview/Android-AR default — true wall-anchored AR spacing
+// (customer-adjustable, iOS Quick Look) is separate, not yet built.
+export const SET_GAP_M = 0.05;
+
 interface FrameProfile {
   thickness: number; // border width (frame strip cross-section, visible from front)
   depth: number; // front-to-back dimension (visible from side)
@@ -34,6 +39,13 @@ function getProfile(
   return { thickness: 0.025, depth: 0.018, artInset: 0 };
 }
 
+// Outer footprint (frame strip included) a panel will occupy — used to lay
+// panels out side-by-side before any textures are loaded.
+export function panelOuterWidth(opts: FrameModelOptions): number {
+  const profile = getProfile(opts.style, opts.shape);
+  return opts.artWidth + profile.thickness * 2;
+}
+
 async function loadTexture(url: string): Promise<THREE.Texture> {
   const loader = new THREE.TextureLoader();
   loader.setCrossOrigin("anonymous");
@@ -46,14 +58,17 @@ async function loadTexture(url: string): Promise<THREE.Texture> {
     loader.load(url, resolve, undefined, reject);
   });
 }
-export async function buildScene(
-  opts: FrameModelOptions,
-): Promise<THREE.Scene> {
+
+// Builds one fully-framed, backed panel (frame strips, art, optional glass,
+// canvas back + stretcher bars) as a self-contained group so it can be
+// dropped into a scene at any x offset — either alone (buildScene) or
+// side-by-side with others (buildSetScene).
+async function buildPanelGroup(opts: FrameModelOptions): Promise<THREE.Group> {
   const { imageUrl, frameColor, artWidth, artHeight, style, shape, glass } =
     opts;
   const profile = getProfile(style, shape);
+  const group = new THREE.Group();
 
-  const scene = new THREE.Scene();
   const texture = await loadTexture(imageUrl);
   texture.colorSpace = THREE.SRGBColorSpace;
 
@@ -67,27 +82,26 @@ export async function buildScene(
   const t = profile.thickness;
   const d = profile.depth;
   const outerW = artWidth + t * 2;
-  const outerH = artHeight + t * 2;
 
   // Four frame strips
   const top = new THREE.Mesh(new THREE.BoxGeometry(outerW, t, d), frameMat);
   top.position.y = artHeight / 2 + t / 2;
-  scene.add(top);
+  group.add(top);
 
   const bottom = new THREE.Mesh(new THREE.BoxGeometry(outerW, t, d), frameMat);
   bottom.position.y = -artHeight / 2 - t / 2;
-  scene.add(bottom);
+  group.add(bottom);
 
   const left = new THREE.Mesh(new THREE.BoxGeometry(t, artHeight, d), frameMat);
   left.position.x = -artWidth / 2 - t / 2;
-  scene.add(left);
+  group.add(left);
 
   const right = new THREE.Mesh(
     new THREE.BoxGeometry(t, artHeight, d),
     frameMat,
   );
   right.position.x = artWidth / 2 + t / 2;
-  scene.add(right);
+  group.add(right);
 
   // Art plane — position depends on profile inset
   const artZ = d / 2 - profile.artInset;
@@ -101,9 +115,8 @@ export async function buildScene(
     artMat,
   );
   art.position.z = artZ;
-  scene.add(art);
+  group.add(art);
 
-  // Glass — included for box-with-glass and all antique frames
   // Glass — box frames only. Antique frames don't take glass.
   const hasGlass = style === "regular" && shape === "box" && glass;
   if (hasGlass) {
@@ -120,7 +133,7 @@ export async function buildScene(
     );
     // Just in front of the art, still inside the frame box
     glassPlane.position.z = artZ + 0.003;
-    scene.add(glassPlane);
+    group.add(glassPlane);
   }
 
   // Dark backing (back of frame)
@@ -152,7 +165,7 @@ export async function buildScene(
   );
   canvasBack.position.z = canvasBackZ;
   canvasBack.rotation.y = Math.PI;
-  scene.add(canvasBack);
+  group.add(canvasBack);
 
   // Outer stretcher bars
   const stretcherTop = new THREE.Mesh(
@@ -160,28 +173,28 @@ export async function buildScene(
     woodMat,
   );
   stretcherTop.position.set(0, artHeight / 2 - barWidth / 2, stretcherZ);
-  scene.add(stretcherTop);
+  group.add(stretcherTop);
 
   const stretcherBottom = new THREE.Mesh(
     new THREE.BoxGeometry(artWidth, barWidth, barWidth),
     woodMat,
   );
   stretcherBottom.position.set(0, -artHeight / 2 + barWidth / 2, stretcherZ);
-  scene.add(stretcherBottom);
+  group.add(stretcherBottom);
 
   const stretcherLeft = new THREE.Mesh(
     new THREE.BoxGeometry(barWidth, artHeight, barWidth),
     woodMat,
   );
   stretcherLeft.position.set(-artWidth / 2 + barWidth / 2, 0, stretcherZ);
-  scene.add(stretcherLeft);
+  group.add(stretcherLeft);
 
   const stretcherRight = new THREE.Mesh(
     new THREE.BoxGeometry(barWidth, artHeight, barWidth),
     woodMat,
   );
   stretcherRight.position.set(artWidth / 2 - barWidth / 2, 0, stretcherZ);
-  scene.add(stretcherRight);
+  group.add(stretcherRight);
 
   // Horizontal cross brace across the middle
   const crossBrace = new THREE.Mesh(
@@ -189,7 +202,7 @@ export async function buildScene(
     woodMat,
   );
   crossBrace.position.set(0, 0, stretcherZ);
-  scene.add(crossBrace);
+  group.add(crossBrace);
 
   // Four corner diagonal braces — the distinctive 45° cuts at each corner
   const diagLength = Math.min(artWidth, artHeight) * 0.14;
@@ -226,15 +239,46 @@ export async function buildScene(
     );
     diag.position.set(c.x, c.y, stretcherZ);
     diag.rotation.z = c.rot;
-    scene.add(diag);
+    group.add(diag);
   }
+
+  return group;
+}
+
+export async function buildScene(
+  opts: FrameModelOptions,
+): Promise<THREE.Scene> {
+  const scene = new THREE.Scene();
+  const group = await buildPanelGroup(opts);
+  scene.add(group);
   return scene;
 }
 
-export async function generateFrameGLB(opts: FrameModelOptions): Promise<Blob> {
-  const scene = await buildScene(opts);
-  const exporter = new GLTFExporter();
+// Lays multiple framed panels out side-by-side, gap between outer edges,
+// the whole row centred on x=0 — mirrors how a set actually hangs on a wall.
+export async function buildSetScene(
+  panelsOpts: FrameModelOptions[],
+  gapM: number = SET_GAP_M,
+): Promise<THREE.Scene> {
+  const scene = new THREE.Scene();
+  const widths = panelsOpts.map(panelOuterWidth);
+  const totalWidth =
+    widths.reduce((a, b) => a + b, 0) + gapM * (panelsOpts.length - 1);
 
+  let cursor = -totalWidth / 2;
+  for (let i = 0; i < panelsOpts.length; i++) {
+    const w = widths[i];
+    const group = await buildPanelGroup(panelsOpts[i]);
+    group.position.x = cursor + w / 2;
+    scene.add(group);
+    cursor += w + gapM;
+  }
+
+  return scene;
+}
+
+function exportScene(scene: THREE.Scene): Promise<Blob> {
+  const exporter = new GLTFExporter();
   return new Promise((resolve, reject) => {
     exporter.parse(
       scene,
@@ -249,4 +293,21 @@ export async function generateFrameGLB(opts: FrameModelOptions): Promise<Blob> {
       { binary: true },
     );
   });
+}
+
+export async function generateFrameGLB(opts: FrameModelOptions): Promise<Blob> {
+  const scene = await buildScene(opts);
+  return exportScene(scene);
+}
+
+// Multi-panel counterpart — used for a set's in-page 3D preview and
+// Android's scene-viewer AR (both read the GLB). iOS Quick Look AR still
+// uses the single-panel USDZ generated elsewhere; unifying that is separate,
+// larger work (customer-adjustable real-world spacing on true wall AR).
+export async function generateSetGLB(
+  panelsOpts: FrameModelOptions[],
+  gapM: number = SET_GAP_M,
+): Promise<Blob> {
+  const scene = await buildSetScene(panelsOpts, gapM);
+  return exportScene(scene);
 }

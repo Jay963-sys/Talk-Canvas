@@ -5,7 +5,12 @@ import { createPortal } from "react-dom";
 import { X, Loader2, Camera, Rotate3d } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useConfigurator } from "@/lib/store";
-import { generateFrameGLB } from "@/lib/frameModel";
+import {
+  generateFrameGLB,
+  generateSetGLB,
+  SET_GAP_M,
+  type FrameModelOptions,
+} from "@/lib/frameModel";
 import { generateFrameUSDZ } from "@/lib/frameUSDZ";
 import { uploadModelToCloudinary, uploadUSDZToCloudinary } from "@/lib/upload";
 import { formatInches, orientCm, orientationOf } from "@/data/sizes";
@@ -17,6 +22,7 @@ import {
 } from "@/lib/crop";
 import ARViewer from "./ARViewer";
 import { USE_CUSTOM_USDZ } from "@/lib/arConfig";
+import type { UploadedImage } from "@/lib/store";
 
 function buildArUrl(glb: string, usdz: string | null, label: string) {
   if (typeof window === "undefined") return null;
@@ -28,7 +34,7 @@ function buildArUrl(glb: string, usdz: string | null, label: string) {
 }
 
 export default function ARModal() {
-  const { image, frame, glass, size, crop, setArOpen } = useConfigurator();
+  const { image, set, frame, glass, size, crop, setArOpen } = useConfigurator();
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [iosUrl, setIosUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,58 +68,83 @@ export default function ARModal() {
     let cancelled = false;
     let localGlbUrl: string | null = null;
 
+    // A set's extra panels ride along on `set.pieces`; `image` is always
+    // `pieces[0]` (see store.ts). The GLB — which powers both the in-page 3D
+    // preview and Android's scene-viewer AR — should show every panel. The
+    // iOS Quick Look USDZ stays single-panel (see note below): true
+    // wall-anchored multi-panel AR, with customer-adjustable spacing, is
+    // separate, bigger work.
+    const panels: UploadedImage[] =
+      set && set.pieces.length > 1 ? set.pieces : [image];
+    const isSet = panels.length > 1;
+
     (async () => {
       try {
-        // Orient the canvas to the artwork. Without this a landscape design is
-        // built into a portrait frame and squashed.
-        const orientation = orientationOf(image);
-        const oriented = orientCm(size, orientation);
-        const dims = { w: oriented.w / 100, h: oriented.h / 100 };
+        // Per-panel model options. Sets never carry a crop — each panel is
+        // used in full (the gallery already aligned them; recropping one
+        // would break the piece) — so only the single-image path applies
+        // the customer's crop/rotation.
+        // Every panel's texture gets baked into the same GLB, so a set's
+        // file size scales with panel count. Shrink each panel's texture
+        // width so the *combined* pixel budget — and roughly the GLB size —
+        // stays close to a single panel's (Cloudinary's free plan caps
+        // uploads at 10MB; a 3-panel set at full 1200px each blew past it).
+        // n=1 keeps today's 1200px exactly.
+        const textureWidth = Math.round(1200 / Math.sqrt(panels.length));
 
-        // Texture = the approved crop, then downsized. The crop MUST precede the
-        // resize in the chain, or its pixel coordinates target the wrong space.
-        // cropTransform already emits any rotation (a_<deg>) ahead of the crop.
-        const natural = { w: image.width, h: image.height };
-        const cropParts =
-          crop && !isFullCrop(crop) ? [cropTransform(crop, natural)] : [];
-        const textureUrl = image.url.startsWith("blob:")
-          ? image.url
-          : cloudinaryChain(image.url, [
-              ...cropParts,
-              "w_1200,c_fit,q_auto,f_jpg",
-            ]);
+        const panelOpts: FrameModelOptions[] = panels.map((piece) => {
+          const orientation = orientationOf(piece);
+          const oriented = orientCm(size, orientation);
+          const dims = { w: oriented.w / 100, h: oriented.h / 100 };
 
-        const opts = {
-          imageUrl: textureUrl,
-          frameColor: frame.swatchColor,
-          artWidth: dims.w,
-          artHeight: dims.h,
-          style: frame.style,
-          shape: frame.shape,
-          glass,
-        };
+          const natural = { w: piece.width, h: piece.height };
+          const cropParts =
+            !isSet && crop && !isFullCrop(crop)
+              ? [cropTransform(crop, natural)]
+              : [];
+          const textureUrl = piece.url.startsWith("blob:")
+            ? piece.url
+            : cloudinaryChain(piece.url, [
+                ...cropParts,
+                `w_${textureWidth},c_fit,q_auto,f_jpg`,
+              ]);
 
-        const isLocalBlob = image.url.startsWith("blob:");
-        // Fold the crop AND rotation into the key so a re-crop or re-rotate
-        // regenerates instead of serving a stale model of the old composition.
+          return {
+            imageUrl: textureUrl,
+            frameColor: frame.swatchColor,
+            artWidth: dims.w,
+            artHeight: dims.h,
+            style: frame.style,
+            shape: frame.shape,
+            glass,
+          };
+        });
+
+        const isLocalBlob = panels.some((p) => p.url.startsWith("blob:"));
+
         const cropSig =
-          crop && !isFullCrop(crop)
+          !isSet && crop && !isFullCrop(crop)
             ? `${Math.round(crop.x * 1000)},${Math.round(crop.y * 1000)},${Math.round(crop.w * 1000)},${Math.round(crop.h * 1000)},r${normalizeDeg(crop.rotation ?? 0)}`
             : "full";
         const cacheKey = [
-          image.publicId || "custom",
+          isSet
+            ? `set:${set!.setId}:${panels.map((p) => p.publicId || "custom").join(",")}`
+            : image.publicId || "custom",
           frame.style,
           frame.shape ?? "none",
           frame.swatchColor,
-          oriented.w,
-          oriented.h,
-          orientation,
+          panelOpts
+            .map(
+              (p) =>
+                `${Math.round(p.artWidth * 1000)}x${Math.round(p.artHeight * 1000)}`,
+            )
+            .join(","),
           glass ? "g" : "n",
-          cropSig,
+          isSet ? "set" : cropSig,
         ].join("|");
 
         // --- 1. Cache lookup (Cloudinary-hosted only; skip local blobs)
-        if (!isLocalBlob && image.publicId) {
+        if (!isLocalBlob && (isSet || image.publicId)) {
           try {
             const res = await fetch(
               `/api/ar-model?key=${encodeURIComponent(cacheKey)}`,
@@ -134,7 +165,36 @@ export default function ARModal() {
 
         // --- 2. GLB generation (always — powers Android + the in-page preview)
         setProgress("Generating 3D model…");
-        const glb = await generateFrameGLB(opts);
+
+        // Re-runs panel-opt construction at a smaller texture width — used
+        // if the first upload still trips Cloudinary's size cap (a set with
+        // several panels, or an unusually large print size).
+        const buildGlbAt = async (width: number) => {
+          const opts =
+            width === textureWidth
+              ? panelOpts
+              : panels.map((piece, i) => ({
+                  ...panelOpts[i],
+                  imageUrl: piece.url.startsWith("blob:")
+                    ? piece.url
+                    : cloudinaryChain(piece.url, [
+                        ...(!isSet && crop && !isFullCrop(crop)
+                          ? [
+                              cropTransform(crop, {
+                                w: piece.width,
+                                h: piece.height,
+                              }),
+                            ]
+                          : []),
+                        `w_${width},c_fit,q_auto,f_jpg`,
+                      ]),
+                }));
+          return isSet
+            ? generateSetGLB(opts, SET_GAP_M)
+            : generateFrameGLB(opts[0]);
+        };
+
+        let glb = await buildGlbAt(textureWidth);
         if (cancelled) return;
 
         let finalGlbUrl: string | null = null;
@@ -143,16 +203,42 @@ export default function ARModal() {
           setModelUrl(localGlbUrl);
         } else {
           setProgress("Uploading…");
-          finalGlbUrl = await uploadModelToCloudinary(glb);
+          try {
+            finalGlbUrl = await uploadModelToCloudinary(glb);
+          } catch (uploadErr) {
+            // Cloudinary's free-plan 10MB cap surfaces as a 400 naming the
+            // file size — step the texture width down and retry once before
+            // giving up. Any other upload error still bubbles as normal.
+            const msg =
+              uploadErr instanceof Error
+                ? uploadErr.message
+                : String(uploadErr);
+            if (/file size too large/i.test(msg) && textureWidth > 400) {
+              setProgress("Optimizing for upload…");
+              const smallerWidth = Math.max(
+                400,
+                Math.round(textureWidth * 0.6),
+              );
+              glb = await buildGlbAt(smallerWidth);
+              if (cancelled) return;
+              finalGlbUrl = await uploadModelToCloudinary(glb);
+            } else {
+              throw uploadErr;
+            }
+          }
           if (cancelled) return;
           setModelUrl(finalGlbUrl);
         }
 
-        // --- 3. Custom wall-anchored USDZ — best-effort, Cloudinary-hosted only.
+        // --- 3. Custom wall-anchored USDZ — best-effort, Cloudinary-hosted
+        // only, and single-panel only (canonical piece), even for a set.
+        // A set's iOS "See it on your wall" AR still shows one piece at
+        // true size, same as before this change — multi-panel wall AR is
+        // the deferred, bigger feature.
         let finalUsdzUrl: string | null = null;
         if (USE_CUSTOM_USDZ && !isLocalBlob) {
           try {
-            const usdz = await generateFrameUSDZ(opts);
+            const usdz = await generateFrameUSDZ(panelOpts[0]);
             if (cancelled) return;
             finalUsdzUrl = await uploadUSDZToCloudinary(usdz);
             if (!cancelled) setIosUrl(finalUsdzUrl);
@@ -165,7 +251,12 @@ export default function ARModal() {
         }
 
         // --- 4. Write-through cache (Cloudinary-hosted only)
-        if (!cancelled && !isLocalBlob && finalGlbUrl && image.publicId) {
+        if (
+          !cancelled &&
+          !isLocalBlob &&
+          finalGlbUrl &&
+          (isSet || image.publicId)
+        ) {
           fetch("/api/ar-model", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -189,12 +280,15 @@ export default function ARModal() {
       cancelled = true;
       if (localGlbUrl) URL.revokeObjectURL(localGlbUrl);
     };
-  }, [image, frame, size, glass, crop]);
+  }, [image, set, frame, size, glass, crop]);
 
   if (!image || !frame || !size) return null;
 
   const glassNote = frame.shape === "box" && glass ? " · with glass" : "";
-  const label = `${frame.name}${glassNote} · ${formatInches(size, orientationOf(image))}`;
+  const isSet = !!set && set.pieces.length > 1;
+  const label = isSet
+    ? `${frame.name}${glassNote} · ${formatInches(size, orientationOf(image))} · Set of ${set!.pieces.length}`
+    : `${frame.name}${glassNote} · ${formatInches(size, orientationOf(image))}`;
   const arUrl = modelUrl ? buildArUrl(modelUrl, iosUrl, label) : null;
 
   if (!mounted) return null;
@@ -216,11 +310,7 @@ export default function ARModal() {
           )}
 
           {modelUrl ? (
-            <ARViewer
-              src={modelUrl}
-              iosSrc={iosUrl ?? undefined}
-              alt={`${frame.name}${glassNote}, ${formatInches(size, orientationOf(image))}`}
-            >
+            <ARViewer src={modelUrl} iosSrc={iosUrl ?? undefined} alt={label}>
               <button
                 slot="ar-button"
                 className="flex items-center gap-2 bg-cream text-ink text-[12px] uppercase tracking-widest font-medium px-5 py-3 rounded-full shadow-lg"
@@ -255,10 +345,22 @@ export default function ARModal() {
         <div className="mt-6 text-center text-cream">
           <p className="display-italic text-2xl">{label}</p>
           <p className="text-xs text-muted mt-3 max-w-md mx-auto leading-relaxed">
-            This is a 3D preview — drag to rotate and inspect the frame. On your
-            phone, tap{" "}
-            <span className="text-cream/90">See it on your wall</span> to place
-            it in your room at true size.
+            {isSet ? (
+              <>
+                This is a 3D preview of the full set — drag to rotate and
+                inspect. On your phone, tap{" "}
+                <span className="text-cream/90">See it on your wall</span> to
+                place one piece in your room at true size; allow roughly the
+                combined width, plus spacing, for the full hang.
+              </>
+            ) : (
+              <>
+                This is a 3D preview — drag to rotate and inspect the frame. On
+                your phone, tap{" "}
+                <span className="text-cream/90">See it on your wall</span> to
+                place it in your room at true size.
+              </>
+            )}
           </p>
 
           {/* Desktop: hand off to a phone via QR (skipped for un-uploaded
