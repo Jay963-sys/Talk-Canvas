@@ -20,6 +20,7 @@ import {
 } from "@/data/delivery";
 import { quoteDelivery, VEHICLE_LABELS } from "@/lib/deliveryCalc";
 import Image from "next/image";
+import WhatsAppHelpButton from "@/components/WhatsAppHelpButton";
 
 interface AppliedCode {
   code: string;
@@ -127,6 +128,12 @@ export default function CheckoutPage() {
     : null;
 
   const hasSet = cartHasSet(items);
+
+  const deliveryZoneLabel = deliveryZone
+    ? deliveryZone === OUTSIDE_LAGOS_ID
+      ? "Outside Lagos"
+      : LAGOS_ZONES.find((z) => z.id === deliveryZone)?.label
+    : undefined;
 
   const shipping = quote?.fee ?? 0;
   const total = subtotal - discount + shipping;
@@ -646,6 +653,15 @@ export default function CheckoutPage() {
           </div>
         </form>
       </div>
+
+      <WhatsAppHelpButton
+        items={items}
+        subtotal={subtotal}
+        shipping={shipping}
+        total={total}
+        deliveryZoneLabel={deliveryZoneLabel}
+        quoteOnRequest={quote?.quoteOnRequest}
+      />
     </div>
   );
 }
