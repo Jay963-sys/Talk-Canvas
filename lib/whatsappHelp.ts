@@ -1,41 +1,25 @@
-// WhatsApp checkout-support helper.
-//
-// Builds a pre-filled WhatsApp message from the current cart/checkout state
-// so a customer stuck on checkout can reach us with their order details
-// already attached — no retyping what they just did.
-//
-// This is a SUPPORT channel, not a sales channel: it only appears on the
-// checkout page, and the message is framed as a help request, not an order
-// request, so it doesn't become a way to skip the cart and buy via DM.
-
 import { formatNaira } from "@/lib/store";
 
-// Business number for the checkout-help WhatsApp link.
-// wa.me wants digits only, no "+", no spaces.
 export const WHATSAPP_HELP_NUMBER = "2349155328133";
 
-// Minimal shape covering both cart item types (original + print), matching
-// what's already rendered in the checkout Order Summary. Kept loose/local
-// rather than importing the full CartItem type so this helper doesn't need
-// to track every field on the store — only what goes in the message.
 export interface WhatsAppHelpItem {
   type: "original" | "print";
-  title?: string; // originals
+  title?: string;
   frameName?: string;
-  sizeLabel?: string; // prints
+  sizeLabel?: string;
   price: number;
   quantity: number;
-  set?: { pieces: unknown[] } | null; // prints — a set counts as N panels
+  set?: { pieces: unknown[] } | null;
 }
 
 interface BuildMessageOptions {
   items: WhatsAppHelpItem[];
   subtotal: number;
-  shipping: number; // 0 if not yet quoted
+  shipping: number;
   total: number;
-  deliveryZoneLabel?: string; // e.g. "Ikeja" — omit if not chosen yet
-  quoteOnRequest?: boolean; // true when delivery is "quoted after order"
-  orderRef?: string; // only exists after an order has actually been created
+  deliveryZoneLabel?: string;
+  quoteOnRequest?: boolean;
+  orderRef?: string;
 }
 
 function describeItem(item: WhatsAppHelpItem): string {

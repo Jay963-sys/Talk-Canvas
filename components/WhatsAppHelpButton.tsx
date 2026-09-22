@@ -16,9 +16,6 @@ interface WhatsAppHelpButtonProps {
   orderRef?: string;
 }
 
-// Checkout-only "need help completing your order?" WhatsApp button.
-// Deliberately not a global/site-wide floating icon — see area notes on
-// why this stays scoped to checkout (support channel, not a sales workaround).
 export default function WhatsAppHelpButton({
   items,
   subtotal,
@@ -49,11 +46,9 @@ export default function WhatsAppHelpButton({
     >
       <span
         className="
-          pointer-events-none hidden sm:block whitespace-nowrap
+          pointer-events-none whitespace-nowrap
           bg-ink text-cream text-[11px] uppercase tracking-widest font-medium
           px-4 py-2.5 rounded-full shadow-lg
-          opacity-0 translate-x-2 transition-all duration-200
-          group-hover:opacity-100 group-hover:translate-x-0
         "
       >
         Need help with your order?
