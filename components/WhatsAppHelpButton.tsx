@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { X } from "lucide-react";
 import {
   buildWhatsAppHelpMessage,
   getWhatsAppHelpUrl,
@@ -16,6 +18,9 @@ interface WhatsAppHelpButtonProps {
   orderRef?: string;
 }
 
+// Checkout-only "need help completing your order?" WhatsApp button.
+// Deliberately not a global/site-wide floating icon — see area notes on
+// why this stays scoped to checkout (support channel, not a sales workaround).
 export default function WhatsAppHelpButton({
   items,
   subtotal,
@@ -25,6 +30,8 @@ export default function WhatsAppHelpButton({
   quoteOnRequest,
   orderRef,
 }: WhatsAppHelpButtonProps) {
+  const [labelOpen, setLabelOpen] = useState(true);
+
   const message = buildWhatsAppHelpMessage({
     items,
     subtotal,
@@ -37,33 +44,41 @@ export default function WhatsAppHelpButton({
   const href = getWhatsAppHelpUrl(message);
 
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group fixed bottom-6 right-6 z-50 flex items-center gap-3"
-      aria-label="Need help completing your order? Chat with us on WhatsApp"
-    >
-      <span
-        className="
-          pointer-events-none whitespace-nowrap
-          bg-ink text-cream text-[11px] uppercase tracking-widest font-medium
-          px-4 py-2.5 rounded-full shadow-lg
-        "
-      >
-        Need help with your order?
-      </span>
+    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+      {labelOpen && (
+        <div
+          className="
+            flex items-center gap-2 whitespace-nowrap
+            bg-ink text-cream text-[11px] uppercase tracking-widest font-medium
+            pl-4 pr-2 py-2.5 rounded-full shadow-lg
+          "
+        >
+          <span>Need help with your order?</span>
+          <button
+            type="button"
+            onClick={() => setLabelOpen(false)}
+            aria-label="Dismiss"
+            className="p-1 rounded-full text-cream/70 hover:text-cream hover:bg-cream/10 transition-colors"
+          >
+            <X size={12} strokeWidth={2} />
+          </button>
+        </div>
+      )}
 
-      <span
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Need help completing your order? Chat with us on WhatsApp"
         className="
-          flex items-center justify-center w-14 h-14 rounded-full
+          group flex items-center justify-center w-14 h-14 rounded-full shrink-0
           bg-ink text-cream shadow-lg
-          transition-transform duration-200 group-hover:scale-105
+          transition-transform duration-200 hover:scale-105
         "
       >
         <WhatsAppIcon className="w-6 h-6" />
-      </span>
-    </a>
+      </a>
+    </div>
   );
 }
 
