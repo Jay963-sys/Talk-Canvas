@@ -372,8 +372,8 @@ export default function ARModal() {
               </div>
               <div className="text-left max-w-[220px]">
                 <p className="text-sm text-muted mt-1 leading-relaxed">
-                  Scan to open the wall preview on your phone — AR needs a phone
-                  camera.
+                  Scan to open the wall preview on your phone — AR requires a
+                  phone camera.
                 </p>
               </div>
             </div>
