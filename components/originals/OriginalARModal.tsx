@@ -225,8 +225,7 @@ export default function OriginalARModal({
                 <QRCodeSVG value={arUrl} size={132} level="M" />
               </div>
               <div className="text-left max-w-[220px]">
-                <p className="text-sm text-cream">Prefer your phone?</p>
-                <p className="text-xs text-muted mt-1 leading-relaxed">
+                <p className="text-sm text-muted mt-1 leading-relaxed">
                   Scan to open the wall preview on your phone — AR needs a phone
                   camera.
                 </p>

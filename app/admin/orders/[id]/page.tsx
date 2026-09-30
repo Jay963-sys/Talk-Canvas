@@ -6,6 +6,7 @@ import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 import OrderStatusSelect from "@/components/admin/OrderStatusSelect";
 import DeliveryQuoteForm from "@/components/admin/DeliveryQuoteForm";
 import { getZone, OUTSIDE_LAGOS_ID } from "@/data/delivery";
+import { LAGOS_DISTANCE_ZONE_ID, TIER_LABELS } from "@/data/distanceRates";
 import { VEHICLE_LABELS } from "@/lib/deliveryCalc";
 import { formatNaira } from "@/lib/store";
 import Image from "next/image";
@@ -33,14 +34,39 @@ export default async function OrderDetailPage({
   const order = await getOrderById(numId);
   if (!order) notFound();
 
+  // Old orders carry an LGA zone id; new ones are priced by distance.
   const zoneLabel =
     order.deliveryZone === OUTSIDE_LAGOS_ID
       ? "Outside Lagos"
-      : (getZone(order.deliveryZone ?? "")?.label ?? null);
+      : order.deliveryZone === LAGOS_DISTANCE_ZONE_ID
+        ? "Lagos, priced by distance"
+        : (getZone(order.deliveryZone ?? "")?.label ?? null);
+
+  // Opens Google Maps with the route from the studio, so staff can check the
+  // distance behind the fee or plan the run. No API key needed.
+  const shopOrigin =
+    process.env.SHOP_LAT && process.env.SHOP_LNG
+      ? `${process.env.SHOP_LAT},${process.env.SHOP_LNG}`
+      : process.env.SHOP_ADDRESS;
+  const destinationText = [
+    order.addressLine1,
+    order.city,
+    order.state,
+    order.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const directionsUrl =
+    order.deliveryMethod === "delivery" && destinationText
+      ? `https://www.google.com/maps/dir/?api=1${
+          shopOrigin ? `&origin=${encodeURIComponent(shopOrigin)}` : ""
+        }&destination=${encodeURIComponent(destinationText)}&travelmode=driving`
+      : null;
+  // New orders store a size tier; older ones store a vehicle.
   const vehicleLabel = order.deliveryVehicle
-    ? (VEHICLE_LABELS[
-        order.deliveryVehicle as keyof typeof VEHICLE_LABELS
-      ] ?? null)
+    ? (TIER_LABELS[order.deliveryVehicle as keyof typeof TIER_LABELS] ??
+      VEHICLE_LABELS[order.deliveryVehicle as keyof typeof VEHICLE_LABELS] ??
+      null)
     : null;
 
   return (
@@ -68,7 +94,8 @@ export default async function OrderDetailPage({
         <OrderStatusBadge status={order.status} />
       </div>
 
-      {/* Outside-Lagos orders ship at zero until the gallery quotes them. */}
+      {/* Outside Lagos, sets, and addresses Google couldn't price ship at zero
+          until the gallery quotes them. */}
       {order.deliveryQuotePending && (
         <DeliveryQuoteForm
           orderId={order.id}
@@ -273,10 +300,20 @@ export default async function OrderDetailPage({
                   <p>{order.country}</p>
                 </div>
 
-                {(zoneLabel || vehicleLabel) && (
+                {(zoneLabel || vehicleLabel || directionsUrl) && (
                   <div className="mt-3 pt-3 border-t border-line text-xs text-muted space-y-1">
                     {zoneLabel && <p>Area: {zoneLabel}</p>}
-                    {vehicleLabel && <p>Vehicle: {vehicleLabel}</p>}
+                    {vehicleLabel && <p>Delivery by: {vehicleLabel}</p>}
+                    {directionsUrl && (
+                      <a
+                        href={directionsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-accent hover:text-accent-dark inline-block pt-1"
+                      >
+                        Route from studio in Google Maps ↗
+                      </a>
+                    )}
                   </div>
                 )}
               </>

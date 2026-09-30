@@ -1,6 +1,6 @@
 import { formatNaira } from "@/lib/store";
 
-export const WHATSAPP_HELP_NUMBER = "2349155328133";
+export const WHATSAPP_HELP_NUMBER = "2347040969082";
 
 export interface WhatsAppHelpItem {
   type: "original" | "print";

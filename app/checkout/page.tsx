@@ -10,15 +10,19 @@ import {
   cartSubtotal,
   discountableSubtotal,
   discountFor,
-  cartHasSet,
 } from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
+import { OUTSIDE_LAGOS_ID } from "@/data/delivery";
 import {
-  LAGOS_ZONES,
-  OUTSIDE_LAGOS_ID,
-  OUTSIDE_LAGOS_NOTE,
-} from "@/data/delivery";
-import { quoteDelivery, VEHICLE_LABELS } from "@/lib/deliveryCalc";
+  BULK_THRESHOLD,
+  LAGOS_DISTANCE_ZONE_ID,
+  OUTSIDE_LAGOS_GIG_NOTE,
+  OUTSOURCED_NOTE,
+} from "@/data/distanceRates";
+import { quoteDeliveryByDistance } from "@/lib/deliveryCalc";
+import AddressAutocomplete, {
+  type ChosenAddress,
+} from "@/components/checkout/AddressAutocomplete";
 import Image from "next/image";
 import WhatsAppHelpButton from "@/components/WhatsAppHelpButton";
 
@@ -33,7 +37,7 @@ export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deliveryZone, setDeliveryZone] = useState("");
+  const [destination, setDestination] = useState<ChosenAddress | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -114,9 +118,9 @@ export default function CheckoutPage() {
   const eligible = discountableSubtotal(items);
   const discount = applied ? discountFor(items, applied.discountPercent) : 0;
 
-  const quote = deliveryZone
-    ? quoteDelivery(
-        deliveryZone,
+  const quote = destination
+    ? quoteDeliveryByDistance(
+        destination,
         items.map((i) => ({
           sizeId: i.type === "print" ? i.sizeId : null,
           quantity: i.quantity,
@@ -127,17 +131,33 @@ export default function CheckoutPage() {
       )
     : null;
 
-  const hasSet = cartHasSet(items);
-
-  const deliveryZoneLabel = deliveryZone
-    ? deliveryZone === OUTSIDE_LAGOS_ID
-      ? "Outside Lagos"
-      : LAGOS_ZONES.find((z) => z.id === deliveryZone)?.label
-    : undefined;
+  const deliveryZone =
+    destination?.inLagos === false ? OUTSIDE_LAGOS_ID : LAGOS_DISTANCE_ZONE_ID;
+  const deliveryZoneLabel = destination?.label;
 
   const shipping = quote?.fee ?? 0;
   const total = subtotal - discount + shipping;
-  const awaitingZone = !deliveryZone;
+  const awaitingZone = !destination;
+
+  const chooseDestination = (a: ChosenAddress | null) => {
+    setDestination(a);
+    if (!a) return;
+    // Prefill from Google; the customer can still correct any of it below.
+    setForm((f) => ({
+      ...f,
+      addressLine1: a.mainText || a.addressLine1 || f.addressLine1,
+      city: a.city ?? f.city,
+      state: a.state ?? f.state,
+      postalCode: a.postalCode ?? f.postalCode,
+    }));
+  };
+
+  const byHandMessage =
+    quote?.reason === "outside-lagos"
+      ? OUTSIDE_LAGOS_GIG_NOTE
+      : quote?.reason === "outsourced"
+        ? OUTSOURCED_NOTE
+        : "We couldn't price delivery to this address automatically. We'll confirm the cost with you after you order — nothing is charged for delivery now.";
 
   // True when the cart is nothing but one-of-one artist works — a code would
   // validate but take nothing off, so say so rather than show "−₦0".
@@ -238,7 +258,8 @@ export default function CheckoutPage() {
           subtotal,
           shipping,
           total,
-          deliveryZone: deliveryZone,
+          deliveryZone,
+          deliveryPlaceId: destination?.placeId,
           affiliateCode: applied?.code,
           notes: notes.trim() !== "" ? notes : undefined,
           fbp,
@@ -292,42 +313,24 @@ export default function CheckoutPage() {
         >
           {/* Left Column - Forms */}
           <div className="md:col-span-7 space-y-12">
-            {/* Delivery Area */}
+            {/* Delivery Address */}
             <section>
               <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
-                Delivery Area
+                Delivery Address
               </h2>
               <div>
-                <select
-                  id="deliveryZone"
-                  required
-                  value={deliveryZone}
-                  onChange={(e) => setDeliveryZone(e.target.value)}
-                  className="w-full px-4 py-3 bg-transparent border border-line focus:border-ink outline-none transition-colors text-[14px] text-ink"
-                >
-                  <option value="" disabled>
-                    Select your area…
-                  </option>
-                  <optgroup label="Lagos">
-                    {LAGOS_ZONES.map((z) => (
-                      <option key={z.id} value={z.id}>
-                        {z.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <option value={OUTSIDE_LAGOS_ID}>Outside Lagos</option>
-                </select>
+                <AddressAutocomplete onChange={chooseDestination} />
 
                 {quote && !quote.quoteOnRequest && (
                   <>
                     <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
-                      Delivered by {VEHICLE_LABELS[quote.vehicle].toLowerCase()}
-                      , based on the size and number of pieces in your order.
+                      Delivered by our van, {quote.km} km from our studio.
+                      {quote.surcharge > 0 &&
+                        ` Includes ${formatNaira(quote.surcharge)} for orders of more than ${BULK_THRESHOLD} pieces.`}
                     </p>
                     <p className="text-[12px] text-ink-soft mt-2 leading-relaxed">
-                      This fee can shift with your exact location or any change
-                      to your order — we&apos;ll contact you before dispatch if
-                      it does.
+                      If your order changes before dispatch, we&apos;ll contact
+                      you about any difference.
                     </p>
                   </>
                 )}
@@ -335,9 +338,7 @@ export default function CheckoutPage() {
                 {quote?.quoteOnRequest && (
                   <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
                     <p className="text-[13px] text-ink leading-relaxed">
-                      {hasSet && deliveryZone !== OUTSIDE_LAGOS_ID
-                        ? "Your order includes a set, which we deliver by arrangement. We'll confirm the cost with you after you order — nothing is charged for delivery now."
-                        : OUTSIDE_LAGOS_NOTE}
+                      {byHandMessage}
                     </p>
                   </div>
                 )}
@@ -392,7 +393,7 @@ export default function CheckoutPage() {
                   required
                 />
                 <Field
-                  label="Apartment, suite, etc. (optional)"
+                  label="Apartment, landmark, etc. (optional)"
                   name="addressLine2"
                   value={form.addressLine2}
                   onChange={setField("addressLine2")}
@@ -531,7 +532,7 @@ export default function CheckoutPage() {
                 {submitting
                   ? "Processing..."
                   : awaitingZone
-                    ? "Choose a delivery area"
+                    ? "Enter a delivery address"
                     : `Pay ${formatNaira(total)}`}
               </button>
               {error && (
@@ -640,7 +641,7 @@ export default function CheckoutPage() {
                   {submitting
                     ? "Processing..."
                     : awaitingZone
-                      ? "Choose a delivery area"
+                      ? "Enter a delivery address"
                       : `Pay ${formatNaira(total)}`}
                 </button>
                 {error && (

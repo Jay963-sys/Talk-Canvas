@@ -11,8 +11,13 @@ import { fulfillOrder } from "@/lib/orders/fulfillment";
 import { checkCode } from "@/lib/db/queries/affiliates";
 import type { Original, ArchivePrint, NewOrderItem } from "@/lib/db/schema";
 import { SHIPPING_CONFIG } from "@/data/shipping";
-import { quoteDelivery, type DeliverablePiece } from "@/lib/deliveryCalc";
+import {
+  quoteDeliveryByDistance,
+  type DeliverablePiece,
+} from "@/lib/deliveryCalc";
 import { OUTSIDE_LAGOS_ID } from "@/data/delivery";
+import { LAGOS_DISTANCE_ZONE_ID } from "@/data/distanceRates";
+import { isPlaceId, resolveDeliveryPlace } from "@/lib/delivery/resolvePlace";
 
 /** Mirror of the cart's ceiling. Never trust the client's number. */
 const MAX_QUANTITY = 99;
@@ -73,8 +78,13 @@ interface OrderBody {
   items: OrderItemInput[];
   notes?: string;
   affiliateCode?: string;
-  /** Lagos LGA id, or "outside-lagos". Required when deliveryMethod is "delivery". */
+  /**
+   * Ignored — kept so older clients don't error. The zone is now derived
+   * server-side from deliveryPlaceId.
+   */
   deliveryZone?: string;
+  /** Google place id of the chosen address. Required when deliveryMethod is "delivery". */
+  deliveryPlaceId?: string;
   fbp?: string | null;
   fbc?: string | null;
 }
@@ -340,19 +350,24 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Delivery ───────────────────────────────────────────────────
-    // Recomputed from the DB-trusted items and the chosen zone. The client
-    // sends a zone id, never a fee.
+    // Recomputed from the DB-trusted items and the chosen address. The client
+    // sends a Google place id, never a fee, a distance or a zone — we look the
+    // place up and measure the drive ourselves.
     let computedShipping = 0;
     let deliveryVehicle: string | null = null;
     let deliveryQuotePending = false;
+    let deliveryZone: string | null = null;
 
     if (deliveryMethod === "delivery") {
-      if (!body.deliveryZone) {
+      if (!isPlaceId(body.deliveryPlaceId)) {
         return NextResponse.json(
-          { error: "Please choose your delivery area." },
+          { error: "Please choose your delivery address from the list." },
           { status: 400 },
         );
       }
+      // Never throws: if Google fails, km/inLagos come back null and the
+      // order goes down the quote-on-request path instead of failing.
+      const dest = await resolveDeliveryPlace(body.deliveryPlaceId);
 
       const pieces: DeliverablePiece[] = itemRows.map((i) => ({
         sizeId: i.sizeId ?? null,
@@ -370,16 +385,12 @@ export async function POST(req: NextRequest) {
         isSet: i.setId != null,
       }));
 
-      const quote = quoteDelivery(body.deliveryZone, pieces);
-      if (!quote) {
-        return NextResponse.json(
-          { error: "We don't recognise that delivery area." },
-          { status: 400 },
-        );
-      }
+      const quote = quoteDeliveryByDistance(dest, pieces);
 
       computedShipping = quote.fee;
-      deliveryVehicle = quote.vehicle;
+      deliveryZone =
+        dest.inLagos === false ? OUTSIDE_LAGOS_ID : LAGOS_DISTANCE_ZONE_ID;
+      deliveryVehicle = quote.tier; // "small" | "large" | "outsourced"
       deliveryQuotePending = quote.quoteOnRequest;
     }
 
@@ -408,7 +419,7 @@ export async function POST(req: NextRequest) {
         country: deliveryMethod === "delivery" ? address!.country : null,
         subtotal: computedSubtotal,
         shipping: computedShipping,
-        deliveryZone: deliveryMethod === "delivery" ? body.deliveryZone! : null,
+        deliveryZone,
         deliveryVehicle,
         deliveryQuotePending,
         affiliateId,
