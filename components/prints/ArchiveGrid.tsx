@@ -38,6 +38,56 @@ export interface ArchiveItem {
   panels?: ArchivePanel[];
 }
 
+/**
+ * Grid sizes the customer can switch between. Each step adds a column at every
+ * breakpoint; "Large" is the original layout. Class strings are written out in
+ * full so Tailwind can see them.
+ */
+export const ARCHIVE_DENSITIES = [
+  {
+    label: "Large tiles",
+    bars: 2,
+    grid: "columns-2 md:columns-3 lg:columns-4 gap-4",
+    spacing: "mb-4",
+  },
+  {
+    label: "Medium tiles",
+    bars: 3,
+    grid: "columns-3 md:columns-4 lg:columns-5 gap-2 md:gap-3",
+    spacing: "mb-2 md:mb-3",
+  },
+  {
+    label: "Small tiles",
+    bars: 4,
+    grid: "columns-4 md:columns-5 lg:columns-6 gap-1.5 md:gap-2",
+    spacing: "mb-1.5 md:mb-2",
+  },
+] as const;
+
+export type ArchiveDensity = 0 | 1 | 2;
+
+const DENSITY_KEY = "tc_archive_density";
+
+function ColumnsIcon({ n }: { n: number }) {
+  const gap = 1.5;
+  const w = (16 - gap * (n - 1)) / n;
+  return (
+    <svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true">
+      {Array.from({ length: n }, (_, i) => (
+        <rect
+          key={i}
+          x={i * (w + gap)}
+          y="0"
+          width={w}
+          height="14"
+          rx="0.5"
+          fill="currentColor"
+        />
+      ))}
+    </svg>
+  );
+}
+
 interface Props {
   initialItems: ArchiveItem[];
   initialCursor: number | null;
@@ -59,6 +109,27 @@ export default function ArchiveGrid({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
+
+  // The customer's grid size. Starts at the default so the server render and
+  // first client render match, then picks up their last choice.
+  const [density, setDensity] = useState<ArchiveDensity>(0);
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(DENSITY_KEY));
+      if (saved === 1 || saved === 2) setDensity(saved);
+    } catch {
+      // Storage blocked — the default grid is fine.
+    }
+  }, []);
+  const chooseDensity = (d: ArchiveDensity) => {
+    setDensity(d);
+    try {
+      localStorage.setItem(DENSITY_KEY, String(d));
+    } catch {
+      // Not remembered, but still applied for this visit.
+    }
+  };
+  const layout = ARCHIVE_DENSITIES[density];
 
   // Reset the grid whenever any filter changes.
   useEffect(() => {
@@ -135,9 +206,41 @@ export default function ArchiveGrid({
 
   return (
     <>
-      <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
+      <div
+        role="group"
+        aria-label="Tile size"
+        className="flex justify-end items-center gap-1 mb-4"
+      >
+        <span className="text-[10px] uppercase tracking-widest text-ink-soft mr-2">
+          View
+        </span>
+        {ARCHIVE_DENSITIES.map((d, i) => (
+          <button
+            key={d.label}
+            type="button"
+            onClick={() => chooseDensity(i as ArchiveDensity)}
+            aria-label={d.label}
+            aria-pressed={density === i}
+            title={d.label}
+            className={`p-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
+              density === i
+                ? "text-ink"
+                : "text-ink-soft/50 hover:text-ink-soft"
+            }`}
+          >
+            <ColumnsIcon n={d.bars} />
+          </button>
+        ))}
+      </div>
+
+      <div className={layout.grid}>
         {items.map((item) => (
-          <ArchiveCard key={item.id} item={item} />
+          <ArchiveCard
+            key={item.id}
+            item={item}
+            density={density}
+            spacing={layout.spacing}
+          />
         ))}
       </div>
 

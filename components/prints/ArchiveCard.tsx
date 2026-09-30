@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { useConfigurator, type ConfiguratorSet } from "@/lib/store";
 import { fetchArchiveSet } from "@/lib/archiveSet";
 import SetLightbox, { type LightboxPanel } from "./SetLightbox";
-import type { ArchiveItem } from "./ArchiveGrid";
+import type { ArchiveDensity, ArchiveItem } from "./ArchiveGrid";
 
 const CONFIGURATOR_ROUTE = "/prints";
 
@@ -14,7 +14,18 @@ function thumb(url: string, width = 600): string {
   return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
 }
 
-export default function ArchiveCard({ item }: { item: ArchiveItem }) {
+export default function ArchiveCard({
+  item,
+  density = 0,
+  spacing = "mb-4",
+}: {
+  item: ArchiveItem;
+  /** Grid size from ArchiveGrid — smaller tiles get a lighter badge and thumbnail. */
+  density?: ArchiveDensity;
+  /** Bottom margin matching the grid's gap, so rows and columns space evenly. */
+  spacing?: string;
+}) {
+  const compact = density === 2;
   const router = useRouter();
   const { reset, setImage, selectSet, setStep } = useConfigurator();
   const [loading, setLoading] = useState(false);
@@ -119,20 +130,18 @@ export default function ArchiveCard({ item }: { item: ArchiveItem }) {
   };
 
   return (
-    <div className="mb-4 break-inside-avoid">
+    <div className={`${spacing} break-inside-avoid`}>
       <button
         onClick={() => select(0)}
         disabled={loading}
-        aria-label={
-          isSet ? `View this set of ${panels}` : "Frame this piece"
-        }
+        aria-label={isSet ? `View this set of ${panels}` : "Frame this piece"}
         aria-busy={loading}
         aria-haspopup={isSet ? "dialog" : undefined}
         className="group relative block w-full overflow-hidden bg-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         style={{ aspectRatio: `${item.width} / ${item.height}` }}
       >
         <img
-          src={thumb(item.imageUrl)}
+          src={thumb(item.imageUrl, compact ? 400 : 600)}
           alt=""
           loading="lazy"
           width={item.width}
@@ -143,8 +152,14 @@ export default function ArchiveCard({ item }: { item: ArchiveItem }) {
         {/* The tile shows one panel. Without this badge a customer clicks
             through expecting one piece and meets a price for several. */}
         {isSet && (
-          <span className="absolute top-2 left-2 bg-ink text-cream text-[10px] uppercase tracking-widest px-2 py-1">
-            Set of {panels}
+          <span
+            className={`absolute bg-ink text-cream uppercase ${
+              compact
+                ? "top-1 left-1 text-[8px] tracking-wider px-1 py-0.5"
+                : "top-2 left-2 text-[10px] tracking-widest px-2 py-1"
+            }`}
+          >
+            {compact ? `×${panels}` : `Set of ${panels}`}
           </span>
         )}
 
@@ -164,8 +179,12 @@ export default function ArchiveCard({ item }: { item: ArchiveItem }) {
           whether the set suits their wall. Kept small so the lead piece stays
           the tile, and so a set of four doesn't tower over its neighbours in
           the masonry column. */}
-      {isSet && feedPanels && feedPanels.length > 1 && (
-        <div className="flex gap-1.5 mt-1.5">
+      {/* Hidden at the smallest size, where the thumbnails would be too
+          small to tap; the badge still says it's a set. */}
+      {isSet && !compact && feedPanels && feedPanels.length > 1 && (
+        <div
+          className={`flex ${density === 1 ? "gap-1 mt-1" : "gap-1.5 mt-1.5"}`}
+        >
           {feedPanels.map((p, i) => (
             <button
               key={p.imageUrl}

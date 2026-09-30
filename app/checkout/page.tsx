@@ -19,7 +19,7 @@ import {
   OUTSIDE_LAGOS_GIG_NOTE,
   OUTSOURCED_NOTE,
 } from "@/data/distanceRates";
-import { quoteDeliveryByDistance } from "@/lib/deliveryCalc";
+import type { DistanceQuote } from "@/lib/deliveryCalc";
 import AddressAutocomplete, {
   type ChosenAddress,
 } from "@/components/checkout/AddressAutocomplete";
@@ -93,6 +93,54 @@ export default function CheckoutPage() {
     if (fromCookie) setCodeInput(decodeURIComponent(fromCookie));
   }, []);
 
+  // Delivery quote comes from the server, which knows each original's real
+  // dimensions (the cart doesn't). Re-asked whenever the address or cart changes.
+  const [quote, setQuote] = useState<DistanceQuote | null>(null);
+  const [quoting, setQuoting] = useState(false);
+  const [quoteError, setQuoteError] = useState(false);
+  const quoteItems = JSON.stringify(
+    items.map((i) => ({
+      originalId: i.type === "original" ? i.originalId : null,
+      sizeId: i.type === "print" ? i.sizeId : null,
+      quantity: i.quantity,
+      // The cart holds a set as one line, so panels are counted here.
+      setSize: i.type === "print" && i.set ? i.set.pieces.length : 1,
+      isSet: i.type === "print" && i.set !== null,
+    })),
+  );
+
+  useEffect(() => {
+    if (!destination) {
+      setQuote(null);
+      setQuoteError(false);
+      return;
+    }
+    const ctrl = new AbortController();
+    setQuoting(true);
+    setQuoteError(false);
+    fetch("/api/delivery/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        km: destination.km,
+        inLagos: destination.inLagos,
+        items: JSON.parse(quoteItems),
+      }),
+      signal: ctrl.signal,
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
+      .then((q: DistanceQuote) => setQuote(q))
+      .catch((e) => {
+        if ((e as Error).name === "AbortError") return;
+        setQuote(null);
+        setQuoteError(true);
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setQuoting(false);
+      });
+    return () => ctrl.abort();
+  }, [destination, quoteItems]);
+
   if (!mounted) return null;
 
   if (items.length === 0) {
@@ -118,26 +166,14 @@ export default function CheckoutPage() {
   const eligible = discountableSubtotal(items);
   const discount = applied ? discountFor(items, applied.discountPercent) : 0;
 
-  const quote = destination
-    ? quoteDeliveryByDistance(
-        destination,
-        items.map((i) => ({
-          sizeId: i.type === "print" ? i.sizeId : null,
-          quantity: i.quantity,
-          // The cart holds a set as one line, so panels are counted here.
-          setSize: i.type === "print" && i.set ? i.set.pieces.length : 1,
-          isSet: i.type === "print" && i.set !== null,
-        })),
-      )
-    : null;
-
   const deliveryZone =
     destination?.inLagos === false ? OUTSIDE_LAGOS_ID : LAGOS_DISTANCE_ZONE_ID;
   const deliveryZoneLabel = destination?.label;
 
   const shipping = quote?.fee ?? 0;
   const total = subtotal - discount + shipping;
-  const awaitingZone = !destination;
+  // Pay stays disabled until there's an address AND a fresh quote for it.
+  const awaitingZone = !destination || !quote || quoting;
 
   const chooseDestination = (a: ChosenAddress | null) => {
     setDestination(a);
@@ -321,7 +357,7 @@ export default function CheckoutPage() {
               <div>
                 <AddressAutocomplete onChange={chooseDestination} />
 
-                {quote && !quote.quoteOnRequest && (
+                {!quoting && quote && !quote.quoteOnRequest && (
                   <>
                     <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
                       Delivered by our van, {quote.km} km from our studio.
@@ -335,7 +371,20 @@ export default function CheckoutPage() {
                   </>
                 )}
 
-                {quote?.quoteOnRequest && (
+                {quoting && (
+                  <p className="text-[13px] text-ink-soft mt-3">
+                    Calculating delivery…
+                  </p>
+                )}
+
+                {quoteError && !quoting && (
+                  <p className="text-[13px] text-red-600 mt-3">
+                    We couldn&apos;t calculate delivery just now. Please pick
+                    your address again, or message us on WhatsApp.
+                  </p>
+                )}
+
+                {!quoting && quote?.quoteOnRequest && (
                   <div className="mt-4 border-l-2 border-ink bg-paper px-5 py-4">
                     <p className="text-[13px] text-ink leading-relaxed">
                       {byHandMessage}
@@ -532,7 +581,9 @@ export default function CheckoutPage() {
                 {submitting
                   ? "Processing..."
                   : awaitingZone
-                    ? "Enter a delivery address"
+                    ? destination
+                      ? "Calculating delivery…"
+                      : "Enter a delivery address"
                     : `Pay ${formatNaira(total)}`}
               </button>
               {error && (
@@ -641,7 +692,9 @@ export default function CheckoutPage() {
                   {submitting
                     ? "Processing..."
                     : awaitingZone
-                      ? "Enter a delivery address"
+                      ? destination
+                        ? "Calculating delivery…"
+                        : "Enter a delivery address"
                       : `Pay ${formatNaira(total)}`}
                 </button>
                 {error && (

@@ -3,11 +3,6 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
-// Each slide carries its own focal point per breakpoint. These are wide
-// landscape shots, so on a tall phone `object-cover` crops the sides hard —
-// the mobile focal point keeps the key artwork in frame, and desktop (light
-// crop) resets to centered. Class strings are written out in full so
-// Tailwind's JIT can see them.
 const HERO_IMAGES = [
   {
     src: "/97.jpg",
@@ -64,7 +59,7 @@ export default function HeroSlideshow() {
             src={img.src}
             alt={img.alt}
             fill
-            priority={i === 0}
+            priority // Changed from priority={i === 0} to apply to all hero slides
             sizes="100vw"
             quality={90}
             className={`object-cover ${img.position} brightness-[0.70] absolute inset-0 transition-opacity duration-[2000ms] ease-in-out ${visibilityClasses}`}

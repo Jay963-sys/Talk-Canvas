@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { HOUSE_ARTIST_NAME, HOUSE_ARTIST_SLUG } from "@/lib/constants";
 import { getFeaturedArtists } from "@/lib/db/queries/artists";
 import Testimonials from "@/components/Testimonials";
 import ArtistCard from "@/components/artists/ArtistCard";
@@ -31,7 +32,7 @@ export default async function ArtistsPage() {
             The People
           </p>
           <h1 className="display text-4xl md:text-5xl lg:text-6xl font-normal leading-tight mb-6">
-            Featured Artists
+            Popular Artists
           </h1>
 
           <p className="text-[17px] text-ink-soft leading-relaxed max-w-xl mx-auto mt-2">
@@ -43,9 +44,7 @@ export default async function ArtistsPage() {
 
         {artists.length === 0 ? (
           <div className="text-center py-24">
-            <p className="text-ink-soft">
-              No featured artists yet — check back soon.
-            </p>
+            <p className="text-ink-soft">No artists yet — check back soon.</p>
           </div>
         ) : (
           <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
@@ -54,6 +53,27 @@ export default async function ArtistsPage() {
             ))}
           </section>
         )}
+
+        {/* The gallery's own collection sits apart from the artists it represents. */}
+        <Link
+          href={`/artists/${HOUSE_ARTIST_SLUG}`}
+          className="group mt-20 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-y border-line py-10"
+        >
+          <div>
+            <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-2">
+              The house collection
+            </p>
+            <h2 className="display text-3xl md:text-4xl font-normal">
+              {HOUSE_ARTIST_NAME} Originals
+            </h2>
+            <p className="text-[15px] text-ink-soft mt-2 max-w-lg">
+              Our own designs, painted by hand to order.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft group-hover:text-ink transition-colors">
+            View the collection <ArrowUpRight size={14} />
+          </span>
+        </Link>
 
         <div className="mt-32">
           <Testimonials title="From collectors" />

@@ -6,7 +6,8 @@ import {
   type NewArtist,
   type Original,
 } from "../schema";
-import { eq, and, asc, desc } from "drizzle-orm";
+import { eq, ne, and, asc, desc } from "drizzle-orm";
+import { HOUSE_ARTIST_SLUG } from "@/lib/constants";
 
 // ── PUBLIC QUERIES (visible only) ────────────────────────────────
 
@@ -22,13 +23,21 @@ export async function getAllArtists(): Promise<Artist[]> {
 }
 
 /**
- * Curated "Popular Artists" surface — visible AND featured.
+ * Curated "Popular Artists" surface — visible AND featured, and never the
+ * house artist. Talk Canvas is the gallery's own collection, a category of
+ * its own, not one of the artists it represents.
  */
 export async function getFeaturedArtists(): Promise<Artist[]> {
   return await db
     .select()
     .from(artists)
-    .where(and(eq(artists.isVisible, true), eq(artists.featured, true)))
+    .where(
+      and(
+        eq(artists.isVisible, true),
+        eq(artists.featured, true),
+        ne(artists.slug, HOUSE_ARTIST_SLUG),
+      ),
+    )
     .orderBy(asc(artists.displayOrder), asc(artists.name));
 }
 

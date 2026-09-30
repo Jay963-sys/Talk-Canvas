@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     "172.16.78.177",
   ],
   images: {
+    qualities: [75, 90],
     remotePatterns: [
       {
         protocol: "https",
