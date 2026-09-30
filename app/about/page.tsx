@@ -114,11 +114,11 @@ export default function AboutPage() {
                 <span>info@talkcanvas.com</span>
               </a>
               <a
-                href="tel:+2347040969082"
+                href="tel: +2347127099936"
                 className="flex flex-col items-center gap-2 hover:text-ink text-ink-soft transition-colors"
               >
                 <Phone size={20} strokeWidth={1.5} className="text-ink" />
-                <span>+234 704 096 9082</span>
+                <span>+234 712 709 9936</span>
               </a>
               <a
                 href="https://wa.me/2347040969082"

@@ -230,7 +230,7 @@ export default function Footer() {
             </a>
             {/* Swapped text label for standard SVG icon to match Instagram */}
             <a
-              href="https://wa.me/2349155328133"
+              href="https://wa.me/2347040969082"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="WhatsApp"
