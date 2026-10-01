@@ -7,7 +7,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { SHIPPING_CONFIG } from "@/data/shipping";
-import { CONTACT } from "@/data/contact";
+import { CONTACT, SHOWROOM_OPEN } from "@/data/contact";
 import ContactForm from "@/components/contact/ContactForm";
 
 function Instagram({
@@ -34,10 +34,13 @@ function Instagram({
   );
 }
 
+const INTRO = SHOWROOM_OPEN
+  ? "Visit our showroom, send us a message, or reach out on WhatsApp. We'd love to hear from you."
+  : "Send us a message or reach out on WhatsApp. We'd love to hear from you.";
+
 export const metadata = {
   title: "Contact — Talk Canvas Gallery",
-  description:
-    "Visit our showroom, send us a message, or reach out on WhatsApp. We'd love to hear from you.",
+  description: INTRO,
 };
 
 export default function ContactPage() {
@@ -56,8 +59,7 @@ export default function ContactPage() {
           Get in Touch
         </h1>
         <p className="text-[15px] text-ink-soft max-w-xl mx-auto leading-relaxed">
-          Visit our showroom, send us a message, or reach out on WhatsApp. We'd
-          love to hear from you.
+          {INTRO}
         </p>
       </div>
 
@@ -66,47 +68,49 @@ export default function ContactPage() {
         <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-start">
           {/* Info Column */}
           <div className="flex flex-col gap-12">
-            {/* Visit Section */}
-            <section>
-              <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
-                Visit
-              </h2>
-              <div className="flex flex-col gap-5 text-[15px] text-ink-soft">
-                <div className="flex items-start gap-3">
-                  <MapPin
-                    size={20}
-                    strokeWidth={1.5}
-                    className="text-ink shrink-0"
-                  />
-                  <div>
-                    <p className="whitespace-pre-line leading-relaxed text-ink">
-                      {SHIPPING_CONFIG.pickup.address}
-                    </p>
-                    <a
-                      href={mapsLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-widest text-ink-soft hover:text-ink mt-3 transition-colors font-medium"
-                    >
-                      Open in Maps
-                      <ExternalLink size={14} strokeWidth={1.5} />
-                    </a>
+            {/* Visit Section — hidden while the showroom is closed (SHOWROOM_OPEN) */}
+            {SHOWROOM_OPEN && (
+              <section>
+                <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
+                  Visit
+                </h2>
+                <div className="flex flex-col gap-5 text-[15px] text-ink-soft">
+                  <div className="flex items-start gap-3">
+                    <MapPin
+                      size={20}
+                      strokeWidth={1.5}
+                      className="text-ink shrink-0"
+                    />
+                    <div>
+                      <p className="whitespace-pre-line leading-relaxed text-ink">
+                        {SHIPPING_CONFIG.pickup.address}
+                      </p>
+                      <a
+                        href={mapsLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-widest text-ink-soft hover:text-ink mt-3 transition-colors font-medium"
+                      >
+                        Open in Maps
+                        <ExternalLink size={14} strokeWidth={1.5} />
+                      </a>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-start gap-3 border-t border-line/50 pt-5 mt-1">
-                  <Clock
-                    size={20}
-                    strokeWidth={1.5}
-                    className="text-ink shrink-0"
-                  />
-                  <div>
-                    <p className="text-ink">{SHIPPING_CONFIG.pickup.days}</p>
-                    <p>{SHIPPING_CONFIG.pickup.hours}</p>
+                  <div className="flex items-start gap-3 border-t border-line/50 pt-5 mt-1">
+                    <Clock
+                      size={20}
+                      strokeWidth={1.5}
+                      className="text-ink shrink-0"
+                    />
+                    <div>
+                      <p className="text-ink">{SHIPPING_CONFIG.pickup.days}</p>
+                      <p>{SHIPPING_CONFIG.pickup.hours}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            )}
 
             {/* Reach Us Section */}
             <section>
@@ -188,19 +192,22 @@ export default function ContactPage() {
         </div>
       </div>
 
-      {/* Map - Grayscale filter added for a premium aesthetic */}
-      <section className="border-t border-line grayscale hover:grayscale-0 transition-all duration-700">
-        <iframe
-          src={mapsEmbed}
-          width="100%"
-          height="450"
-          style={{ border: 0, display: "block" }}
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-          title="Talk Canvas Gallery showroom location"
-        />
-      </section>
+      {/* Map - Grayscale filter added for a premium aesthetic. Hidden while
+          the showroom is closed. */}
+      {SHOWROOM_OPEN && (
+        <section className="border-t border-line grayscale hover:grayscale-0 transition-all duration-700">
+          <iframe
+            src={mapsEmbed}
+            width="100%"
+            height="450"
+            style={{ border: 0, display: "block" }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Talk Canvas Gallery showroom location"
+          />
+        </section>
+      )}
     </div>
   );
 }

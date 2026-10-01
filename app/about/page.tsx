@@ -6,6 +6,7 @@ import {
   Clock,
   ExternalLink,
 } from "lucide-react";
+import { SHOWROOM_OPEN } from "@/data/contact";
 
 function Instagram({
   size = 24,
@@ -75,34 +76,42 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* Gallery Info - Symmetric 3-Column Grid */}
-        <div className="grid md:grid-cols-3 gap-12 md:gap-8 border-t border-line pt-16">
-          <InfoBlock label="Visit Us">
-            <div className="flex flex-col items-center text-center gap-3">
-              <MapPin size={20} strokeWidth={1.5} className="text-ink mb-2" />
-              <p>
-                5, Abeke Animashaun Street,
-                <br />
-                Lekki Phase 1, opp Ichie Kris
-                <br />
-                Onyekwuje Street,
-                <br />
-                Lagos, Nigeria 105102
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center gap-2 mt-4 pt-4 border-t border-line/50 w-full">
-              <Clock
-                size={16}
-                strokeWidth={1.5}
-                className="text-ink-soft mb-1"
-              />
-              <p>
-                Mon — Sat
-                <br />
-                9:00 AM — 5:00 PM
-              </p>
-            </div>
-          </InfoBlock>
+        {/* Gallery Info. "Visit Us" only shows while SHOWROOM_OPEN is true. */}
+        <div
+          className={`grid gap-12 md:gap-8 border-t border-line pt-16 ${
+            SHOWROOM_OPEN
+              ? "md:grid-cols-3"
+              : "md:grid-cols-2 max-w-2xl mx-auto"
+          }`}
+        >
+          {SHOWROOM_OPEN && (
+            <InfoBlock label="Visit Us">
+              <div className="flex flex-col items-center text-center gap-3">
+                <MapPin size={20} strokeWidth={1.5} className="text-ink mb-2" />
+                <p>
+                  5, Abeke Animashaun Street,
+                  <br />
+                  Lekki Phase 1, opp Ichie Kris
+                  <br />
+                  Onyekwuje Street,
+                  <br />
+                  Lagos, Nigeria 105102
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center gap-2 mt-4 pt-4 border-t border-line/50 w-full">
+                <Clock
+                  size={16}
+                  strokeWidth={1.5}
+                  className="text-ink-soft mb-1"
+                />
+                <p>
+                  Mon — Sat
+                  <br />
+                  9:00 AM — 5:00 PM
+                </p>
+              </div>
+            </InfoBlock>
+          )}
 
           <InfoBlock label="Contact">
             <div className="flex flex-col gap-6 w-full items-center">

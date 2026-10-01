@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Configurator from "@/components/prints/Configurator";
 import RoomGallery from "@/components/prints/RoomGallery";
+import InstagramHint from "@/components/prints/InstagramHint";
 import Testimonials from "@/components/Testimonials";
 import { getArchivePage } from "@/lib/db/queries/archivePrints";
 
@@ -67,6 +68,9 @@ export default async function PrintsPage() {
       </section>
 
       {/* Main Configurator Component */}
+      <div className="max-w-7xl mx-auto px-6 md:px-10 -mt-6 mb-10">
+        <InstagramHint className="justify-center text-center" />
+      </div>
       <div className="mb-24">
         <Configurator />
       </div>
@@ -75,9 +79,10 @@ export default async function PrintsPage() {
       <section className="max-w-7xl mx-auto px-6 md:px-10 pb-16">
         <div className="bg-paper rounded-2xl p-8 md:p-12 text-center">
           <h2 className="display text-3xl mb-4">Don't have a design?</h2>
-          <p className="text-[15px] text-ink-soft mb-8">
+          <p className="text-[15px] text-ink-soft mb-4">
             Browse our curated archive of ready-to-frame prints.
           </p>
+          <InstagramHint className="justify-center text-center max-w-md mx-auto mb-8" />
           <Link
             href="/prints/archive"
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
@@ -132,7 +137,7 @@ export default async function PrintsPage() {
           </Link>
         </div>
       </section>
-      
+
       {/* See it in your space */}
       <div className="py-10">
         <RoomGallery />

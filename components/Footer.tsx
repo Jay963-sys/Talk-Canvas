@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight } from "lucide-react";
+import { SHOWROOM_OPEN } from "@/data/contact";
 
 function Instagram({
   size = 24,
@@ -185,22 +186,34 @@ export default function Footer() {
               Contact
             </h3>
             <address className="not-italic flex flex-col gap-3 text-[13px] text-ink-soft">
-              <p>
-                <strong className="font-medium text-ink block mb-1">
-                  Lagos Gallery
-                </strong>
-                5, Abeke Animashaun Street,
-                <br />
-                Lekki Phase 1,
-                <br />
-                Lagos, Nigeria 105102
-              </p>
+              {/* Showroom address — only while SHOWROOM_OPEN is true. */}
+              {SHOWROOM_OPEN && (
+                <p>
+                  <strong className="font-medium text-ink block mb-1">
+                    Lagos Gallery
+                  </strong>
+                  5, Abeke Animashaun Street,
+                  <br />
+                  Lekki Phase 1,
+                  <br />
+                  Lagos, Nigeria 105102
+                </p>
+              )}
               <a
                 href="mailto:info@talkcanvas.com"
-                className="hover:text-ink transition-colors w-fit mt-2"
+                className="hover:text-ink transition-colors w-fit"
               >
                 info@talkcanvas.com
               </a>
+              <a
+                href="https://wa.me/2347040969082"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-ink transition-colors w-fit"
+              >
+                WhatsApp us
+              </a>
+              {!SHOWROOM_OPEN && <p>Delivering across Nigeria</p>}
             </address>
           </div>
         </div>

@@ -7,8 +7,7 @@ import { uploadToCloudinary, validateFile } from "@/lib/upload";
 import { downscaleImage } from "@/lib/image";
 import { fetchArchiveSet } from "@/lib/archiveSet";
 import ArchivePickerModal, { ArchiveItem } from "./ArchivePickerModal";
-
-
+import InstagramHint from "./InstagramHint";
 
 export default function StepUpload() {
   const { image, set, setImage, selectSet } = useConfigurator();
@@ -93,10 +92,11 @@ export default function StepUpload() {
   return (
     <div className="fade-in">
       <h2 className="display text-3xl font-normal mb-3">Upload your design</h2>
-      <p className="text-[14px] text-ink-soft mb-8 max-w-xl">
+      <p className="text-[14px] text-ink-soft mb-3 max-w-xl">
         JPG or PNG, up to 25MB. For the sharpest print, upload the
         highest-resolution file you have — we optimize it automatically.
       </p>
+      <InstagramHint className="mb-8 max-w-xl" />
 
       <div
         onDragOver={(e) => {
@@ -209,8 +209,7 @@ export default function StepUpload() {
       {set && (
         <p className="mt-4 text-[13px] text-ink-soft leading-relaxed">
           This design comes as a set of {set.pieces.length}. Every piece takes
-          the same frame and size, and they&apos;re sold together — delivery is
-          arranged separately and we&apos;ll quote it after you order.
+          the same frame and size, and they&apos;re sold together.
         </p>
       )}
 

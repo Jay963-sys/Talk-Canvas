@@ -4,6 +4,13 @@
  * may or may not be the same address).
  */
 
+/**
+ * Showroom switch. While false, the showroom address, opening hours and map
+ * are hidden everywhere on the site (Contact, About, Footer). The content is
+ * all still in the code — flip this to true when the showroom reopens.
+ */
+export const SHOWROOM_OPEN = false;
+
 export const CONTACT = {
   // TODO: swap with real email
   email: "info@talkcanvas.com",
