@@ -16,7 +16,7 @@ export const CONTACT = {
   email: "info@talkcanvas.com",
 
   // TODO: swap with real phone number
-  phone: "+234 704 096 9082",
+  phone: "+234 712 709 9936",
 
   whatsapp: {
     // For wa.me URL — country code + number, NO + or spaces (e.g. "2348012345678")
