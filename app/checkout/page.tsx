@@ -360,7 +360,8 @@ export default function CheckoutPage() {
                 {!quoting && quote && !quote.quoteOnRequest && (
                   <>
                     <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
-                      Delivered by our van, {quote.km} km from our studio.
+                      Delivered by our van, {quote.km} km from our Lagos
+                      mainland production site.
                       {quote.surcharge > 0 &&
                         ` Includes ${formatNaira(quote.surcharge)} for orders of more than ${BULK_THRESHOLD} pieces.`}
                     </p>
