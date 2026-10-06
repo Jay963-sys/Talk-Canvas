@@ -170,6 +170,10 @@ export const orders = pgTable("orders", {
     .default("unpaid")
     .notNull(),
   paymentReference: varchar("payment_reference", { length: 100 }),
+  // Naira actually received so far. paymentStatus is derived from this vs
+  // `total`: a delivery quote added after payment raises the total, which
+  // leaves the order part-paid until the balance is recorded.
+  amountPaid: integer("amount_paid").default(0).notNull(),
   fbp: text("fbp"),
   fbc: text("fbc"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

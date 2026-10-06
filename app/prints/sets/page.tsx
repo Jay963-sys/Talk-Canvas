@@ -114,8 +114,7 @@ export default async function SetsPage({
         <div className="bg-paper rounded-2xl p-6 md:p-8 mb-16 max-w-3xl mx-auto text-center">
           <p className="text-[14px] text-ink-soft leading-relaxed">
             Sets are printed on the same archival paper as every other piece,
-            and framed to match across the group. Delivery is arranged
-            individually — we&apos;ll quote it after you order.
+            and framed to match across the group.
           </p>
         </div>
 

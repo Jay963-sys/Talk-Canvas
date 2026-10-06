@@ -12,6 +12,7 @@ import OrderConfirmation from "@/lib/email/templates/OrderConfirmation";
 import OrderNotification from "@/lib/email/templates/OrderNotification";
 import { SHIPPING_CONFIG } from "@/data/shipping";
 import { getZone, OUTSIDE_LAGOS_ID } from "@/data/delivery";
+import { LAGOS_DISTANCE_ZONE_ID, TIER_LABELS } from "@/data/distanceRates";
 import { VEHICLE_LABELS } from "@/lib/deliveryCalc";
 import { sendPurchase } from "@/lib/meta/capi";
 
@@ -111,12 +112,17 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
   // by hand — an outside-Lagos address, and any order containing a set. Surface
   // it loudly either way or it gets shipped for free.
   const deliveryQuotePending = order.deliveryQuotePending ?? false;
+  // Old orders store an LGA zone and a vehicle; new ones a distance zone and a
+  // size tier. Handle both so neither prints blank in the emails.
   const deliveryZoneLabel =
     order.deliveryZone === OUTSIDE_LAGOS_ID
-      ? "Outside Lagos"
-      : (getZone(order.deliveryZone ?? "")?.label ?? null);
+      ? "Outside Lagos (GIG Logistics)"
+      : order.deliveryZone === LAGOS_DISTANCE_ZONE_ID
+        ? "Lagos, priced by distance"
+        : (getZone(order.deliveryZone ?? "")?.label ?? null);
   const deliveryVehicleLabel = order.deliveryVehicle
-    ? (VEHICLE_LABELS[order.deliveryVehicle as keyof typeof VEHICLE_LABELS] ??
+    ? (TIER_LABELS[order.deliveryVehicle as keyof typeof TIER_LABELS] ??
+      VEHICLE_LABELS[order.deliveryVehicle as keyof typeof VEHICLE_LABELS] ??
       null)
     : null;
 
@@ -205,7 +211,10 @@ export async function fulfillPaidOrder(
     return "amount_mismatch";
   }
 
-  const transitioned = await markOrderPaidByReference(reference);
+  const transitioned = await markOrderPaidByReference(
+    reference,
+    paidAmountKobo / 100,
+  );
   if (!transitioned) return "skipped"; // already paid
 
   await fulfillOrder(order);

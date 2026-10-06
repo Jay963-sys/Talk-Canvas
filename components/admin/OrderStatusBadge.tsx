@@ -3,6 +3,8 @@ import { STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 const STATUS_STYLES: Record<OrderStatus, string> = {
   pending: "bg-paper text-ink-soft border-line",
   in_production: "bg-accent/10 text-accent border-accent/40",
+  ready_for_delivery: "bg-amber-50 text-amber-800 border-amber-300",
+  in_transit: "bg-blue-50 text-blue-700 border-blue-300",
   completed: "bg-green-50 text-green-700 border-green-300",
   cancelled: "bg-red-50 text-red-700 border-red-300",
 };

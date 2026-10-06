@@ -16,7 +16,7 @@ import { OUTSIDE_LAGOS_ID } from "@/data/delivery";
 import {
   BULK_THRESHOLD,
   LAGOS_DISTANCE_ZONE_ID,
-  OUTSIDE_LAGOS_GIG_NOTE,
+  EXTRA_LARGE_NOTE,
   OUTSOURCED_NOTE,
 } from "@/data/distanceRates";
 import type { DistanceQuote } from "@/lib/deliveryCalc";
@@ -189,8 +189,8 @@ export default function CheckoutPage() {
   };
 
   const byHandMessage =
-    quote?.reason === "outside-lagos"
-      ? OUTSIDE_LAGOS_GIG_NOTE
+    quote?.reason === "extra-large"
+      ? EXTRA_LARGE_NOTE
       : quote?.reason === "outsourced"
         ? OUTSOURCED_NOTE
         : "We couldn't price delivery to this address automatically. We'll confirm the cost with you after you order — nothing is charged for delivery now.";
@@ -360,10 +360,19 @@ export default function CheckoutPage() {
                 {!quoting && quote && !quote.quoteOnRequest && (
                   <>
                     <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
-                      Delivered by our van, {quote.km} km from our Lagos
-                      mainland production site.
-                      {quote.surcharge > 0 &&
-                        ` Includes ${formatNaira(quote.surcharge)} for orders of more than ${BULK_THRESHOLD} pieces.`}
+                      {quote.scope === "nationwide" ? (
+                        <>
+                          Delivered by GIG Logistics.
+                          {quote.additional > 0 &&
+                            ` Includes ${formatNaira(quote.additional)} for the other ${quote.pieces - 1} ${quote.pieces - 1 === 1 ? "frame" : "frames"} in your order.`}
+                        </>
+                      ) : (
+                        <>
+                          Delivered by our van, {quote.km} km from our studio.
+                          {quote.surcharge > 0 &&
+                            ` Includes ${formatNaira(quote.surcharge)} for orders of more than ${BULK_THRESHOLD} pieces.`}
+                        </>
+                      )}
                     </p>
                     <p className="text-[12px] text-ink-soft mt-2 leading-relaxed">
                       If your order changes before dispatch, we&apos;ll contact

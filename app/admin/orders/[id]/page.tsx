@@ -5,6 +5,8 @@ import { getOrderById } from "@/lib/db/queries/orders";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 import OrderStatusSelect from "@/components/admin/OrderStatusSelect";
 import DeliveryQuoteForm from "@/components/admin/DeliveryQuoteForm";
+import RecordPaymentForm from "@/components/admin/RecordPaymentForm";
+import { PAYMENT_LABELS, type PaymentStatus } from "@/lib/constants";
 import { getZone, OUTSIDE_LAGOS_ID } from "@/data/delivery";
 import { LAGOS_DISTANCE_ZONE_ID, TIER_LABELS } from "@/data/distanceRates";
 import { VEHICLE_LABELS } from "@/lib/deliveryCalc";
@@ -37,7 +39,7 @@ export default async function OrderDetailPage({
   // Old orders carry an LGA zone id; new ones are priced by distance.
   const zoneLabel =
     order.deliveryZone === OUTSIDE_LAGOS_ID
-      ? "Outside Lagos"
+      ? "Outside Lagos (GIG Logistics)"
       : order.deliveryZone === LAGOS_DISTANCE_ZONE_ID
         ? "Lagos, priced by distance"
         : (getZone(order.deliveryZone ?? "")?.label ?? null);
@@ -62,6 +64,11 @@ export default async function OrderDetailPage({
           shopOrigin ? `&origin=${encodeURIComponent(shopOrigin)}` : ""
         }&destination=${encodeURIComponent(destinationText)}&travelmode=driving`
       : null;
+  const paymentKey = (
+    order.paymentStatus in PAYMENT_LABELS ? order.paymentStatus : "unpaid"
+  ) as PaymentStatus;
+  const balanceDue = Math.max(0, order.total - order.amountPaid);
+
   // New orders store a size tier; older ones store a vehicle.
   const vehicleLabel = order.deliveryVehicle
     ? (TIER_LABELS[order.deliveryVehicle as keyof typeof TIER_LABELS] ??
@@ -101,8 +108,16 @@ export default async function OrderDetailPage({
           orderId={order.id}
           subtotal={order.subtotal}
           discountAmount={order.discountAmount}
+          amountPaid={order.amountPaid}
         />
       )}
+
+      {/* The total grew after payment (delivery quote), or a balance is owed. */}
+      {!order.deliveryQuotePending &&
+        balanceDue > 0 &&
+        order.amountPaid > 0 && (
+          <RecordPaymentForm orderId={order.id} balance={balanceDue} />
+        )}
 
       <div className="grid md:grid-cols-3 gap-10">
         <div className="md:col-span-2 space-y-10">
@@ -219,6 +234,19 @@ export default async function OrderDetailPage({
                 {formatNaira(order.total)}
               </span>
             </div>
+
+            {paymentKey === "part_paid" && (
+              <>
+                <div className="flex justify-between text-sm pt-2">
+                  <span className="text-muted">Paid so far</span>
+                  <span>{formatNaira(order.amountPaid)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-medium text-amber-700">
+                  <span>Balance due</span>
+                  <span>{formatNaira(balanceDue)}</span>
+                </div>
+              </>
+            )}
           </section>
         </div>
 
@@ -237,14 +265,16 @@ export default async function OrderDetailPage({
               Payment
             </h2>
             <div className="flex items-center gap-2">
-              {order.paymentStatus === "paid" ? (
-                <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-              ) : (
-                <span className="inline-block w-2 h-2 rounded-full bg-red-500"></span>
-              )}
-              <span className="text-sm capitalize">
-                {order.paymentStatus || "Unpaid"}
-              </span>
+              <span
+                className={`inline-block w-2 h-2 rounded-full ${
+                  paymentKey === "paid"
+                    ? "bg-green-500"
+                    : paymentKey === "part_paid"
+                      ? "bg-amber-500"
+                      : "bg-red-500"
+                }`}
+              ></span>
+              <span className="text-sm">{PAYMENT_LABELS[paymentKey]}</span>
             </div>
             {order.paymentReference && (
               <p className="text-xs text-muted mt-2 font-mono break-all">

@@ -2,40 +2,33 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Truck } from "lucide-react";
+import { Banknote } from "lucide-react";
 
-export default function DeliveryQuoteForm({
+/** Staff record a balance the customer has paid (e.g. the delivery fee by transfer). */
+export default function RecordPaymentForm({
   orderId,
-  subtotal,
-  discountAmount,
-  amountPaid = 0,
+  balance,
 }: {
   orderId: number;
-  subtotal: number;
-  discountAmount: number;
-  /** Already received, so the form can say what balance the quote leaves. */
-  amountPaid?: number;
+  balance: number;
 }) {
   const router = useRouter();
-  const [fee, setFee] = useState("");
+  const [amount, setAmount] = useState(String(balance));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const parsed = Number(fee);
-  const valid = Number.isFinite(parsed) && parsed >= 0 && fee !== "";
-  const newTotal = valid
-    ? subtotal - discountAmount + Math.round(parsed)
-    : null;
+  const parsed = Math.round(Number(amount));
+  const valid = Number.isFinite(parsed) && parsed > 0 && parsed <= balance;
 
   const save = async () => {
     if (!valid) return;
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}/delivery-quote`, {
-        method: "PATCH",
+      const res = await fetch(`/api/admin/orders/${orderId}/payment`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shipping: Math.round(parsed) }),
+        body: JSON.stringify({ amount: parsed }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -44,6 +37,7 @@ export default function DeliveryQuoteForm({
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
       setSaving(false);
     }
   };
@@ -51,31 +45,33 @@ export default function DeliveryQuoteForm({
   return (
     <div className="border-l-2 border-amber-500 bg-amber-50 px-5 py-4 mb-8">
       <div className="flex items-start gap-3 mb-3">
-        <Truck size={18} strokeWidth={1.5} className="text-amber-700 mt-0.5" />
+        <Banknote
+          size={18}
+          strokeWidth={1.5}
+          className="text-amber-700 mt-0.5"
+        />
         <div>
           <p className="text-sm font-medium text-amber-900">
-            Delivery quote needed
+            Balance due: ₦{balance.toLocaleString("en-NG")}
           </p>
           <p className="text-[13px] text-amber-800 mt-1 leading-relaxed">
-            Nothing was charged for delivery on this order (it has an
-            extra-large piece, or one too big for our van). Agree a fee with the
-            customer, then record it here — the order total updates to match.
+            Once the customer has paid the balance (for example the delivery fee
+            by transfer), record it here and the order shows as paid.
           </p>
         </div>
       </div>
-
       <div className="flex items-end gap-3 flex-wrap">
         <div>
           <label className="block text-xs text-amber-900 mb-1">
-            Delivery fee (₦)
+            Amount received (₦)
           </label>
           <input
             type="number"
-            min="0"
+            min="1"
+            max={balance}
             step="500"
-            value={fee}
-            onChange={(e) => setFee(e.target.value)}
-            placeholder="18000"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             className="w-40 px-3 py-2 border border-amber-300 bg-white text-ink outline-none focus:border-amber-600"
           />
         </div>
@@ -85,23 +81,9 @@ export default function DeliveryQuoteForm({
           disabled={!valid || saving}
           className="px-5 py-2 bg-amber-700 text-white text-xs uppercase tracking-widest hover:bg-amber-800 transition-colors disabled:opacity-50"
         >
-          {saving ? "Saving…" : "Save quote"}
+          {saving ? "Saving…" : "Record payment"}
         </button>
-        {newTotal !== null && (
-          <span className="text-[13px] text-amber-900 pb-2">
-            New total: ₦{newTotal.toLocaleString("en-NG")}
-          </span>
-        )}
       </div>
-
-      {newTotal !== null && amountPaid > 0 && newTotal > amountPaid && (
-        <p className="text-[13px] text-amber-900 mt-3">
-          They&apos;ve already paid ₦{amountPaid.toLocaleString("en-NG")}, so
-          this order will show as <strong>part paid</strong> with ₦
-          {(newTotal - amountPaid).toLocaleString("en-NG")} still to collect.
-        </p>
-      )}
-
       {error && <p className="text-xs text-red-700 mt-2">{error}</p>}
     </div>
   );

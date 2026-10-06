@@ -390,7 +390,7 @@ export async function POST(req: NextRequest) {
       computedShipping = quote.fee;
       deliveryZone =
         dest.inLagos === false ? OUTSIDE_LAGOS_ID : LAGOS_DISTANCE_ZONE_ID;
-      deliveryVehicle = quote.tier; // "small" | "large" | "outsourced"
+      deliveryVehicle = quote.tier; // "small" | "large" | "outsourced" | "gig_<tier>"
       deliveryQuotePending = quote.quoteOnRequest;
     }
 

@@ -7,8 +7,8 @@ import {
   type NewOrder,
   type NewOrderItem,
 } from "../schema";
-import { eq, desc, inArray, and, ne, gte, lte } from "drizzle-orm";
-import { type OrderStatus } from "../../constants";
+import { eq, desc, inArray, and, gte, lte } from "drizzle-orm";
+import { paymentStatusFor, type OrderStatus } from "../../constants";
 
 /**
  * For the list view — gets all orders along with their items.
@@ -133,22 +133,54 @@ export async function getOrderByReference(
 }
 
 /**
- * Atomically flip to paid only if not already paid. Returns the order if
- * THIS call made the transition, else undefined — the idempotency guard so
- * concurrent webhook + callback fulfill exactly once.
+ * Record the first (Paystack) payment — only if nothing has been recorded yet.
+ * Returns the order if THIS call made the transition, else undefined — the
+ * idempotency guard so concurrent webhook + callback fulfill exactly once.
+ * `amountNaira` is the verified amount Paystack took, which the caller has
+ * already checked equals the order total at that moment.
  */
 export async function markOrderPaidByReference(
   reference: string,
+  amountNaira: number,
 ): Promise<Order | undefined> {
   const [updated] = await db
     .update(orders)
-    .set({ paymentStatus: "paid", updatedAt: new Date() })
+    .set({
+      amountPaid: amountNaira,
+      paymentStatus: "paid",
+      updatedAt: new Date(),
+    })
     .where(
-      and(
-        eq(orders.paymentReference, reference),
-        ne(orders.paymentStatus, "paid"),
-      ),
+      and(eq(orders.paymentReference, reference), eq(orders.amountPaid, 0)),
     )
+    .returning();
+  return updated;
+}
+
+/**
+ * Add a later payment (e.g. the delivery fee paid by transfer) and re-derive
+ * the payment status. Returns undefined if the order doesn't exist.
+ */
+export async function recordBalancePayment(
+  id: number,
+  amountNaira: number,
+): Promise<Order | undefined> {
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.id, id))
+    .limit(1);
+  if (!order) return undefined;
+
+  const newPaid = order.amountPaid + amountNaira;
+  const [updated] = await db
+    .update(orders)
+    .set({
+      amountPaid: newPaid,
+      paymentStatus: paymentStatusFor(newPaid, order.total),
+      updatedAt: new Date(),
+    })
+    .where(eq(orders.id, id))
     .returning();
   return updated;
 }
@@ -158,19 +190,23 @@ export async function getAllOrders(): Promise<Order[]> {
 }
 
 /**
- * Record the delivery fee the gallery agreed with an outside-Lagos customer.
- * Clears the pending flag so the order stops showing as unquoted.
+ * Record the delivery fee the gallery agreed with the customer (outside Lagos,
+ * or pieces too big for the van). Clears the pending flag, and re-derives the
+ * payment status: the total just grew, so a fully-paid order becomes part-paid
+ * until the delivery fee is received.
  */
 export async function setDeliveryQuote(
   id: number,
   shipping: number,
   total: number,
+  amountPaid: number,
 ): Promise<Order | undefined> {
   const [updated] = await db
     .update(orders)
     .set({
       shipping,
       total,
+      paymentStatus: paymentStatusFor(amountPaid, total),
       deliveryQuotePending: false,
       updatedAt: new Date(),
     })

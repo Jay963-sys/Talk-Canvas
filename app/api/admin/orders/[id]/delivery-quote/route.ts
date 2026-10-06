@@ -5,9 +5,10 @@ import { getOrderById } from "@/lib/db/queries/orders";
 import { setDeliveryQuote } from "@/lib/db/queries/orders";
 
 /**
- * Record the agreed delivery fee for an outside-Lagos order. The gallery
- * quotes the customer by hand, then enters the figure here — it updates the
- * shipping line and the order total, and clears the pending flag.
+ * Record the agreed delivery fee for an order quoted by hand (outside Lagos,
+ * or a piece too big for the van). It updates the shipping line and the order
+ * total, clears the pending flag, and — because the total just grew — turns a
+ * fully-paid order into a part-paid one until the balance is recorded.
  */
 export async function PATCH(
   req: NextRequest,
@@ -50,7 +51,12 @@ export async function PATCH(
     // was already applied when the order was placed.
     const newTotal = order.subtotal - order.discountAmount + fee;
 
-    const updated = await setDeliveryQuote(numId, fee, newTotal);
+    const updated = await setDeliveryQuote(
+      numId,
+      fee,
+      newTotal,
+      order.amountPaid,
+    );
 
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${numId}`);

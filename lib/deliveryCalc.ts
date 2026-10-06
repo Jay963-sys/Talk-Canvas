@@ -8,9 +8,14 @@ import {
 } from "@/data/delivery";
 import {
   distanceFee,
+  gigTierForInches,
+  GIG_BASE,
+  GIG_SUBSEQUENT,
+  GIG_TIER_ORDER,
   MAX_AUTO_QUOTE_KM,
   tierForInches,
   type DeliveryTier,
+  type GigTier,
 } from "@/data/distanceRates";
 import { getSize } from "@/data/sizes";
 
@@ -113,15 +118,23 @@ export interface DeliveryDestination {
 }
 
 export interface DistanceQuote {
-  tier: DeliveryTier;
+  /**
+   * Lagos: the van's size tier. Outside Lagos: "gig_<tier>". This is what's
+   * stored on the order as deliveryVehicle.
+   */
+  tier: DeliveryTier | `gig_${GigTier}`;
   fee: number;
   quoteOnRequest: boolean;
   /** Why it's quoted by hand, so checkout can say the right thing. */
-  reason: "outside-lagos" | "outsourced" | "unmeasured" | null;
+  reason: "extra-large" | "outsourced" | "unmeasured" | null;
+  /** "lagos" = the van, by distance. "nationwide" = GIG Logistics, by size. */
+  scope: "lagos" | "nationwide";
   km: number | null;
   pieces: number;
-  /** Bulk surcharge included in fee (more than BULK_THRESHOLD pieces). */
+  /** Lagos only: bulk surcharge included in fee (more than BULK_THRESHOLD pieces). */
   surcharge: number;
+  /** Outside Lagos only: the part of the fee for frames beyond the first. */
+  additional: number;
 }
 
 const TIER_RANK: Record<DeliveryTier, number> = {
@@ -130,19 +143,88 @@ const TIER_RANK: Record<DeliveryTier, number> = {
   outsourced: 2,
 };
 
-function tierFor(p: DeliverablePiece): DeliveryTier | null {
+function inchesFor(p: DeliverablePiece): { w: number; h: number } | null {
   if (p.sizeId) {
     const s = getSize(p.sizeId);
-    return s ? tierForInches(s.inches.w, s.inches.h) : null;
+    return s ? { w: s.inches.w, h: s.inches.h } : null;
   }
   if (p.widthInches && p.heightInches) {
-    return tierForInches(p.widthInches, p.heightInches);
+    return { w: p.widthInches, h: p.heightInches };
   }
   return null;
 }
 
+function tierFor(p: DeliverablePiece): DeliveryTier | null {
+  const dims = inchesFor(p);
+  return dims ? tierForInches(dims.w, dims.h) : null;
+}
+
+/** Frames this entry stands for — a set's panels each count. */
+const pieceCount = (p: DeliverablePiece) =>
+  (p.quantity || 1) * Math.max(1, p.setSize ?? 1);
+
 /**
- * Distance-based pricing (the gallery's van rules, see data/distanceRates).
+ * Outside Lagos (GIG Logistics): the gallery's price list, by size, same for
+ * every state. Base = the largest size in the order; every other frame adds
+ * its own category's subsequent rate. Extra large is quoted by hand.
+ */
+function quoteOutsideLagos(pieces: DeliverablePiece[]): DistanceQuote {
+  // An unknown size can't be priced safely — treat it as extra large.
+  const entries = pieces.map((p) => {
+    const dims = inchesFor(p);
+    return {
+      tier: (dims ? gigTierForInches(dims.w, dims.h) : "xl") as GigTier,
+      count: pieceCount(p),
+    };
+  });
+  const pieceTotal = entries.reduce((n, e) => n + e.count, 0);
+  const top = entries.reduce<GigTier>(
+    (worst, e) =>
+      GIG_TIER_ORDER.indexOf(e.tier) > GIG_TIER_ORDER.indexOf(worst)
+        ? e.tier
+        : worst,
+    "small",
+  );
+  const common = {
+    scope: "nationwide" as const,
+    km: null,
+    pieces: pieceTotal,
+    surcharge: 0,
+  };
+
+  if (top === "xl") {
+    return {
+      ...common,
+      tier: "gig_xl",
+      fee: 0,
+      quoteOnRequest: true,
+      reason: "extra-large",
+      additional: 0,
+    };
+  }
+
+  // One frame of the top tier is covered by the base; all the rest pay their own rate.
+  const additional =
+    entries.reduce(
+      (sum, e) =>
+        e.tier === "xl" ? sum : sum + e.count * GIG_SUBSEQUENT[e.tier],
+      0,
+    ) - GIG_SUBSEQUENT[top];
+
+  return {
+    ...common,
+    tier: `gig_${top}` as const,
+    fee: GIG_BASE[top] + additional,
+    quoteOnRequest: false,
+    reason: null,
+    additional,
+  };
+}
+
+/**
+ * Delivery pricing by destination (the gallery's rules, see data/distanceRates).
+ *   Lagos         — the van, ₦/km, plus a bulk surcharge over 10 pieces.
+ *   Outside Lagos — GIG Logistics, by size.
  * Same contract as quoteDelivery: the checkout preview and the order route
  * must both call this with the same inputs, or the customer sees one price
  * and is charged another.
@@ -153,10 +235,9 @@ export function quoteDeliveryByDistance(
   dest: DeliveryDestination,
   pieces: DeliverablePiece[],
 ): DistanceQuote {
-  const totalPieces = pieces.reduce(
-    (n, p) => n + (p.quantity || 1) * Math.max(1, p.setSize ?? 1),
-    0,
-  );
+  if (dest.inLagos === false) return quoteOutsideLagos(pieces);
+
+  const totalPieces = pieces.reduce((n, p) => n + pieceCount(p), 0);
   const tiers = pieces.map(tierFor);
   // An unknown size can't be priced safely — treat it like an oversized piece.
   const tier = tiers.reduce<DeliveryTier>(
@@ -172,12 +253,13 @@ export function quoteDeliveryByDistance(
     fee: 0,
     quoteOnRequest: true,
     reason,
+    scope: "lagos",
     km: dest.km,
     pieces: totalPieces,
     surcharge: 0,
+    additional: 0,
   });
 
-  if (dest.inLagos === false) return byHand("outside-lagos"); // GIG Logistics
   if (tier === "outsourced") return byHand("outsourced"); // third-party courier
   if (
     dest.inLagos === null ||
@@ -193,9 +275,11 @@ export function quoteDeliveryByDistance(
     fee,
     quoteOnRequest: false,
     reason: null,
+    scope: "lagos",
     km: dest.km,
     pieces: totalPieces,
     surcharge,
+    additional: 0,
   };
 }
 

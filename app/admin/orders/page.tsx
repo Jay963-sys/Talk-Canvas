@@ -2,6 +2,13 @@ import Link from "next/link";
 import { getOrdersFiltered } from "@/lib/db/queries/orders";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 import { formatNaira } from "@/lib/store";
+import { PAYMENT_LABELS, type PaymentStatus } from "@/lib/constants";
+
+const PAYMENT_COLORS: Record<PaymentStatus, string> = {
+  paid: "text-green-600",
+  part_paid: "text-amber-600",
+  unpaid: "text-red-500",
+};
 
 function formatDateTime(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
@@ -215,11 +222,25 @@ export default async function OrdersPage({
                   </td>
 
                   <td className="px-4 py-4 align-top text-[10px] uppercase tracking-wider">
-                    {order.paymentStatus === "paid" ? (
-                      <span className="text-green-600">Paid</span>
-                    ) : (
-                      <span className="text-red-500">Unpaid</span>
-                    )}
+                    {(() => {
+                      const key = (
+                        order.paymentStatus in PAYMENT_LABELS
+                          ? order.paymentStatus
+                          : "unpaid"
+                      ) as PaymentStatus;
+                      return (
+                        <>
+                          <span className={PAYMENT_COLORS[key]}>
+                            {PAYMENT_LABELS[key]}
+                          </span>
+                          {key === "part_paid" && (
+                            <span className="block normal-case tracking-normal text-[11px] text-muted mt-0.5">
+                              {formatNaira(order.total - order.amountPaid)} due
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </td>
 
                   <td className="px-4 py-4 align-top">
