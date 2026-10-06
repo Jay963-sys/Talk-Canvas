@@ -1,7 +1,8 @@
 /**
  * Delivery by distance — the gallery's rules.
  *
- * One company van, ₦300 per km whatever the size. Every piece falls into a tier:
+ * Lagos: one company van, charged by distance (see KM_BANDS) whatever the
+ * size. Every piece falls into a tier:
  *   small      — van, +₦3,500 when the order has more than 10 pieces
  *   large      — van, +₦5,000 when the order has more than 10 pieces
  *   outsourced — too big for the van; a third-party courier is booked and
@@ -17,8 +18,34 @@ export const LAGOS_DISTANCE_ZONE_ID = "lagos-distance";
 
 export type DeliveryTier = "small" | "large" | "outsourced";
 
-/** Van rate, same for every size the van can carry. */
-export const PER_KM = 300;
+/**
+ * Van rate per km, by distance band. Each km is charged at its OWN band's
+ * rate, so the price rises smoothly and never jumps at a boundary:
+ * 12 km = 5 × 1,500 + 5 × 1,000 + 2 × 950. Short trips cost more per km
+ * because the van's fixed cost is the same however short the run.
+ * Same for every size the van can carry; no minimum fee.
+ */
+export const KM_BANDS: readonly { upToKm: number; perKm: number }[] = [
+  { upToKm: 5, perKm: 1500 }, //   1–5 km
+  { upToKm: 10, perKm: 1000 }, //  6–10 km
+  { upToKm: 15, perKm: 950 }, //  11–15 km
+  { upToKm: 20, perKm: 650 }, //  16–20 km
+  { upToKm: 40, perKm: 400 }, //  21–40 km
+  { upToKm: 50, perKm: 350 }, //  41–50 km
+  { upToKm: Infinity, perKm: 300 }, // 51 km and above
+];
+
+/** Naira for the distance alone, before any bulk surcharge or rounding. */
+export function distanceCharge(km: number): number {
+  let charge = 0;
+  let from = 0;
+  for (const band of KM_BANDS) {
+    if (km <= from) break;
+    charge += (Math.min(km, band.upToKm) - from) * band.perKm;
+    from = band.upToKm;
+  }
+  return charge;
+}
 
 /** Added when an order has more than BULK_THRESHOLD pieces. */
 export const BULK_SURCHARGE: Record<
@@ -79,7 +106,7 @@ export function distanceFee(
   pieces: number,
 ): { fee: number; surcharge: number } {
   const surcharge = pieces > BULK_THRESHOLD ? BULK_SURCHARGE[tier] : 0;
-  const distancePart = Math.ceil((km * PER_KM) / 100) * 100; // round up to ₦100
+  const distancePart = Math.ceil(Math.round(distanceCharge(km)) / 100) * 100; // round up to ₦100
   return { fee: Math.max(MINIMUM_FEE, distancePart + surcharge), surcharge };
 }
 

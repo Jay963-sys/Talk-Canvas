@@ -357,12 +357,18 @@ export default function CheckoutPage() {
               <div>
                 <AddressAutocomplete onChange={chooseDestination} />
 
+                <p className="text-[12px] text-ink-soft mt-3 leading-relaxed">
+                  Delivering outside Lagos? We send through GIG Logistics, so
+                  enter the address of the GIG station closest to you.
+                </p>
+
                 {!quoting && quote && !quote.quoteOnRequest && (
                   <>
                     <p className="text-[13px] text-ink-soft mt-3 leading-relaxed">
                       {quote.scope === "nationwide" ? (
                         <>
-                          Delivered by GIG Logistics.
+                          Delivered by GIG Logistics to the station address
+                          above.
                           {quote.additional > 0 &&
                             ` Includes ${formatNaira(quote.additional)} for the other ${quote.pieces - 1} ${quote.pieces - 1 === 1 ? "frame" : "frames"} in your order.`}
                         </>
