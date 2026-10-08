@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth-server";
+import { revalidateStorefront } from "@/lib/revalidate";
 import {
   getArtistById,
   updateArtist,
@@ -59,6 +60,7 @@ export async function PATCH(
     }
     revalidatePath("/admin/artists");
     revalidatePath(`/admin/artists/${numId}`);
+    revalidateStorefront();
 
     return NextResponse.json(updated);
   } catch (err: unknown) {
@@ -100,6 +102,7 @@ export async function DELETE(
       revalidatePath(`/artists/${existing.slug}`);
       revalidatePath("/admin/artists");
       revalidatePath("/originals");
+      revalidateStorefront();
     }
     return NextResponse.json({ ok: true });
   } catch (err) {

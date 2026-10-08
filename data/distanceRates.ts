@@ -19,11 +19,9 @@ export const LAGOS_DISTANCE_ZONE_ID = "lagos-distance";
 export type DeliveryTier = "small" | "large" | "outsourced";
 
 /**
- * Van rate per km, by distance band. Each km is charged at its OWN band's
- * rate, so the price rises smoothly and never jumps at a boundary:
- * 12 km = 5 × 1,500 + 5 × 1,000 + 2 × 950. Short trips cost more per km
- * because the van's fixed cost is the same however short the run.
- * Same for every size the van can carry; no minimum fee.
+ * Van rate per km, by distance band. Short trips cost more per km because
+ * the van's fixed cost is the same however short the run. Same for every
+ * size the van can carry; no minimum fee.
  */
 export const KM_BANDS: readonly { upToKm: number; perKm: number }[] = [
   { upToKm: 5, perKm: 1500 }, //   1–5 km
@@ -35,8 +33,27 @@ export const KM_BANDS: readonly { upToKm: number; perKm: number }[] = [
   { upToKm: Infinity, perKm: 300 }, // 51 km and above
 ];
 
-/** Naira for the distance alone, before any bulk surcharge or rounding. */
+/**
+ * How a trip's distance becomes a price:
+ *
+ * "whole-trip" (the gallery's rule): the WHOLE distance is charged at the rate
+ *   of the band the trip lands in. 22.1 km is in the 21–40 km band, so
+ *   22.1 × ₦400 = ₦8,840. Note the price is NOT always rising with distance:
+ *   20 km costs ₦13,000 but 21 km costs ₦8,400, because the rate drops.
+ *
+ * "per-band": each km is charged at its own band's rate (5 km at ₦1,500, the
+ *   next 5 at ₦1,000, …). Rises smoothly, no drops. Switch to this if the
+ *   gallery would rather not have the drops.
+ */
+export const KM_PRICING_MODE: "whole-trip" | "per-band" = "whole-trip";
+
+/** Naira for the distance alone, before any bulk surcharge. */
 export function distanceCharge(km: number): number {
+  if (KM_PRICING_MODE === "whole-trip") {
+    const band =
+      KM_BANDS.find((b) => km <= b.upToKm) ?? KM_BANDS[KM_BANDS.length - 1];
+    return km * band.perKm;
+  }
   let charge = 0;
   let from = 0;
   for (const band of KM_BANDS) {
@@ -106,7 +123,7 @@ export function distanceFee(
   pieces: number,
 ): { fee: number; surcharge: number } {
   const surcharge = pieces > BULK_THRESHOLD ? BULK_SURCHARGE[tier] : 0;
-  const distancePart = Math.ceil(Math.round(distanceCharge(km)) / 100) * 100; // round up to ₦100
+  const distancePart = Math.round(distanceCharge(km)); // exact, to the nearest naira
   return { fee: Math.max(MINIMUM_FEE, distancePart + surcharge), surcharge };
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dissolveArchiveSet } from "@/lib/db/queries/archivePrints";
 import { requireSession } from "@/lib/auth-server";
+import { revalidateStorefront } from "@/lib/revalidate";
 
 /**
  * Ungroup a set. The prints themselves survive as individual archive pieces —
@@ -23,5 +24,6 @@ export async function DELETE(
   }
 
   await dissolveArchiveSet(numId);
+  revalidateStorefront();
   return new NextResponse(null, { status: 204 });
 }

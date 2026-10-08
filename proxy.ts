@@ -2,14 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { SESSION_COOKIE_NAME } from "@/lib/auth";
 
-/**
- * Affiliate attribution: an influencer shares talkcanvas.com/?ref=TOYE10.
- * We drop the code in a cookie so it survives browsing and pre-fills at
- * checkout. The cookie is a convenience only — the code is re-validated and
- * the discount recomputed server-side when the order is placed.
- */
 const REF_COOKIE = "tc_ref";
-const REF_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const REF_MAX_AGE = 60 * 60 * 24 * 30;
 
 async function isValidToken(token: string): Promise<boolean> {
   try {
@@ -21,7 +15,6 @@ async function isValidToken(token: string): Promise<boolean> {
   }
 }
 
-/** Capture ?ref=CODE onto any response leaving this proxy. */
 function captureRef(req: NextRequest, res: NextResponse): NextResponse {
   const ref = req.nextUrl.searchParams.get("ref");
   if (!ref) return res;
@@ -33,7 +26,6 @@ function captureRef(req: NextRequest, res: NextResponse): NextResponse {
     maxAge: REF_MAX_AGE,
     path: "/",
     sameSite: "lax",
-    // Readable by the checkout page to pre-fill the code field.
     httpOnly: false,
   });
   return res;
@@ -42,10 +34,6 @@ function captureRef(req: NextRequest, res: NextResponse): NextResponse {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ── Admin auth ────────────────────────────────────────────────
-  // The matcher now covers the whole site (so ?ref= is caught anywhere), so
-  // the auth gate must be scoped to /admin explicitly rather than relying on
-  // the matcher to scope it.
   if (pathname.startsWith("/admin")) {
     // Login page is public so we don't infinite-redirect
     if (pathname === "/admin/login") return NextResponse.next();
@@ -61,14 +49,16 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── Public pages: capture affiliate referrals ─────────────────
   return captureRef(req, NextResponse.next());
 }
 
 export const config = {
-  // Everything except API routes, Next internals, and static files — the
-  // ?ref= link can land on any public page, not just the homepage.
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|usdz|glb)$).*)",
+    "/admin/:path*",
+    {
+      source:
+        "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|usdz|glb)$).*)",
+      has: [{ type: "query", key: "ref" }],
+    },
   ],
 };

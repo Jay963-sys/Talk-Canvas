@@ -218,6 +218,26 @@ export const orderItems = pgTable("order_items", {
   year: integer("year"),
 });
 
+// ── PAYMENT EVENTS ──────────────────────────────────────────────
+// A log of every payment signal the site receives (Paystack webhook, the
+// customer's return to the site, staff checks) and what we did with it.
+// Vercel's free plan keeps logs for about an hour; this is how "did Paystack
+// ever tell us about this payment?" gets answered days later.
+export const paymentEvents = pgTable("payment_events", {
+  id: serial("id").primaryKey(),
+  // "webhook" | "return" | "admin"
+  source: varchar("source", { length: 20 }).notNull(),
+  event: varchar("event", { length: 50 }),
+  reference: varchar("reference", { length: 100 }),
+  // Naira, as reported by Paystack.
+  amount: integer("amount"),
+  // "fulfilled" | "skipped" | "amount_mismatch" | "not_found" | "not_paid" | "error" | "ignored"
+  outcome: varchar("outcome", { length: 30 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PaymentEvent = typeof paymentEvents.$inferSelect;
+
 export type Order = typeof orders.$inferSelect;
 export type NewOrder = typeof orders.$inferInsert;
 export type OrderItem = typeof orderItems.$inferSelect;

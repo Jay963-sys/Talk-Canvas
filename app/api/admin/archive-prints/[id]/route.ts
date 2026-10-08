@@ -6,6 +6,7 @@ import {
 } from "@/lib/db/queries/archivePrints";
 // ⚠️ AUTH: align with app/api/admin/originals/[id]/route.ts.
 import { requireSession } from "@/lib/auth-server";
+import { revalidateStorefront } from "@/lib/revalidate";
 import { isArchiveCategory } from "@/data/collections";
 
 export async function PATCH(
@@ -32,10 +33,7 @@ export async function PATCH(
   // the filter bar; now it fails loudly at the edge.
   const hasCategory = body && "category" in body;
   if (hasCategory && !isArchiveCategory(body.category)) {
-    return NextResponse.json(
-      { error: "Unknown category" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Unknown category" }, { status: 400 });
   }
 
   if (!hasVisibility && !hasCategory) {
@@ -56,6 +54,7 @@ export async function PATCH(
   if (!row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  revalidateStorefront();
   return NextResponse.json(row);
 }
 
@@ -75,5 +74,6 @@ export async function DELETE(
   }
 
   await deleteArchivePrint(numId);
+  revalidateStorefront();
   return new NextResponse(null, { status: 204 });
 }

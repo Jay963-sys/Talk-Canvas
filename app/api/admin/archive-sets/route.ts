@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createArchiveSet } from "@/lib/db/queries/archivePrints";
 import { requireSession } from "@/lib/auth-server";
+import { revalidateStorefront } from "@/lib/revalidate";
 
 export async function POST(req: NextRequest) {
   const session = await requireSession();
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const setId = await createArchiveSet(ids);
+    revalidateStorefront();
     return NextResponse.json({ setId }, { status: 201 });
   } catch (err) {
     // createArchiveSet throws messages written to be read by staff — mixed

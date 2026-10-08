@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getOrderById } from "@/lib/db/queries/orders";
+import { getOrderById, getPaymentEvents } from "@/lib/db/queries/orders";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 import OrderStatusSelect from "@/components/admin/OrderStatusSelect";
 import DeliveryQuoteForm from "@/components/admin/DeliveryQuoteForm";
 import RecordPaymentForm from "@/components/admin/RecordPaymentForm";
+import CheckPaymentButton from "@/components/admin/CheckPaymentButton";
 import { PAYMENT_LABELS, type PaymentStatus } from "@/lib/constants";
 import { getZone, OUTSIDE_LAGOS_ID } from "@/data/delivery";
 import { LAGOS_DISTANCE_ZONE_ID, TIER_LABELS } from "@/data/distanceRates";
@@ -64,6 +65,11 @@ export default async function OrderDetailPage({
           shopOrigin ? `&origin=${encodeURIComponent(shopOrigin)}` : ""
         }&destination=${encodeURIComponent(destinationText)}&travelmode=driving`
       : null;
+  // What Paystack and the site have told each other about this payment.
+  const paymentEvents = order.paymentReference
+    ? await getPaymentEvents(order.paymentReference)
+    : [];
+
   const paymentKey = (
     order.paymentStatus in PAYMENT_LABELS ? order.paymentStatus : "unpaid"
   ) as PaymentStatus;
@@ -280,6 +286,35 @@ export default async function OrderDetailPage({
               <p className="text-xs text-muted mt-2 font-mono break-all">
                 Ref: {order.paymentReference}
               </p>
+            )}
+
+            {paymentKey === "unpaid" && order.paymentReference && (
+              <CheckPaymentButton orderId={order.id} />
+            )}
+
+            {paymentEvents.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-line">
+                <p className="text-[11px] uppercase tracking-widest text-muted mb-2">
+                  Payment activity
+                </p>
+                <ul className="space-y-1.5">
+                  {paymentEvents.map((e) => (
+                    <li key={e.id} className="text-xs text-ink-soft">
+                      <span className="text-ink">
+                        {e.source === "webhook"
+                          ? "Paystack webhook"
+                          : e.source === "return"
+                            ? "Customer returned"
+                            : "Staff check"}
+                      </span>{" "}
+                      — {e.outcome.replace(/_/g, " ")}
+                      <span className="block text-muted">
+                        {formatDateTime(e.createdAt)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </section>
 

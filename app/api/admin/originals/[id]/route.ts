@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth-server";
+import { revalidateStorefront } from "@/lib/revalidate";
 import {
   getOriginalById,
   updateOriginal,
@@ -80,6 +81,7 @@ export async function PATCH(
     revalidatePath("/");
     revalidatePath("/admin");
     revalidatePath(`/admin/originals/${numId}`);
+    revalidateStorefront();
 
     return NextResponse.json(updated);
   } catch (err: unknown) {
@@ -120,6 +122,7 @@ export async function DELETE(
       revalidatePath("/");
       revalidatePath("/admin");
       revalidatePath(`/admin/originals/${numId}`);
+      revalidateStorefront();
     }
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -1,10 +1,10 @@
-
-  import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   getAllArchivePrints,
   createArchivePrint,
 } from "@/lib/db/queries/archivePrints";
 import { requireSession } from "@/lib/auth-server";
+import { revalidateStorefront } from "@/lib/revalidate";
 import { isArchiveCategory } from "@/data/collections";
 
 export async function GET() {
@@ -47,6 +47,8 @@ export async function POST(req: NextRequest) {
     height,
     category: isArchiveCategory(category) ? category : undefined,
   });
+
+  revalidateStorefront();
 
   return NextResponse.json(row, { status: 201 });
 }

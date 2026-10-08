@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth-server";
+import { revalidateStorefront } from "@/lib/revalidate";
 import { createOriginal } from "@/lib/db/queries/originals";
 
 export async function POST(req: NextRequest) {
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
     revalidatePath("/originals");
     revalidatePath("/");
     revalidatePath("/admin");
+    revalidateStorefront();
 
     return NextResponse.json(created, { status: 201 });
   } catch (err: unknown) {

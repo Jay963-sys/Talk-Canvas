@@ -15,6 +15,7 @@ import { getZone, OUTSIDE_LAGOS_ID } from "@/data/delivery";
 import { LAGOS_DISTANCE_ZONE_ID, TIER_LABELS } from "@/data/distanceRates";
 import { VEHICLE_LABELS } from "@/lib/deliveryCalc";
 import { sendPurchase } from "@/lib/meta/capi";
+import { revalidateStorefront } from "@/lib/revalidate";
 
 /** Split a stored full name into first / last for Meta's user_data. */
 function splitName(full: string | null | undefined): {
@@ -48,6 +49,9 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
 
     if (soldIds.length > 0) {
       await Promise.allSettled(soldIds.map((id) => markOriginalSold(id)));
+      // Pages are cached for a day — without this, a sold one-of-one would
+      // keep showing as available.
+      revalidateStorefront();
     }
   }
 

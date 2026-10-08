@@ -2,12 +2,14 @@ import { db } from "../index";
 import {
   orders,
   orderItems,
+  paymentEvents,
+  type PaymentEvent,
   type Order,
   type OrderItem,
   type NewOrder,
   type NewOrderItem,
 } from "../schema";
-import { eq, desc, inArray, and, gte, lte } from "drizzle-orm";
+import { eq, desc, inArray, and, gte, lte, isNotNull } from "drizzle-orm";
 import { paymentStatusFor, type OrderStatus } from "../../constants";
 
 /**
@@ -213,4 +215,58 @@ export async function setDeliveryQuote(
     .where(eq(orders.id, id))
     .returning();
   return updated;
+}
+
+// ── Payment activity ────────────────────────────────────────────
+
+/** Record a payment signal. Never throws — logging must not break payments. */
+export async function logPaymentEvent(e: {
+  source: "webhook" | "return" | "admin";
+  event?: string | null;
+  reference?: string | null;
+  amount?: number | null;
+  outcome: string;
+}): Promise<void> {
+  try {
+    await db.insert(paymentEvents).values({
+      source: e.source,
+      event: e.event?.slice(0, 50) ?? null,
+      reference: e.reference?.slice(0, 100) ?? null,
+      amount:
+        e.amount != null && Number.isFinite(e.amount)
+          ? Math.round(e.amount)
+          : null,
+      outcome: e.outcome.slice(0, 30),
+    });
+  } catch (err) {
+    console.error("logPaymentEvent failed", err);
+  }
+}
+
+export async function getPaymentEvents(
+  reference: string,
+): Promise<PaymentEvent[]> {
+  return db
+    .select()
+    .from(paymentEvents)
+    .where(eq(paymentEvents.reference, reference))
+    .orderBy(desc(paymentEvents.createdAt))
+    .limit(30);
+}
+
+/** Unpaid orders that have a Paystack reference — candidates for a payment check. */
+export async function getUnpaidOrdersWithReference(
+  limit: number,
+): Promise<Order[]> {
+  return db
+    .select()
+    .from(orders)
+    .where(
+      and(
+        eq(orders.paymentStatus, "unpaid"),
+        isNotNull(orders.paymentReference),
+      ),
+    )
+    .orderBy(desc(orders.createdAt))
+    .limit(limit);
 }

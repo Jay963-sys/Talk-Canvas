@@ -3,6 +3,12 @@ import { getOrdersFiltered } from "@/lib/db/queries/orders";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 import { formatNaira } from "@/lib/store";
 import { PAYMENT_LABELS, type PaymentStatus } from "@/lib/constants";
+import { CheckAllUnpaidButton } from "@/components/admin/CheckPaymentButton";
+
+// Paid orders are what staff work from. Unpaid ones are checkouts that were
+// started but not paid (or paid in a way the site missed) — kept, because the
+// record is what lets a payment be traced, but out of the way by default.
+type View = "paid" | "unpaid" | "all";
 
 const PAYMENT_COLORS: Record<PaymentStatus, string> = {
   paid: "text-green-600",
@@ -37,11 +43,32 @@ function parseRange(sp: { from?: string; to?: string }) {
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; view?: string }>;
 }) {
   const sp = await searchParams;
   const range = parseRange(sp);
-  const orders = await getOrdersFiltered(range);
+  const view: View =
+    sp.view === "unpaid" || sp.view === "all" ? sp.view : "paid";
+  const allOrders = await getOrdersFiltered(range);
+  const isPaidish = (s: string) => s === "paid" || s === "part_paid";
+  const counts = {
+    paid: allOrders.filter((o) => isPaidish(o.paymentStatus)).length,
+    unpaid: allOrders.filter((o) => !isPaidish(o.paymentStatus)).length,
+    all: allOrders.length,
+  };
+  const orders =
+    view === "all"
+      ? allOrders
+      : allOrders.filter(
+          (o) => isPaidish(o.paymentStatus) === (view === "paid"),
+        );
+  const tabHref = (v: View) => {
+    const q = new URLSearchParams();
+    if (v !== "paid") q.set("view", v);
+    if (sp.from) q.set("from", sp.from);
+    if (sp.to) q.set("to", sp.to);
+    return `/admin/orders${q.toString() ? `?${q}` : ""}`;
+  };
   const needingQuote = orders.filter((o) => o.deliveryQuotePending).length;
 
   const filtered = !!(range.from || range.to);
@@ -64,8 +91,10 @@ export default async function OrdersPage({
             Orders
           </h1>
           <p className="text-sm text-ink-soft mt-2">
-            {orders.length} {orders.length === 1 ? "order" : "orders"}
-            {filtered ? " in range" : " total"}
+            {orders.length}{" "}
+            {view === "unpaid" ? "unpaid" : view === "paid" ? "paid" : ""}{" "}
+            {orders.length === 1 ? "order" : "orders"}
+            {filtered ? " in range" : ""}
           </p>
         </div>
 
@@ -76,6 +105,40 @@ export default async function OrdersPage({
           Export CSV
         </a>
       </div>
+
+      {/* Paid / Unpaid / All — paid is the default. */}
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        {(
+          [
+            ["paid", "Paid"],
+            ["unpaid", "Unpaid"],
+            ["all", "All"],
+          ] as const
+        ).map(([v, label]) => (
+          <Link
+            key={v}
+            href={tabHref(v)}
+            className={`px-4 py-2 text-[11px] uppercase tracking-widest border transition-colors ${
+              view === v
+                ? "bg-ink text-cream border-ink"
+                : "border-line text-ink-soft hover:border-ink hover:text-ink"
+            }`}
+          >
+            {label} ({counts[v]})
+          </Link>
+        ))}
+      </div>
+
+      {view === "unpaid" && (
+        <div className="mb-8 border border-line bg-paper px-5 py-4">
+          <p className="text-sm text-ink-soft mb-3 max-w-2xl">
+            These checkouts were started but never recorded as paid. Most are
+            abandoned. If a customer says they paid, check it with Paystack — it
+            confirms the payment and sends their order emails.
+          </p>
+          <CheckAllUnpaidButton />
+        </div>
+      )}
 
       {/* Date-range filter — native GET form, no client JS. */}
       <form
@@ -146,7 +209,13 @@ export default async function OrdersPage({
       {orders.length === 0 ? (
         <div className="text-center py-24 border border-dashed border-line">
           <p className="text-ink-soft">
-            {filtered ? "No orders in this range." : "No orders yet."}
+            {view === "unpaid"
+              ? "No unpaid orders."
+              : filtered
+                ? "No orders in this range."
+                : view === "paid"
+                  ? "No paid orders yet."
+                  : "No orders yet."}
           </p>
           {!filtered && (
             <p className="text-xs text-muted mt-2">

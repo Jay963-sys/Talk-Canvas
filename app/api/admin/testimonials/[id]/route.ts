@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth-server";
+import { revalidateStorefront } from "@/lib/revalidate";
 import {
   getTestimonialById,
   updateTestimonial,
@@ -13,6 +14,8 @@ function revalidateAll() {
   revalidatePath("/prints/archive");
   revalidatePath("/artists");
   revalidatePath("/admin/testimonials");
+  // Reviews also show on /prints and anywhere else the Testimonials strip is used.
+  revalidateStorefront();
 }
 
 export async function PATCH(
