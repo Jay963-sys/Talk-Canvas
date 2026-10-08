@@ -13,7 +13,7 @@ import Image from "next/image";
 import { Metadata } from "next";
 import TrackView from "@/components/TrackView";
 
-export const revalidate = 60;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   const all = await getAllOriginals();

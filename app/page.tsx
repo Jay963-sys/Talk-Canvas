@@ -12,7 +12,7 @@ import { getFeaturedArtists } from "@/lib/db/queries/artists";
 import { getArchivePage } from "@/lib/db/queries/archivePrints";
 import { Metadata } from "next";
 
-export const revalidate = 60;
+export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: "Talk Canvas Gallery | Contemporary Art in Lagos",

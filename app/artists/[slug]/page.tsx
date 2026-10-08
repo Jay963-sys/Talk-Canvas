@@ -5,7 +5,7 @@ import { Metadata } from "next";
 import { getArtistBySlug, getAllArtists } from "@/lib/db/queries/artists";
 import WorkCard from "@/components/WorkCard";
 
-export const revalidate = 60;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   const all = await getAllArtists();

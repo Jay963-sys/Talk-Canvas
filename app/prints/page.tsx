@@ -18,7 +18,7 @@ export const metadata = {
     "Upload your design or choose one from our archive, pick a frame, and preview it on your wall in AR.",
 };
 
-export const revalidate = 60;
+export const revalidate = 86400;
 
 function thumb(url: string, width = 500): string {
   return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);

@@ -17,7 +17,7 @@ export const metadata = {
     "In-house studio designs, hand-painted to order on canvas. The same design can be recreated for your space.",
 };
 
-export const revalidate = 60;
+export const revalidate = 86400;
 
 const ACQUISITION_STEPS = [
   {
