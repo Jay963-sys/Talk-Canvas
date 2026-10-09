@@ -1,0 +1,1 @@
+ALTER TABLE "testimonials" ADD COLUMN "video_loop" boolean DEFAULT false NOT NULL;

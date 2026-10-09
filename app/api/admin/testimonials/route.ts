@@ -64,6 +64,9 @@ export async function POST(req: NextRequest) {
       rating,
       imageUrl: data.imageUrl || null,
       imagePublicId: data.imagePublicId || null,
+      videoUrl: data.videoUrl || null,
+      videoPublicId: data.videoPublicId || null,
+      videoLoop: Boolean(data.videoLoop),
       displayOrder: Number(data.displayOrder) || 0,
       isVisible: data.isVisible ?? true,
     });

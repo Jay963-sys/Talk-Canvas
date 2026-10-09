@@ -4,10 +4,28 @@ export interface UploadResult {
   width: number;
   height: number;
   bytes: number;
+  /** Seconds. Only present for videos. */
+  duration?: number;
 }
 
 const MAX_SIZE = 25 * 1024 * 1024; // 25MB
 const VALID_TYPES = ["image/jpeg", "image/png"];
+
+// Cloudinary's own cap decides what really gets through; this just stops a
+// huge file from starting an upload that is certain to be refused. Phone
+// videos are .mp4 (Android) or .mov (iPhone).
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
+const VALID_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
+
+export function validateVideoFile(file: File): string | null {
+  if (!VALID_VIDEO_TYPES.includes(file.type)) {
+    return "Please upload an MP4, MOV or WebM video.";
+  }
+  if (file.size > MAX_VIDEO_SIZE) {
+    return "Video is too large. Maximum size is 100MB — a short clip works best.";
+  }
+  return null;
+}
 
 export function validateFile(file: File): string | null {
   if (!VALID_TYPES.includes(file.type)) {
@@ -24,17 +42,28 @@ export async function uploadToCloudinary(
   options?: {
     onProgress?: (percent: number) => void;
     signEndpoint?: string;
+    /** Cloudinary resource type. Videos upload to a different endpoint. */
+    resourceType?: "image" | "video";
+    /** Sent to the sign endpoint, e.g. { kind: "video" } to pick a folder. */
+    signBody?: Record<string, unknown>;
   },
 ): Promise<UploadResult> {
   const signEndpoint = options?.signEndpoint ?? "/api/cloudinary/sign";
   const onProgress = options?.onProgress;
 
   // 1. Get signed params from our server
-  const signRes = await fetch(signEndpoint, { method: "POST" });
+  const signRes = await fetch(signEndpoint, {
+    method: "POST",
+    ...(options?.signBody && {
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(options.signBody),
+    }),
+  });
   if (!signRes.ok) throw new Error("Failed to get upload signature");
 
   const { timestamp, signature, folder, apiKey, cloudName } =
     await signRes.json();
+  const resourceType = options?.resourceType ?? "image";
 
   // 2. Upload directly to Cloudinary
   const formData = new FormData();
@@ -48,7 +77,7 @@ export async function uploadToCloudinary(
     const xhr = new XMLHttpRequest();
     xhr.open(
       "POST",
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
     );
 
     xhr.upload.onprogress = (e) => {
@@ -66,6 +95,8 @@ export async function uploadToCloudinary(
           width: data.width,
           height: data.height,
           bytes: data.bytes,
+          duration:
+            typeof data.duration === "number" ? data.duration : undefined,
         });
       } else {
         // Surface Cloudinary's actual reason instead of a generic failure —

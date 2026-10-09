@@ -8,15 +8,21 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     await requireSession();
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Review videos get their own folder so they don't mix with artwork.
+  const body = await req.json().catch(() => ({}));
+  const folder =
+    body?.kind === "video"
+      ? "talk-canvas/review-videos"
+      : "talk-canvas/originals";
+
   const timestamp = Math.round(Date.now() / 1000);
-  const folder = "talk-canvas/originals";
 
   const signature = cloudinary.utils.api_sign_request(
     { timestamp, folder },

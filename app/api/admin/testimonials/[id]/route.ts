@@ -65,6 +65,13 @@ export async function PATCH(
       ...(data.imagePublicId !== undefined && {
         imagePublicId: data.imagePublicId || null,
       }),
+      ...(data.videoUrl !== undefined && { videoUrl: data.videoUrl || null }),
+      ...(data.videoPublicId !== undefined && {
+        videoPublicId: data.videoPublicId || null,
+      }),
+      ...(data.videoLoop !== undefined && {
+        videoLoop: Boolean(data.videoLoop),
+      }),
       ...(data.displayOrder !== undefined && {
         displayOrder: Number(data.displayOrder),
       }),

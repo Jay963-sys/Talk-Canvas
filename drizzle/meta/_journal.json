@@ -99,6 +99,20 @@
       "when": 1791490598994,
       "tag": "0013_new_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791521042838,
+      "tag": "0014_clumsy_fixer",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791525505718,
+      "tag": "0015_slippery_prodigy",
+      "breakpoints": true
     }
   ]
 }

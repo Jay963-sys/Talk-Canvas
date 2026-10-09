@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
 import ImageUploader from "@/components/admin/ImageUploader";
+import VideoUploader from "@/components/admin/VideoUploader";
 import type { Testimonial } from "@/lib/db/schema";
 
 const inputCls =
@@ -26,6 +27,13 @@ export default function TestimonialForm({
   const [imagePublicId, setImagePublicId] = useState(
     testimonial?.imagePublicId ?? "",
   );
+
+  const [videoUrl, setVideoUrl] = useState(testimonial?.videoUrl ?? "");
+  const [videoPublicId, setVideoPublicId] = useState(
+    testimonial?.videoPublicId ?? "",
+  );
+
+  const [videoLoop, setVideoLoop] = useState(testimonial?.videoLoop ?? false);
 
   const [isVisible, setIsVisible] = useState(testimonial?.isVisible ?? true);
   const [displayOrder, setDisplayOrder] = useState(
@@ -55,6 +63,9 @@ export default function TestimonialForm({
             rating,
             imageUrl: imageUrl || null,
             imagePublicId: imagePublicId || null,
+            videoUrl: videoUrl || null,
+            videoPublicId: videoPublicId || null,
+            videoLoop: videoUrl ? videoLoop : false,
             displayOrder: parseInt(displayOrder) || 0,
             isVisible,
           }),
@@ -166,6 +177,51 @@ export default function TestimonialForm({
           A customer photo of the piece hanging in their space. Reviews with a
           photo are shown larger and appear first — they&apos;re the strongest
           proof you have.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-xs uppercase tracking-[0.15em] text-muted mb-4">
+          Video
+          <span className="normal-case tracking-normal text-muted ml-1">
+            (optional)
+          </span>
+        </h2>
+        <VideoUploader
+          value={videoUrl ? { url: videoUrl, publicId: videoPublicId } : null}
+          onChange={(v) => {
+            setVideoUrl(v?.url || "");
+            setVideoPublicId(v?.publicId || "");
+            // A freshly uploaded short clip defaults to looping; a long one
+            // (or a removed video) does not. Staff can still change it.
+            if (v) setVideoLoop(v.duration != null && v.duration <= 10);
+            else setVideoLoop(false);
+          }}
+        />
+        {videoUrl && (
+          <label className="flex items-start gap-2 text-sm mt-4">
+            <input
+              type="checkbox"
+              checked={videoLoop}
+              onChange={(e) => setVideoLoop(e.target.checked)}
+              className="accent-ink mt-1"
+            />
+            <span>
+              Play as a silent loop
+              <span className="block text-xs text-muted mt-0.5 leading-relaxed">
+                Starts by itself, muted, when the visitor scrolls to it, and
+                repeats. Best for clips under about 10 seconds. Visitors can
+                still unmute or pause. Leave it off for longer clips, which use
+                less data as press-to-play.
+              </span>
+            </span>
+          </label>
+        )}
+        <p className="text-xs text-muted mt-3 leading-relaxed">
+          A short clip of the customer with their piece — under a minute works
+          best. Visitors press play to watch it; nothing downloads until they
+          do. If you also add a wall photo above, the photo is the picture shown
+          before the video plays.
         </p>
       </section>
 

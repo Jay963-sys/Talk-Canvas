@@ -312,6 +312,13 @@ export const testimonials = pgTable("testimonials", {
   imageUrl: text("image_url"),
   imagePublicId: varchar("image_public_id", { length: 255 }),
 
+  // Optional customer video (Cloudinary, resource_type "video"). When a review
+  // has both, the photo is the cover shown before the video plays.
+  videoUrl: text("video_url"),
+  videoPublicId: varchar("video_public_id", { length: 255 }),
+  // Short clips play as a silent loop; longer ones stay press-to-play.
+  videoLoop: boolean("video_loop").default(false).notNull(),
+
   displayOrder: integer("display_order").default(0).notNull(),
   isVisible: boolean("is_visible").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
