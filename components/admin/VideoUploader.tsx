@@ -138,7 +138,7 @@ export default function VideoUploader({ value, onChange }: Props) {
             strokeWidth={1.5}
           />
           <p className="text-sm font-medium">Click to upload a video</p>
-          <p className="text-xs text-muted mt-1">MP4, MOV or WebM, max 100MB</p>
+          <p className="text-xs text-muted mt-1">MP4, MOV or WebM.</p>
           {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
         </>
       )}
