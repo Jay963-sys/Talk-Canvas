@@ -5,20 +5,18 @@ export type FrameColor = "black" | "brown" | "gold" | "white";
 export interface Frame {
   id: string;
   style: FrameStyle;
-  shape: FrameShape | null; // null for antique (single shape)
+  shape: FrameShape | null;
   color: FrameColor;
   name: string;
   shortName: string;
   gradient: string;
-  swatchColor: string; // hex — used for AR material
+  swatchColor: string;
   glassAvailable: boolean;
-  // Photo lives at /public/frames/<id>.jpg
-  // UI falls back to the gradient if the file isn't present
   photo: string;
+  available?: boolean;
 }
 
 export const FRAMES: Frame[] = [
-  // ── Regular Floating (4 colors, no glass option) ─────────────────
   {
     id: "regular-floating-black",
     style: "regular",
@@ -42,6 +40,7 @@ export const FRAMES: Frame[] = [
     swatchColor: "#5c3a22",
     glassAvailable: false,
     photo: "/frames/regular-floating-brown.jpg",
+    available: false,
   },
   {
     id: "regular-floating-gold",
@@ -140,10 +139,12 @@ export const FRAMES: Frame[] = [
     shortName: "Antique Gold",
     gradient: "linear-gradient(135deg, #d4a559 0%, #8b6914 100%)",
     swatchColor: "#b8902c",
-    glassAvailable: false, // already included
+    glassAvailable: false,
     photo: "/frames/antique-gold.jpg",
   },
 ];
+
+export const AVAILABLE_FRAMES = FRAMES.filter((f) => f.available !== false);
 
 export function getFrame(id: string): Frame | undefined {
   return FRAMES.find((f) => f.id === id);

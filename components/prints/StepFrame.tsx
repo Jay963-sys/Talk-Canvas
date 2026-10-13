@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import {
-  FRAMES,
+  AVAILABLE_FRAMES,
   type FrameStyle,
   type FrameShape,
   type Frame,
@@ -19,12 +19,9 @@ export default function StepFrame() {
     frame?.style === "regular" ? frame.shape! : "floating",
   );
 
-  const regularFrames = FRAMES.filter((f) => f.style === "regular");
-  const antiqueFrames = FRAMES.filter((f) => f.style === "antique");
+  const regularFrames = AVAILABLE_FRAMES.filter((f) => f.style === "regular");
+  const antiqueFrames = AVAILABLE_FRAMES.filter((f) => f.style === "antique");
 
-  // Select a frame, and drop the selected size if it isn't offered for this
-  // frame + glass combination (e.g. antique isn't priced for small sizes),
-  // so the summary never shows a size with a "—" total.
   const selectFrame = (f: Frame) => {
     setFrame(f);
     if (size && !isSizeAvailable(size, f, glass)) {
@@ -52,6 +49,7 @@ export default function StepFrame() {
         (f) => f.shape === newShape && f.color === frame.color,
       );
       if (swap) selectFrame(swap);
+      else setFrame(null);
     }
   };
 
