@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import {
   getArchivePage,
   withSetPanels,
@@ -6,7 +7,25 @@ import {
 } from "@/lib/db/queries/archivePrints";
 import { isArchiveCategory, type ArchiveCategory } from "@/data/collections";
 
-export const dynamic = "force-dynamic";
+const getCachedArchiveFeed = unstable_cache(
+  async (
+    cursor?: number,
+    category?: ArchiveCategory,
+    orientation?: ArchiveOrientation,
+    setsOnly?: boolean,
+  ) => {
+    const page = await getArchivePage(
+      cursor,
+      undefined,
+      category,
+      orientation,
+      setsOnly,
+    );
+    return withSetPanels(page);
+  },
+  ["archive-feed-api"],
+  { revalidate: 86400, tags: ["archive"] },
+);
 
 export async function GET(req: NextRequest) {
   const cursorParam = req.nextUrl.searchParams.get("cursor");
@@ -16,8 +35,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
   }
 
-  // Unknown values fall through as "no filter" rather than erroring — a stale
-  // bookmark should show the whole archive, not a dead page.
   const c = req.nextUrl.searchParams.get("category");
   const category: ArchiveCategory | undefined = isArchiveCategory(c)
     ? c
@@ -27,21 +44,14 @@ export async function GET(req: NextRequest) {
   const orientation: ArchiveOrientation | undefined =
     o === "portrait" || o === "landscape" ? o : undefined;
 
-  // Feeds the /prints/sets grid, including its infinite scroll — without this
-  // page two of that page would quietly widen back to the whole archive.
   const setsOnly = req.nextUrl.searchParams.get("setsOnly") === "1";
 
-  const page = await getArchivePage(
+  const data = await getCachedArchiveFeed(
     cursor,
-    undefined,
     category,
     orientation,
     setsOnly,
   );
 
-  // Panels ride along for every set row, on every feed — the mixed archive
-  // grid shows set tiles too, and a tile that gained a thumbnail strip on the
-  // server page would lose it on page two if this were gated to setsOnly.
-  // Costs one extra query, and only when the page actually contains a set.
-  return NextResponse.json(await withSetPanels(page));
+  return NextResponse.json(data);
 }

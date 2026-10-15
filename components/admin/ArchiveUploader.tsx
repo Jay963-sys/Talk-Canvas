@@ -32,11 +32,8 @@ interface Job {
   status: Status;
   progress: number;
   error?: string;
-  /** Read from the file itself before upload, so set mode can check shapes
-   *  while the images are still cancellable. */
   width?: number;
   height?: number;
-  /** Archive print id, once saved. Collected in order to build the set. */
   createdId?: number;
 }
 
@@ -46,13 +43,11 @@ function preCheck(file: File): string | null {
   return null;
 }
 
-/** Matches the server's rule: squares read portrait. */
 function orientationOf(job: Job): "portrait" | "landscape" | null {
   if (!job.width || !job.height) return null;
   return job.width > job.height ? "landscape" : "portrait";
 }
 
-/** Intrinsic dimensions, read from the browser rather than guessed. */
 function readDimensions(
   url: string,
 ): Promise<{ width: number; height: number } | null> {
@@ -70,17 +65,12 @@ export default function ArchiveUploader() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<Mode>("individual");
-  // Required, and deliberately not defaulted to a real category — an unset
-  // select is a visible prompt, whereas a pre-filled one gets uploaded past.
   const [category, setCategory] = useState<ArchiveCategory | "">("");
   const [groupError, setGroupError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  // A second, hidden input dedicated to replacing one slot in place. The target
-  // index is stashed here so the change handler knows which tile to swap.
   const replaceRef = useRef<HTMLInputElement>(null);
   const replaceIndex = useRef<number | null>(null);
 
-  /** Build a Job (with preview) from a File, running the pre-check. */
   const makeJob = (file: File): Job => {
     const err = preCheck(file);
     return {
@@ -97,9 +87,6 @@ export default function ArchiveUploader() {
     const next: Job[] = Array.from(fileList).map(makeJob);
     setJobs((prev) => [...prev, ...next]);
 
-    // Fill in dimensions as they resolve. Doing this up front means a mixed
-    // batch is caught before anything reaches Cloudinary — otherwise the
-    // grouping fails afterwards and leaves loose prints behind.
     const measured = await Promise.all(
       next.map(async (job) => ({
         preview: job.preview,
@@ -119,7 +106,6 @@ export default function ArchiveUploader() {
       prev.map((j, idx) => (idx === i ? { ...j, ...patch } : j)),
     );
 
-  /** Swap two positions. In set mode this IS the hanging order. */
   const move = (i: number, delta: number) => {
     setJobs((prev) => {
       const target = i + delta;
@@ -130,7 +116,6 @@ export default function ArchiveUploader() {
     });
   };
 
-  /** Drop a piece that isn't working before the batch uploads. */
   const remove = (i: number) => {
     setJobs((prev) => {
       const target = prev[i];
@@ -140,7 +125,6 @@ export default function ArchiveUploader() {
     setGroupError(null);
   };
 
-  /** Open the file picker to swap one slot in place, keeping its position. */
   const requestReplace = (i: number) => {
     replaceIndex.current = i;
     replaceRef.current?.click();
@@ -160,7 +144,6 @@ export default function ArchiveUploader() {
     });
     setGroupError(null);
 
-    // Measure the replacement so the set orientation check stays correct.
     const dims = await readDimensions(job.preview);
     if (dims) {
       setJobs((prev) =>
@@ -176,7 +159,6 @@ export default function ArchiveUploader() {
     setBusy(true);
     setGroupError(null);
 
-    // Ids in job order, so the set is built in the order shown on screen.
     const createdIds: number[] = [];
     let anyFailed = false;
 
@@ -191,8 +173,6 @@ export default function ArchiveUploader() {
       }
       try {
         update(i, { status: "optimizing", progress: 0 });
-        // Trim baked-in white margins on individual designs only — set panels
-        // must keep identical dimensions to stay aligned, so they're left as-is.
         const optimized = await downscaleImage(jobs[i].file, 2400, 0.85, {
           trim: mode !== "set",
         });
@@ -204,6 +184,9 @@ export default function ArchiveUploader() {
         });
 
         update(i, { status: "saving" });
+        const isLastItem = i === jobs.length - 1;
+        const skipRevalidate = mode === "set" || !isLastItem;
+
         const res = await fetch("/api/admin/archive-prints", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -213,6 +196,7 @@ export default function ArchiveUploader() {
             width: result.width,
             height: result.height,
             category,
+            skipRevalidate,
           }),
         });
         if (!res.ok) throw new Error("Couldn't save this image");
@@ -229,9 +213,6 @@ export default function ArchiveUploader() {
       }
     }
 
-    // Grouping happens last, once every piece exists. A set is all-or-nothing,
-    // so a batch with a failed upload is left as loose prints rather than
-    // grouped into something incomplete — staff can retry or group by hand.
     if (mode === "set") {
       if (anyFailed || createdIds.length < 2) {
         setGroupError(
@@ -265,7 +246,6 @@ export default function ArchiveUploader() {
     jobs.every((j) => j.status === "done" || j.status === "error");
   const anyDone = jobs.some((j) => j.status === "done");
 
-  // Set checks, run before upload so nothing lands in a bad state.
   const orientations = new Set(
     jobs
       .filter((j) => j.status !== "error")
@@ -307,9 +287,6 @@ export default function ArchiveUploader() {
         </p>
       </div>
 
-      {/* Grouping at upload rather than afterwards: once the archive runs to
-          hundreds of pieces, finding the three panels again in a grid to group
-          them is the slow part. */}
       <div className="mb-6">
         <span className="text-xs uppercase tracking-[0.1em] text-muted block mb-2">
           What is this batch?
@@ -409,8 +386,6 @@ export default function ArchiveUploader() {
         <>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-6">
             {jobs.map((job, i) => {
-              // Remove/replace only make sense before a piece is committed —
-              // once it's uploaded, the fix is on the server, not here.
               const editable =
                 !busy && (job.status === "pending" || job.status === "error");
               return (
@@ -484,10 +459,6 @@ export default function ArchiveUploader() {
                     )}
                   </div>
 
-                  {/* Footer controls: reorder (set mode) on the left, swap the
-                      slot in place on the right. Arrows rather than
-                      drag-and-drop — this is used on a phone as often as a
-                      laptop, and a two-tap swap needs no library. */}
                   {(editable ||
                     (mode === "set" && !busy && jobs.length > 1)) && (
                     <div className="flex justify-between items-center mt-1 gap-1">
@@ -558,7 +529,10 @@ export default function ArchiveUploader() {
             ) : (
               anyDone && (
                 <button
-                  onClick={() => router.push("/admin/archive-prints")}
+                  onClick={() => {
+                    router.refresh();
+                    router.push("/admin/archive-prints");
+                  }}
                   className="bg-ink text-cream px-5 py-2 text-sm hover:bg-accent transition-colors"
                 >
                   Done — view archive

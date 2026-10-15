@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const { imageUrl, imagePublicId, width, height, category } = body ?? {};
+  const { imageUrl, imagePublicId, width, height, category, skipRevalidate } =
+    body ?? {};
 
   if (
     typeof imageUrl !== "string" ||
@@ -35,11 +36,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  // An unrecognized category falls back to "others" instead of failing the
-  // request. This is deliberately more forgiving than the PATCH route: by the
-  // time we get here the image is already in Cloudinary, and a mistagged
-  // upload is fixable from the admin grid in one dropdown, whereas a rejected
-  // one costs the whole transfer. PATCH has no such sunk cost, so it rejects.
   const row = await createArchivePrint({
     imageUrl,
     imagePublicId,
@@ -48,7 +44,9 @@ export async function POST(req: NextRequest) {
     category: isArchiveCategory(category) ? category : undefined,
   });
 
-  revalidateStorefront();
+  if (!skipRevalidate) {
+    revalidateStorefront();
+  }
 
   return NextResponse.json(row, { status: 201 });
 }

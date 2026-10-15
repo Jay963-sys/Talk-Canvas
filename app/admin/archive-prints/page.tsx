@@ -129,11 +129,16 @@ export default async function AdminArchivePage({
           both. */}
       {all.length > 0 && (
         <div className="flex flex-wrap gap-x-5 gap-y-2 pb-3 mb-3">
-          <Link href={href({ sets: false })} className={tab(!setsOnly)}>
+          <Link
+            href={href({ sets: false })}
+            prefetch={false}
+            className={tab(!setsOnly)}
+          >
             All pieces ({all.length})
           </Link>
           <Link
             href={href({ sets: true })}
+            prefetch={false}
             className={tab(setsOnly, setCount === 0)}
           >
             Sets ({setCount})
@@ -141,11 +146,13 @@ export default async function AdminArchivePage({
         </div>
       )}
 
-      {/* Filter — the working tool for clearing out "Others" after a bulk
-          upload, so counts are shown rather than hidden. */}
       {all.length > 0 && (
         <div className="flex flex-wrap gap-x-5 gap-y-2 border-b border-line pb-3 mb-6">
-          <Link href={href({ category: null })} className={tab(!category)}>
+          <Link
+            href={href({ category: null })}
+            prefetch={false}
+            className={tab(!category)}
+          >
             All ({all.length})
           </Link>
           {ARCHIVE_CATEGORIES.map((c) => {
@@ -155,6 +162,7 @@ export default async function AdminArchivePage({
               <Link
                 key={c.slug}
                 href={href({ category: c.slug as ArchiveCategory })}
+                prefetch={false}
                 className={tab(active, count === 0)}
               >
                 {c.label} ({count})
@@ -163,7 +171,6 @@ export default async function AdminArchivePage({
           })}
         </div>
       )}
-
       {items.length === 0 ? (
         <div className="border border-line py-20 text-center text-ink-soft">
           {setsOnly && category ? (

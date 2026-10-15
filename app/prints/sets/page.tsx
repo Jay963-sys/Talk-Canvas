@@ -1,10 +1,7 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import {
-  getArchivePage,
-  withSetPanels,
-  type ArchiveOrientation,
-} from "@/lib/db/queries/archivePrints";
+import { getArchivePage, withSetPanels } from "@/lib/db/queries/archivePrints";
 import ArchiveGrid, { type ArchiveItem } from "@/components/prints/ArchiveGrid";
 import Testimonials from "@/components/Testimonials";
 
@@ -14,41 +11,11 @@ export const metadata = {
     "Diptychs, triptychs and complementary pairs. Each set hangs together in one frame style and size — choose your frame, preview the scale, and order the whole set.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
 
-const ORIENTATIONS: { id: ArchiveOrientation | null; label: string }[] = [
-  { id: null, label: "All shapes" },
-  { id: "portrait", label: "Portrait" },
-  { id: "landscape", label: "Landscape" },
-];
-
-function setsHref(orientation: ArchiveOrientation | undefined): string {
-  return orientation
-    ? `/prints/sets?orientation=${orientation}`
-    : "/prints/sets";
-}
-
-export default async function SetsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ orientation?: string }>;
-}) {
-  const { orientation: rawOrientation } = await searchParams;
-  const orientation: ArchiveOrientation | undefined =
-    rawOrientation === "portrait" || rawOrientation === "landscape"
-      ? rawOrientation
-      : undefined;
-
-  // No category filter here on purpose. Sets are a format, not a style, and
-  // there are far fewer of them — stacking nine style tabs over a short grid
-  // would be mostly empty tabs. Shape still matters, since it decides whether
-  // a set fits the wall someone has in mind.
-  //
-  // withSetPanels is what lets each tile show the whole group rather than one
-  // panel and a badge: on this page every row is a set, so fetching panels per
-  // tile would be a request each.
+export default async function SetsPage() {
   const { items, nextCursor } = await withSetPanels(
-    await getArchivePage(undefined, undefined, undefined, orientation, true),
+    await getArchivePage(undefined, undefined, undefined, undefined, true),
   );
 
   const initialItems: ArchiveItem[] = items.map((i) => ({
@@ -88,43 +55,14 @@ export default async function SetsPage({
           </p>
         </div>
 
-        <div className="border-b border-line mb-12">
-          <div className="flex justify-center gap-x-6 py-3">
-            {ORIENTATIONS.map((f) => {
-              const active = (orientation ?? null) === f.id;
-              return (
-                <Link
-                  key={f.label}
-                  href={setsHref(f.id ?? undefined)}
-                  scroll={false}
-                  aria-current={active ? "page" : undefined}
-                  className={`text-[12px] uppercase tracking-widest pb-1 border-b -mb-[13px] transition-colors ${
-                    active
-                      ? "text-ink border-ink font-medium"
-                      : "text-ink-soft hover:text-ink border-transparent"
-                  }`}
-                >
-                  {f.label}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="bg-paper rounded-2xl p-6 md:p-8 mb-16 max-w-3xl mx-auto text-center">
-          <p className="text-[14px] text-ink-soft leading-relaxed">
-            Sets are printed on the same archival paper as every other piece,
-            and framed to match across the group.
-          </p>
-        </div>
-
-        <ArchiveGrid
-          key={orientation ?? "all"}
-          initialItems={initialItems}
-          initialCursor={nextCursor}
-          orientation={orientation}
-          setsOnly
-        />
+        <Suspense fallback={null}>
+          <ArchiveGrid
+            initialItems={initialItems}
+            initialCursor={nextCursor}
+            setsOnly
+            materialsNote="Sets are printed on the same archival paper as every other piece, and framed to match across the group."
+          />
+        </Suspense>
 
         <div className="mt-32">
           <Testimonials title="On pieces from the archive" />

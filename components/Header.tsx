@@ -236,6 +236,7 @@ export default function Header() {
                         <Link
                           key={drop.href}
                           href={drop.href}
+                          prefetch={false}
                           className="px-6 py-2.5 hover:bg-paper transition-colors text-[11px] uppercase tracking-widest text-ink text-center"
                         >
                           {drop.label}
@@ -321,6 +322,7 @@ export default function Header() {
                           <Link
                             key={drop.href}
                             href={drop.href}
+                            prefetch={false}
                             onClick={() => setOpen(false)}
                             className="text-xl tracking-tight text-ink-soft hover:text-ink transition-colors"
                           >
