@@ -118,6 +118,7 @@ export default async function OrdersPage({
           <Link
             key={v}
             href={tabHref(v)}
+            prefetch={false}
             className={`px-4 py-2 text-[11px] uppercase tracking-widest border transition-colors ${
               view === v
                 ? "bg-ink text-cream border-ink"
@@ -184,6 +185,7 @@ export default async function OrdersPage({
         {filtered && (
           <Link
             href="/admin/orders"
+            prefetch={false}
             className="px-4 py-2.5 text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors"
           >
             Clear
@@ -254,6 +256,7 @@ export default async function OrdersPage({
                   <td className="sticky left-0 z-10 bg-white group-hover:bg-paper transition-colors px-4 py-4 whitespace-nowrap align-top border-r border-line md:border-r-0">
                     <Link
                       href={`/admin/orders/${order.id}`}
+                      prefetch={false}
                       className="display-italic text-base hover:underline"
                     >
                       #{String(order.id).padStart(5, "0")}
@@ -319,6 +322,7 @@ export default async function OrdersPage({
                   <td className="px-4 py-4 whitespace-nowrap align-top text-right">
                     <Link
                       href={`/admin/orders/${order.id}`}
+                      prefetch={false}
                       className="text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors"
                     >
                       View →

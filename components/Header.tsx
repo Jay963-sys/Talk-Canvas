@@ -122,7 +122,11 @@ export default function Header() {
       >
         {/* Top Announcement Bar */}
         <div className="w-full bg-ink text-cream text-[10px] sm:text-[11px] uppercase tracking-[0.1em] text-center py-2.5 font-medium">
-          <Link href="/about" className="hover:opacity-80 transition-opacity">
+          <Link
+            href="/about"
+            prefetch={false}
+            className="hover:opacity-80 transition-opacity"
+          >
             Shipping across Nigeria →
           </Link>
         </div>
@@ -167,6 +171,7 @@ export default function Header() {
             <div className="flex-1 flex justify-center">
               <Link
                 href="/"
+                prefetch={false}
                 className="display text-2xl md:text-3xl tracking-tight text-ink relative z-50 hover:opacity-80 transition-opacity"
                 onClick={() => {
                   setOpen(false);
@@ -181,6 +186,7 @@ export default function Header() {
             <div className="flex-1 flex items-center justify-end gap-3 md:gap-5 relative z-50">
               <Link
                 href="/admin/login"
+                prefetch={false}
                 className="hidden md:flex p-2 text-ink hover:text-ink-soft transition-colors"
                 aria-label="Account"
               >
@@ -212,6 +218,7 @@ export default function Header() {
               <div key={item.label} className="relative group">
                 <Link
                   href={item.href}
+                  prefetch={false}
                   className={clsx(
                     "relative transition-colors hover:text-ink-soft flex items-center gap-1.5 py-2",
                     isActivePath(item.href, pathname) && !item.dropdown
@@ -306,6 +313,7 @@ export default function Header() {
                   >
                     <Link
                       href={item.href}
+                      prefetch={false}
                       onClick={() => setOpen(false)}
                       className={clsx(
                         "display text-4xl tracking-tight transition-colors flex items-center gap-4",
@@ -342,6 +350,7 @@ export default function Header() {
               >
                 <Link
                   href="/admin/login"
+                  prefetch={false}
                   onClick={() => setOpen(false)}
                   className="text-ink-soft text-lg flex items-center gap-3"
                 >

@@ -1,16 +1,14 @@
 import Link from "next/link";
 import type { Original } from "@/lib/db/schema";
 import { formatNaira } from "@/lib/store";
-// Removed originalSizeLabel import to keep the card minimalist
 
 export default function WorkCard({ work }: { work: Original }) {
   return (
-    <Link href={`/originals/${work.slug}`} className="block group">
-      {/* 
-        1. Added aspect-[4/5] for a strict uniform grid
-        2. Changed bg-line to bg-paper for a softer loading state
-        3. Added a subtle rounded corner to match the modern aesthetic
-      */}
+    <Link
+      href={`/originals/${work.slug}`}
+      prefetch={false}
+      className="block group"
+    >
       <div className="relative aspect-[4/5] bg-paper overflow-hidden mb-4 rounded-sm">
         {work.soldAt && (
           <span className="absolute top-3 left-3 px-3 py-1 bg-ink text-cream text-[10px] uppercase font-medium tracking-widest z-10">

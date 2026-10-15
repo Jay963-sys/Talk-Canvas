@@ -57,6 +57,7 @@ export default function HomeProductGrid({
               <Link
                 key={item.imageUrl || i}
                 href="/prints/archive"
+                prefetch={false}
                 className="group block overflow-hidden bg-paper rounded-xl border border-line/40 hover:border-ink/20 transition-colors"
                 style={{ aspectRatio: `4/5` }}
               >
@@ -74,6 +75,7 @@ export default function HomeProductGrid({
       <div className="mt-16 text-center">
         <Link
           href={tab === "originals" ? "/originals" : "/prints/archive"}
+          prefetch={false}
           className="inline-block px-8 py-4 border border-ink text-[12px] uppercase tracking-widest font-bold hover:bg-ink hover:text-cream transition-colors"
         >
           Explore {tab === "originals" ? "All Originals" : "All Archive Prints"}

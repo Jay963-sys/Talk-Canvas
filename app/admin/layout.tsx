@@ -22,7 +22,11 @@ export default async function AdminLayout({
     <div className="min-h-screen bg-cream">
       <header className="border-b border-line bg-paper">
         <div className="max-w-7xl mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
-          <Link href="/admin" className="display text-lg font-medium">
+          <Link
+            href="/admin"
+            prefetch={false}
+            className="display text-lg font-medium"
+          >
             Talk Canvas{" "}
             <span className="display-italic text-accent">Admin</span>
           </Link>

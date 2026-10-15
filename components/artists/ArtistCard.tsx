@@ -7,10 +7,13 @@ function thumb(url: string, width = 600): string {
 
 export default function ArtistCard({ artist }: { artist: Artist }) {
   return (
-    <Link href={`/artists/${artist.slug}`} className="group block">
+    <Link
+      href={`/artists/${artist.slug}`}
+      prefetch={false}
+      className="group block"
+    >
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-paper">
         {artist.portraitUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={thumb(artist.portraitUrl)}
             alt={artist.name}

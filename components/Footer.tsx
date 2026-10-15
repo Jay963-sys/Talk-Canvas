@@ -98,6 +98,7 @@ export default function Footer() {
           <div className="flex flex-col gap-6">
             <Link
               href="/"
+              prefetch={false}
               className="display text-2xl tracking-tight text-ink hover:opacity-80 transition-opacity w-fit"
             >
               Talk Canvas
@@ -116,12 +117,14 @@ export default function Footer() {
             <nav className="flex flex-col gap-3 text-[13px] text-ink-soft">
               <Link
                 href="/originals"
+                prefetch={false}
                 className="hover:text-ink transition-colors w-fit"
               >
                 Originals
               </Link>
               <Link
                 href="/prints"
+                prefetch={false}
                 className="hover:text-ink transition-colors w-fit"
               >
                 Prints
@@ -134,12 +137,14 @@ export default function Footer() {
               </Link>
               <Link
                 href="/prints/custom"
+                prefetch={false}
                 className="hover:text-ink transition-colors w-fit"
               >
                 Custom Artwork
               </Link>
               <Link
                 href="/artists"
+                prefetch={false}
                 className="hover:text-ink transition-colors w-fit"
               >
                 Artists
@@ -161,18 +166,21 @@ export default function Footer() {
               </Link>
               <Link
                 href="/contact"
+                prefetch={false}
                 className="hover:text-ink transition-colors w-fit"
               >
                 Contact
               </Link>
               <Link
                 href="/shipping-returns"
+                prefetch={false}
                 className="hover:text-ink transition-colors w-fit"
               >
                 Shipping & Returns
               </Link>
               <Link
                 href="/faq"
+                prefetch={false}
                 className="hover:text-ink transition-colors w-fit"
               >
                 FAQs

@@ -23,6 +23,7 @@ export default async function EditTestimonialPage({
     <div>
       <Link
         href="/admin/testimonials"
+        prefetch={false}
         className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors mb-8"
       >
         <ArrowLeft size={14} strokeWidth={1.5} />

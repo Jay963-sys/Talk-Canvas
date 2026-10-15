@@ -19,6 +19,7 @@ export default async function AdminArtistsPage() {
         </div>
         <Link
           href="/admin/artists/new"
+          prefetch={false}
           className="inline-flex items-center gap-2 px-5 py-3 bg-ink text-cream text-xs uppercase tracking-[0.15em] hover:bg-ink-soft transition-colors"
         >
           <Plus size={14} strokeWidth={1.5} />

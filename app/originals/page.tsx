@@ -108,6 +108,7 @@ export default async function OriginalsPage() {
           </p>
           <Link
             href="/artists"
+            prefetch={false}
             className="inline-flex items-center gap-2 px-10 py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-bold hover:bg-ink-soft transition-colors"
           >
             Meet the artists

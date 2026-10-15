@@ -64,6 +64,7 @@ export default async function SearchPage({
         <div className="flex flex-col items-center text-center mb-16 md:mb-24">
           <Link
             href="/"
+            prefetch={false}
             className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-ink-soft hover:text-ink transition-colors mb-8"
           >
             <ArrowLeft size={14} strokeWidth={2} />
@@ -111,6 +112,7 @@ export default async function SearchPage({
             </p>
             <Link
               href="/originals"
+              prefetch={false}
               className="mt-8 px-8 py-3 bg-ink text-cream text-sm font-medium hover:bg-ink-soft transition-colors"
             >
               Explore all works

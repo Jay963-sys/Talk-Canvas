@@ -9,6 +9,7 @@ export default function NewArtistPage() {
     <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
       <Link
         href="/admin/artists"
+        prefetch={false}
         className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors mb-8"
       >
         <ArrowLeft size={14} strokeWidth={1.5} />

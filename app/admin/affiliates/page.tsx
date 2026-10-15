@@ -23,6 +23,7 @@ export default async function AdminAffiliatesPage() {
         </div>
         <Link
           href="/admin/affiliates/new"
+          prefetch={false}
           className="inline-flex items-center gap-2 px-5 py-3 bg-ink text-cream text-xs uppercase tracking-[0.15em] hover:bg-ink-soft transition-colors"
         >
           <Plus size={14} strokeWidth={1.5} />

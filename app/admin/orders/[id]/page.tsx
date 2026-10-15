@@ -86,6 +86,7 @@ export default async function OrderDetailPage({
     <div className="max-w-5xl mx-auto px-6 md:px-10 py-12">
       <Link
         href="/admin/orders"
+        prefetch={false}
         className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink mb-8"
       >
         <ArrowLeft size={16} strokeWidth={1.5} />

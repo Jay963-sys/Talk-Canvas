@@ -116,6 +116,7 @@ export default async function AdminArchivePage({
         </div>
         <Link
           href="/admin/archive-prints/new"
+          prefetch={false}
           className="inline-flex items-center gap-2 bg-ink text-cream px-4 py-2 text-sm hover:bg-accent transition-colors shrink-0"
         >
           <Plus size={16} strokeWidth={1.5} />
@@ -200,7 +201,11 @@ export default async function AdminArchivePage({
           ) : (
             <>
               No archive prints yet.{" "}
-              <Link href="/admin/archive-prints/new" className="underline">
+              <Link
+                href="/admin/archive-prints/new"
+                prefetch={false}
+                className="underline"
+              >
                 Add some
               </Link>
               .

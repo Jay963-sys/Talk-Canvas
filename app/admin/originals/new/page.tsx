@@ -9,6 +9,7 @@ export default function NewOriginalPage() {
     <div className="max-w-7xl mx-auto px-6 md:px-10 py-12">
       <Link
         href="/admin"
+        prefetch={false}
         className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink mb-8"
       >
         <ArrowLeft size={16} strokeWidth={1.5} />

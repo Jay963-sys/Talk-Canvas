@@ -85,6 +85,7 @@ export default async function PrintsPage() {
           <InstagramHint className="justify-center text-center max-w-md mx-auto mb-8" />
           <Link
             href="/prints/archive"
+            prefetch={false}
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
           >
             Browse Archive
@@ -101,6 +102,7 @@ export default async function PrintsPage() {
               <Link
                 key={item.id}
                 href="/prints/archive"
+                prefetch={false}
                 className="group block overflow-hidden bg-paper rounded-xl"
               >
                 <div className="relative aspect-[4/5] w-full">
@@ -130,6 +132,7 @@ export default async function PrintsPage() {
           </div>
           <Link
             href="/prints/sets"
+            prefetch={false}
             className="shrink-0 inline-flex items-center gap-2 px-8 py-3.5 bg-cream text-ink text-[12px] uppercase tracking-widest font-medium hover:bg-paper transition-colors"
           >
             Shop Sets
@@ -186,6 +189,7 @@ export default async function PrintsPage() {
           </p>
           <Link
             href="/prints/custom"
+            prefetch={false}
             className="inline-flex items-center gap-2 px-8 py-4 bg-cream text-ink text-[12px] uppercase tracking-widest font-medium hover:bg-paper transition-colors"
           >
             Request a custom order

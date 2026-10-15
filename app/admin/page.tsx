@@ -22,6 +22,7 @@ export default async function AdminDashboard() {
         </div>
         <Link
           href="/admin/originals/new"
+          prefetch={false}
           className="px-5 py-3 bg-accent hover:bg-accent-dark text-cream text-sm font-medium tracking-wider transition-colors flex items-center gap-2"
         >
           <Plus size={16} strokeWidth={2} />
@@ -34,6 +35,7 @@ export default async function AdminDashboard() {
           <p className="text-ink-soft">No originals yet.</p>
           <Link
             href="/admin/originals/new"
+            prefetch={false}
             className="inline-block mt-4 text-sm text-accent hover:text-accent-dark"
           >
             Add the first one →

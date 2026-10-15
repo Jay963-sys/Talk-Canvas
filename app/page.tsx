@@ -34,13 +34,11 @@ export default async function Home() {
   const [all, archivePreview, artists] = await Promise.all([
     getAllOriginals(),
     getArchivePage(undefined, 16),
-    // Featured only, house artist excluded — same list as /artists.
     getFeaturedArtists(),
   ]);
 
   const featuredPool = all.slice(0, 8);
   const archiveItems = archivePreview.items;
-  // Grid uses the first 8; the archive rail takes the next 8 so nothing repeats.
   const archiveRail = archiveItems.slice(8, 16);
   const featuredArtists = artists.slice(0, 4);
 
@@ -71,12 +69,14 @@ export default async function Home() {
           >
             <Link
               href="/originals"
+              prefetch={false}
               className="w-full sm:w-auto px-10 py-4 bg-cream text-ink text-[12px] uppercase tracking-widest font-bold hover:bg-white transition-colors"
             >
               Shop Original Paintings
             </Link>
             <Link
               href="/prints"
+              prefetch={false}
               className="w-full sm:w-auto px-10 py-4 border-2 border-cream text-cream text-[12px] uppercase tracking-widest font-bold hover:bg-cream/10 transition-colors"
             >
               Shop Prints
@@ -100,6 +100,7 @@ export default async function Home() {
               </div>
               <Link
                 href="/prints/archive"
+                prefetch={false}
                 className="hidden md:flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink"
               >
                 Browse all <ArrowUpRight size={14} />
@@ -111,6 +112,7 @@ export default async function Home() {
                 <Link
                   key={item.id}
                   href="/prints/archive"
+                  prefetch={false}
                   className="group flex flex-col min-w-[240px] md:min-w-[280px] snap-start"
                 >
                   <div
@@ -135,6 +137,7 @@ export default async function Home() {
               {/* Trailing CTA tile */}
               <Link
                 href="/prints/archive"
+                prefetch={false}
                 className="group flex flex-col items-center justify-center text-center min-w-[240px] md:min-w-[280px] snap-start rounded-2xl border border-line/40 bg-paper hover:border-ink/20 transition-colors"
                 style={{ aspectRatio: "4 / 5" }}
               >
@@ -149,6 +152,7 @@ export default async function Home() {
             <div className="px-6 md:hidden">
               <Link
                 href="/prints/archive"
+                prefetch={false}
                 className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink"
               >
                 Browse all <ArrowUpRight size={14} />
@@ -193,6 +197,7 @@ export default async function Home() {
               </h2>
               <Link
                 href="/artists"
+                prefetch={false}
                 className="hidden md:flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium text-ink-soft hover:text-ink transition-colors"
               >
                 Meet everyone <ArrowUpRight size={14} />
@@ -209,6 +214,7 @@ export default async function Home() {
             <div className="mt-8 md:hidden text-center">
               <Link
                 href="/artists"
+                prefetch={false}
                 className="inline-block px-8 py-4 border border-line text-[12px] uppercase tracking-widest font-bold hover:border-ink transition-colors w-full"
               >
                 Meet all artists
@@ -246,6 +252,8 @@ export default async function Home() {
               src="/home/5.jpeg"
               alt="Talk Canvas Studio"
               fill
+              sizes="100vw"
+              unoptimized
               className="object-cover opacity-50"
             />
             <h2 className="relative z-10 display text-4xl md:text-6xl text-cream leading-tight max-w-3xl">
@@ -264,6 +272,7 @@ export default async function Home() {
             </p>
             <Link
               href="/about"
+              prefetch={false}
               className="text-[12px] uppercase tracking-widest font-bold border-b border-ink pb-1 hover:text-ink-soft hover:border-ink-soft transition-colors"
             >
               Learn More

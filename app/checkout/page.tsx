@@ -155,6 +155,7 @@ export default function CheckoutPage() {
         <Link
           className="inline-block px-8 py-3.5 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
           href="/prints"
+          prefetch={false}
         >
           Shop Prints
         </Link>
@@ -334,6 +335,7 @@ export default function CheckoutPage() {
         <Link
           className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors mb-12"
           href="/prints"
+          prefetch={false}
         >
           <ArrowLeft size={14} strokeWidth={1.5} />
           Continue Shopping

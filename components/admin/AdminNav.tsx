@@ -44,7 +44,11 @@ export default function AdminNav() {
             {link.label}
           </Link>
         ))}
-        <Link href="/" className="text-ink-soft hover:text-ink transition-colors">
+        <Link
+          href="/"
+          prefetch={false}
+          className="text-ink-soft hover:text-ink transition-colors"
+        >
           View site ↗
         </Link>
         <LogoutButton />
@@ -54,20 +58,42 @@ export default function AdminNav() {
         Visible on mobile. Hidden on medium screens and up.
       */}
       <div className="flex items-center justify-end md:hidden">
-        <button 
+        <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="p-2 text-ink"
           aria-label="Toggle menu"
         >
           {isMobileMenuOpen ? (
             // Close (X) Icon
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           ) : (
             // Hamburger Menu Icon
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+              />
             </svg>
           )}
         </button>
@@ -93,8 +119,9 @@ export default function AdminNav() {
             </Link>
           ))}
           <hr className="border-gray-100" />
-          <Link 
-            href="/" 
+          <Link
+            href="/"
+            prefetch={false}
             className="text-ink-soft hover:text-ink transition-colors"
             onClick={() => setIsMobileMenuOpen(false)}
           >

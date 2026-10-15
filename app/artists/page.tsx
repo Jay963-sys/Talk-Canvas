@@ -22,6 +22,7 @@ export default async function ArtistsPage() {
         <div className="flex flex-col items-center text-center mb-16">
           <Link
             href="/originals"
+            prefetch={false}
             className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors mb-12"
           >
             <ArrowLeft size={14} strokeWidth={1.5} />

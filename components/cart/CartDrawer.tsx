@@ -98,6 +98,7 @@ export default function CartDrawer() {
                 <Link
                   href="/originals"
                   onClick={() => setOpen(false)}
+                  prefetch={false}
                   className="w-full py-3.5 bg-ink text-cream text-[11px] uppercase tracking-widest font-medium hover:bg-ink-soft transition-colors"
                 >
                   Shop Originals
@@ -105,6 +106,7 @@ export default function CartDrawer() {
                 <Link
                   href="/prints"
                   onClick={() => setOpen(false)}
+                  prefetch={false}
                   className="w-full py-3.5 border border-line bg-transparent text-ink text-[11px] uppercase tracking-widest font-medium hover:border-ink transition-colors"
                 >
                   Shop Prints
@@ -263,6 +265,7 @@ export default function CartDrawer() {
             <Link
               href="/checkout"
               onClick={() => setOpen(false)}
+              prefetch={false}
               className="block w-full py-4 bg-ink text-cream text-[12px] uppercase tracking-widest font-medium text-center hover:bg-ink-soft transition-colors"
             >
               Proceed to Checkout

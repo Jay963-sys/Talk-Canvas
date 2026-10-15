@@ -56,6 +56,7 @@ export default async function ArtistDetailPage({
       <div className="max-w-7xl mx-auto px-6 md:px-10 py-12 md:py-16">
         <Link
           href="/artists"
+          prefetch={false}
           className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors mb-10 md:mb-16"
         >
           <ArrowLeft size={14} strokeWidth={1.5} />

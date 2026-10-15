@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
   getAllOriginals,
   getOriginalBySlug,
@@ -15,6 +16,10 @@ import TrackView from "@/components/TrackView";
 
 export const revalidate = 86400;
 
+const getCachedWork = cache(async (slug: string) => {
+  return getOriginalBySlugWithArtist(slug);
+});
+
 export async function generateStaticParams() {
   const all = await getAllOriginals();
   return all.map((o) => ({ id: o.slug }));
@@ -26,7 +31,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const work = await getOriginalBySlug(id);
+  const work = await getCachedWork(id);
 
   if (!work) return { title: "Artwork Not Found" };
 
@@ -61,7 +66,7 @@ export default async function WorkDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const work = await getOriginalBySlugWithArtist(id);
+  const work = await getCachedWork(id);
   if (!work) notFound();
 
   return (
@@ -70,6 +75,7 @@ export default async function WorkDetail({
         {/* Minimalist Back Navigation */}
         <Link
           href="/originals"
+          prefetch={false}
           className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors mb-10 md:mb-16"
         >
           <ArrowLeft size={14} strokeWidth={1.5} />
@@ -102,6 +108,7 @@ export default async function WorkDetail({
               {work.artistSlug ? (
                 <Link
                   href={`/artists/${work.artistSlug}`}
+                  prefetch={false}
                   className="hover:text-ink transition-colors"
                 >
                   {work.artistName ?? work.artist}
