@@ -4,6 +4,7 @@ import { getTestimonials } from "@/lib/db/queries/testimonials";
 import type { Testimonial } from "@/lib/db/schema";
 import { videoPoster, videoSrc } from "@/lib/media";
 import LoopVideo from "@/components/LoopVideo";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 /**
  * Every photo and video box uses this one shape, so a row of reviews lines up
@@ -14,10 +15,6 @@ import LoopVideo from "@/components/LoopVideo";
  * "aspect-[4/3]" for wider ones.
  */
 const MEDIA_ASPECT = "aspect-square";
-
-function thumb(url: string, width = 900): string {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
-}
 
 function Stars({ rating }: { rating: number }) {
   const n = Math.max(1, Math.min(5, rating));

@@ -15,6 +15,7 @@ import {
 import { uploadToCloudinary } from "@/lib/upload";
 import { downscaleImage } from "@/lib/image";
 import { ARCHIVE_CATEGORIES, type ArchiveCategory } from "@/data/collections";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 type Status =
   | "pending"
@@ -393,7 +394,7 @@ export default function ArchiveUploader() {
                   <div className="relative aspect-square bg-paper overflow-hidden border border-line">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={job.preview}
+                      src={thumb(job.preview)}
                       alt=""
                       className="w-full h-full object-cover"
                     />

@@ -8,6 +8,7 @@ import { downscaleImage } from "@/lib/image";
 import { fetchArchiveSet } from "@/lib/archiveSet";
 import ArchivePickerModal, { ArchiveItem } from "./ArchivePickerModal";
 import InstagramHint from "./InstagramHint";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export default function StepUpload() {
   const { image, set, setImage, selectSet } = useConfigurator();
@@ -149,7 +150,7 @@ export default function StepUpload() {
               {set.pieces.map((piece, i) => (
                 <img
                   key={i}
-                  src={piece.url}
+                  src={thumb(piece.url, 1200)}
                   alt=""
                   className="max-h-64 max-w-[30%] object-contain"
                 />
@@ -162,7 +163,7 @@ export default function StepUpload() {
         ) : image ? (
           <>
             <img
-              src={image.url}
+              src={thumb(image.url, 1200)}
               alt="Selected"
               className="max-h-80 max-w-full object-contain p-6"
             />

@@ -4,6 +4,7 @@ import { ArrowLeft, Globe } from "lucide-react";
 import { Metadata } from "next";
 import { getArtistBySlug, getAllArtists } from "@/lib/db/queries/artists";
 import WorkCard from "@/components/WorkCard";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export const revalidate = 86400;
 
@@ -69,7 +70,7 @@ export default async function ArtistDetailPage({
             <div className="relative aspect-[4/5] w-full max-w-[320px] bg-paper overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={artist.portraitUrl}
+                src={thumb(artist.portraitUrl, 600)}
                 alt={artist.name}
                 className="absolute inset-0 w-full h-full object-cover"
               />

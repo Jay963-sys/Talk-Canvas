@@ -12,7 +12,8 @@ import {
   Img,
   Preview,
 } from "@react-email/components";
-import { styles, formatNaira, thumb, colors } from "../styles";
+import { styles, formatNaira, colors } from "../styles";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 interface Item {
   type?: "print" | "original";

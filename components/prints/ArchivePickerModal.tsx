@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2 } from "lucide-react";
 import { ARCHIVE_CATEGORIES, type ArchiveCategory } from "@/data/collections";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 type Orientation = "portrait" | "landscape";
 
@@ -27,10 +28,6 @@ export interface ArchiveItem {
 interface Props {
   onSelect: (item: ArchiveItem) => void;
   onClose: () => void;
-}
-
-function thumb(url: string, width = 500) {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
 }
 
 const ORIENTATIONS: { id: Orientation | null; label: string }[] = [

@@ -55,16 +55,6 @@ export default function StepReview() {
 
       <div className="bg-paper p-8 sm:p-10 flex justify-center items-center min-h-[500px]">
         {isSet ? (
-          /*
-            No cropper here on purpose. The panels of a split artwork are
-            aligned by the gallery — recropping one of them independently would
-            pull the piece out of register. Each panel gets the same centred
-            fit against the chosen size instead.
-
-            FramedPreview, not a bare <img>: the customer has just chosen a
-            frame, and showing the panels unframed makes every set look like a
-            plain white mount whatever they picked.
-          */
           <div className="flex justify-center items-start gap-4 sm:gap-6 flex-wrap">
             {set.pieces.map((piece, i) => (
               <FramedPreview

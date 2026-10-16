@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Plus, Star, ImageIcon } from "lucide-react";
 import { getAllTestimonialsForAdmin } from "@/lib/db/queries/testimonials";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export default async function AdminTestimonialsPage() {
                 {t.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={t.imageUrl}
+                    src={thumb(t.imageUrl, 600)}
                     alt=""
                     className="w-full h-full object-cover"
                   />

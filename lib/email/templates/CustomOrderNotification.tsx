@@ -10,7 +10,8 @@ import {
   Preview,
   Link,
 } from "@react-email/components";
-import { styles, thumb } from "../styles";
+import { styles } from "../styles";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 interface Props {
   name: string;

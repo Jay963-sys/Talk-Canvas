@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getAllArtistsForAdmin } from "@/lib/db/queries/artists";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export default async function AdminArtistsPage() {
                 {artist.portraitUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={artist.portraitUrl}
+                    src={thumb(artist.portraitUrl, 600)}
                     alt=""
                     className="w-full h-full object-cover"
                   />

@@ -10,6 +10,7 @@ import {
 } from "@/data/frames";
 import { isSizeAvailable } from "@/data/pricing";
 import { useConfigurator } from "@/lib/store";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export default function StepFrame() {
   const { frame, glass, size, setFrame, setGlass, setSize } = useConfigurator();
@@ -187,7 +188,7 @@ function ColorTile({ frame, selected, onClick }: any) {
     >
       <div className="aspect-square bg-paper mb-2 overflow-hidden">
         <img
-          src={frame.photo}
+          src={thumb(frame.photo, 1200)}
           alt={frame.color}
           className="w-full h-full object-cover"
         />

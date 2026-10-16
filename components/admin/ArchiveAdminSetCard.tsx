@@ -11,12 +11,7 @@ import {
 } from "@/data/collections";
 import AdminLightbox from "./AdminLightbox";
 import type { AdminArchiveItem } from "./ArchiveAdminCard";
-
-function thumb(url: string, width = 500): string {
-  // c_limit, not c_fill — a cropped square thumbnail hides the composition,
-  // which is the thing staff are checking when they open the grid.
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
-}
+import { thumb } from "@/lib/cloudinaryLoader";
 
 interface Props {
   setId: number;
@@ -175,7 +170,7 @@ export default function ArchiveAdminSetCard({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={thumb(p.imageUrl, 400)}
+                src={thumb(p.imageUrl, 600)}
                 alt=""
                 loading="lazy"
                 className="w-full h-auto block"

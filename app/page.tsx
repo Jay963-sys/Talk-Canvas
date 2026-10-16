@@ -11,6 +11,7 @@ import { getAllOriginals } from "@/lib/db/queries/originals";
 import { getFeaturedArtists } from "@/lib/db/queries/artists";
 import { getArchivePage } from "@/lib/db/queries/archivePrints";
 import { Metadata } from "next";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export const revalidate = 86400;
 
@@ -25,10 +26,6 @@ export const metadata: Metadata = {
     url: "/",
   },
 };
-
-function thumb(url: string, width = 500): string {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
-}
 
 export default async function Home() {
   const [all, archivePreview, artists] = await Promise.all([

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Original } from "@/lib/db/schema";
 import { formatNaira } from "@/lib/store";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export default function WorkCard({ work }: { work: Original }) {
   return (
@@ -16,7 +17,7 @@ export default function WorkCard({ work }: { work: Original }) {
           </span>
         )}
         <img
-          src={work.imageUrl}
+          src={thumb(work.imageUrl)}
           alt={work.title}
           loading="lazy"
           className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"

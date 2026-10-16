@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-
-// Lifestyle "in your space" gallery — see the brief from earlier in this
-// thread for shot list/styling notes. 10 room shots in /public, each tile
-// below rotates through the full set independently so the grid never feels
-// like a synced slideshow.
+import { thumb } from "@/lib/cloudinaryLoader";
 
 const ROOMS = [
   { src: "/1.png", alt: "Framed print in a Lagos living room" },
@@ -50,7 +46,7 @@ function RotatingTile({
       {ROOMS.map((room, i) => (
         <img
           key={room.src}
-          src={room.src}
+          src={thumb(room.src, 1200)}
           alt={room.alt}
           loading="lazy"
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-in-out ${

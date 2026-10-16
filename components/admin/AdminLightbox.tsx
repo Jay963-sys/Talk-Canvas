@@ -3,10 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-
-function full(url: string, width = 1600): string {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
-}
+import { thumb } from "@/lib/cloudinaryLoader";
 
 /** Below this, a horizontal drag reads as a scroll rather than a swipe. */
 const SWIPE_PX = 48;
@@ -62,12 +59,11 @@ export default function AdminLightbox({
     };
   }, [onClose, go]);
 
-  // Warm the neighbours so stepping through doesn't flash empty.
   useEffect(() => {
     if (count < 2) return;
     for (const d of [1, -1]) {
       const img = new Image();
-      img.src = full(images[(index + d + count) % count]);
+      img.src = thumb(images[(index + d + count) % count], 1200);
     }
   }, [index, count, images]);
 
@@ -135,10 +131,8 @@ export default function AdminLightbox({
         <div className="flex-1 min-w-0 h-full flex items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            // Keyed so a near-identical panel doesn't linger while the next
-            // one decodes — the exact case staff are trying to tell apart.
             key={images[index]}
-            src={full(images[index])}
+            src={thumb(images[index], 1200)}
             alt=""
             className="max-w-full max-h-full object-contain"
           />

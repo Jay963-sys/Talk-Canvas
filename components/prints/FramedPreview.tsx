@@ -1,4 +1,5 @@
 import type { Frame } from "@/data/frames";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 interface Props {
   image: string;
@@ -35,7 +36,11 @@ export default function FramedPreview({ image, frame, maxWidth = 380 }: Props) {
       }}
     >
       {/* Art sits flush against the frame — no white mat by default. */}
-      <img src={image} alt="Your print" className="w-full block" />
+      <img
+        src={thumb(image, 1200)}
+        alt="Your print"
+        className="w-full block"
+      />{" "}
     </div>
   );
 }

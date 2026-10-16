@@ -11,6 +11,7 @@ import RoomGallery from "@/components/prints/RoomGallery";
 import InstagramHint from "@/components/prints/InstagramHint";
 import Testimonials from "@/components/Testimonials";
 import { getArchivePage } from "@/lib/db/queries/archivePrints";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export const metadata = {
   title: "Prints — Talk Canvas Gallery",
@@ -19,10 +20,6 @@ export const metadata = {
 };
 
 export const revalidate = 86400;
-
-function thumb(url: string, width = 500): string {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
-}
 
 const STEPS = [
   {

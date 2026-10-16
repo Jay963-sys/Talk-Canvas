@@ -3,10 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import WorkCard from "@/components/WorkCard";
-
-function thumb(url: string, width = 500): string {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
-}
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export default function HomeProductGrid({
   originals,

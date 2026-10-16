@@ -7,17 +7,9 @@ const nextConfig: NextConfig = {
     "172.16.78.177",
   ],
   images: {
-    qualities: [75, 90],
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-        port: "",
-        pathname: "/**",
-      },
-    ],
+    loader: "custom",
+    loaderFile: "./lib/cloudinaryLoader.ts",
   },
-  /* config options here */
 };
 
 export default nextConfig;

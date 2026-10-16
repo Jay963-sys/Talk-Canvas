@@ -14,6 +14,7 @@ import {
 } from "@/lib/cartStore";
 import { formatNaira } from "@/lib/store";
 import { usePathname } from "next/navigation";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export default function CartDrawer() {
   const { items, isOpen, setOpen, removeItem, increment, decrement } =
@@ -124,7 +125,7 @@ export default function CartDrawer() {
                     {/* Strict 4/5 Aspect Ratio for Cart Images */}
                     <div className="w-[75px] relative aspect-[4/5] bg-paper shrink-0 rounded-sm overflow-hidden border border-line/40">
                       <img
-                        src={item.imageUrl}
+                        src={thumb(item.imageUrl, 1200)}
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover"
                       />

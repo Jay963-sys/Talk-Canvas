@@ -7,12 +7,9 @@ import { useConfigurator, type ConfiguratorSet } from "@/lib/store";
 import { fetchArchiveSet } from "@/lib/archiveSet";
 import SetLightbox, { type LightboxPanel } from "./SetLightbox";
 import type { ArchiveDensity, ArchiveItem } from "./ArchiveGrid";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 const CONFIGURATOR_ROUTE = "/prints";
-
-function thumb(url: string, width = 600): string {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
-}
 
 export default function ArchiveCard({
   item,
@@ -141,7 +138,7 @@ export default function ArchiveCard({
         style={{ aspectRatio: `${item.width} / ${item.height}` }}
       >
         <img
-          src={thumb(item.imageUrl, compact ? 400 : 600)}
+          src={thumb(item.imageUrl, compact ? 200 : 600)}
           alt=""
           loading="lazy"
           width={item.width}

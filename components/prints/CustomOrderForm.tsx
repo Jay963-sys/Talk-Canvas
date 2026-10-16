@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Upload, Check, Loader2, X } from "lucide-react";
 import { uploadToCloudinary, validateFile } from "@/lib/upload";
 import { FRAMES } from "@/data/frames";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export default function CustomOrderForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -153,7 +154,7 @@ export default function CustomOrderForm() {
         {imageUrl ? (
           <div className="flex items-start gap-4 p-4 border border-line bg-paper">
             <img
-              src={imageUrl}
+              src={thumb(imageUrl, 1200)}
               alt="Uploaded design"
               className="w-20 h-20 object-cover"
             />

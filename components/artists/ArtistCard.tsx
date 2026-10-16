@@ -1,9 +1,6 @@
 import Link from "next/link";
 import type { Artist } from "@/lib/db/schema";
-
-function thumb(url: string, width = 600): string {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,f_auto,q_auto/`);
-}
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export default function ArtistCard({ artist }: { artist: Artist }) {
   return (

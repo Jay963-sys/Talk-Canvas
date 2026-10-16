@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Upload, Loader2, X } from "lucide-react";
 import { uploadToCloudinary, validateFile } from "@/lib/upload";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 interface UploadedImage {
   url: string;
@@ -50,7 +51,7 @@ export default function ImageUploader({ value, onChange }: Props) {
     return (
       <div className="relative inline-block">
         <img
-          src={value.url}
+          src={thumb(value.url)}
           alt=""
           className="max-h-80 max-w-full object-contain bg-paper border border-line"
         />

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export interface LightboxPanel {
   imageUrl: string;
@@ -161,7 +162,7 @@ export default function SetLightbox({
             // Keyed so a swap doesn't leave the previous panel painted while
             // the next decodes — a real risk when panels are near-identical.
             key={panel.imageUrl}
-            src={large(panel.imageUrl)}
+            src={thumb(panel.imageUrl, 1200)}
             alt={`Piece ${index + 1} of ${count}`}
             width={panel.width}
             height={panel.height}
@@ -200,7 +201,7 @@ export default function SetLightbox({
                 }`}
               >
                 <img
-                  src={large(p.imageUrl, 160)}
+                  src={thumb(p.imageUrl, 200)}
                   alt=""
                   loading="lazy"
                   className="w-full h-full object-cover"
