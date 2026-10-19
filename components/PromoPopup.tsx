@@ -7,7 +7,7 @@ import { X, Check, Tag } from "lucide-react";
 const DISMISS_KEY = "tc_promo_seen";
 const DISMISS_DAYS = 30;
 const SHOW_DELAY_MS = 3000;
-const CLOSE_DELAY_MS = 1500; // How long to force them to read
+const CLOSE_DELAY_MS = 1500;
 
 function hasSeen(code: string): boolean {
   if (typeof window === "undefined") return false;

@@ -8,8 +8,22 @@ import {
 } from "../schema";
 import { eq, and, sql, desc, count } from "drizzle-orm";
 import { randomBytes } from "crypto";
+import { unstable_cache, revalidateTag, revalidatePath } from "next/cache";
+const getCachedActivePromoRows = unstable_cache(
+  async () => {
+    return await db
+      .select()
+      .from(affiliates)
+      .where(and(eq(affiliates.kind, "promo"), eq(affiliates.isActive, true)))
+      .orderBy(desc(affiliates.id));
+  },
+  ["active-promo-rows"],
+  {
+    revalidate: 86400, // Cache in Vercel Data Cache for 24 hours
+    tags: ["active-promo"],
+  },
+);
 
-/** Why a code was rejected — surfaced to the customer at checkout. */
 export type CodeRejection =
   | "not_found"
   | "inactive"
@@ -130,15 +144,20 @@ export async function getAffiliatesByKind(
  * gallery has several, the most recently created live one wins.
  */
 export async function getActivePromo(): Promise<Affiliate | undefined> {
-  const rows = await db
-    .select()
-    .from(affiliates)
-    .where(and(eq(affiliates.kind, "promo"), eq(affiliates.isActive, true)))
-    .orderBy(desc(affiliates.id));
+  const rows = await getCachedActivePromoRows();
 
-  return rows.find(
+  const active = rows.find(
     (p) => !p.expiresAt || new Date(p.expiresAt).getTime() > Date.now(),
   );
+
+  if (!active) return undefined;
+
+  return {
+    ...active,
+    expiresAt: active.expiresAt ? new Date(active.expiresAt) : null,
+    createdAt: new Date(active.createdAt),
+    updatedAt: new Date(active.updatedAt),
+  };
 }
 
 export async function getAffiliateById(
@@ -165,6 +184,9 @@ export async function createAffiliate(data: NewAffiliate): Promise<Affiliate> {
         kind === "affiliate" ? (data.statsToken ?? generateStatsToken()) : null,
     })
     .returning();
+
+  revalidateTag("active-promo", "max");
+  revalidatePath("/", "layout");
   return created;
 }
 
@@ -181,13 +203,17 @@ export async function updateAffiliate(
     })
     .where(eq(affiliates.id, id))
     .returning();
+
+  revalidateTag("active-promo", "max");
+  revalidatePath("/", "layout");
+
   return updated;
 }
 
 export async function deleteAffiliate(id: number): Promise<void> {
-  // orders.affiliateId is onDelete "set null" — past orders keep their
-  // affiliateCode/discountAmount snapshot even if the affiliate is removed.
   await db.delete(affiliates).where(eq(affiliates.id, id));
+  revalidateTag("active-promo", "max");
+  revalidatePath("/", "layout");
 }
 
 // ── RECONCILIATION ───────────────────────────────────────────────
