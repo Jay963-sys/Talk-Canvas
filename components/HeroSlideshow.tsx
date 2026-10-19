@@ -59,7 +59,7 @@ export default function HeroSlideshow() {
             src={img.src}
             alt={img.alt}
             fill
-            priority // Changed from priority={i === 0} to apply to all hero slides
+            priority
             sizes="100vw"
             quality={90}
             className={`object-cover ${img.position} brightness-[0.70] absolute inset-0 transition-opacity duration-[2000ms] ease-in-out ${visibilityClasses}`}

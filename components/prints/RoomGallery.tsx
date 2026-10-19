@@ -30,7 +30,6 @@ function RotatingTile({
     ).matches;
     if (prefersReducedMotion) return;
 
-    // Increment our step in the custom sequence array
     const timer = setInterval(() => {
       setStep((s) => (s + 1) % sequence.length);
     }, intervalMs);
@@ -38,7 +37,6 @@ function RotatingTile({
     return () => clearInterval(timer);
   }, [intervalMs, sequence.length]);
 
-  // Safely grab the active index from our custom sequence
   const activeIndex = sequence[step] ?? 0;
 
   return (
@@ -70,9 +68,6 @@ export default function RoomGallery({
   eyebrow?: string;
   title?: ReactNode;
 }) {
-  // Four slots, each following a completely scrambled, disjointed path through
-  // the 9 images. This prevents the "chase effect" where one slot naturally
-  // trails right behind another.
   const slots = [
     { sequence: [0, 1, 2, 3, 4, 5, 6, 7, 8], intervalMs: 4200 },
     { sequence: [3, 6, 0, 8, 5, 2, 7, 1, 4], intervalMs: 5000 },

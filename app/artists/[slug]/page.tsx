@@ -30,7 +30,9 @@ export async function generateMetadata({
     openGraph: {
       title: artist.name,
       description: artist.bio ?? `Original works by ${artist.name}.`,
-      images: artist.portraitUrl ? [{ url: artist.portraitUrl }] : undefined,
+      images: artist.portraitUrl
+        ? [{ url: thumb(artist.portraitUrl, 1200) }]
+        : undefined,
       type: "profile",
     },
   };

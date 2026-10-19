@@ -1,8 +1,5 @@
 import type { ImageLoaderProps } from "next/image";
 
-/**
- * Use this helper on any raw <img> tag (WorkCard, ArchiveCard, ArtistCard, etc.)
- */
 export function thumb(url: string, width: 200 | 600 | 1200 = 600): string {
   if (
     !url ||
@@ -20,9 +17,6 @@ export function thumb(url: string, width: 200 | 600 | 1200 = 600): string {
   );
 }
 
-/**
- * Global Next.js <Image> loader (automatically wired via next.config.ts)
- */
 export default function cloudinaryLoader({
   src,
   width,

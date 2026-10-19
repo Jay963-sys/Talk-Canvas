@@ -25,6 +25,7 @@ import AddressAutocomplete, {
 } from "@/components/checkout/AddressAutocomplete";
 import Image from "next/image";
 import WhatsAppHelpButton from "@/components/WhatsAppHelpButton";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 interface AppliedCode {
   code: string;
@@ -627,7 +628,7 @@ export default function CheckoutPage() {
                         alt=""
                         className="object-cover"
                         fill
-                        src={item.imageUrl}
+                        src={thumb(item.imageUrl)}
                       />
                     </div>
                     <div className="flex-1 flex flex-col justify-center">

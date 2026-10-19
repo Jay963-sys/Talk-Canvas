@@ -13,6 +13,7 @@ import { formatNaira } from "@/lib/store";
 import Image from "next/image";
 import { Metadata } from "next";
 import TrackView from "@/components/TrackView";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export const revalidate = 86400;
 
@@ -43,7 +44,7 @@ export async function generateMetadata({
       description: `Original ${work.medium}, ${work.year}.`,
       images: [
         {
-          url: work.imageUrl,
+          url: thumb(work.imageUrl),
           width: 800,
           height: 1000,
           alt: work.title,
@@ -55,7 +56,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: work.title,
       description: `Original ${work.medium} by ${work.artist}.`,
-      images: [work.imageUrl],
+      images: [thumb(work.imageUrl)],
     },
   };
 }
@@ -92,7 +93,7 @@ export default async function WorkDetail({
               </span>
             )}
             <Image
-              src={work.imageUrl}
+              src={thumb(work.imageUrl)}
               alt={work.title}
               fill
               priority

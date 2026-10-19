@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/cart/CartDrawer";
 import PromoPopupGate from "@/components/PromoPopupGate";
 import MetaPixel from "@/components/MetaPixel";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.jpg",
+        url: thumb("/og-image.jpg"),
         width: 1200,
         height: 630,
         alt: "Talk Canvas Gallery",
@@ -55,6 +56,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Talk Canvas Gallery",
     description: "Contemporary works & fine-art prints from Lagos.",
+    images: [thumb("/og-image.jpg")],
   },
 };
 

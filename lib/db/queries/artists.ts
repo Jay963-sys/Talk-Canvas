@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "../index";
 import {
   artists,
@@ -9,11 +10,6 @@ import {
 import { eq, ne, and, asc, desc } from "drizzle-orm";
 import { HOUSE_ARTIST_SLUG } from "@/lib/constants";
 
-// ── PUBLIC QUERIES (visible only) ────────────────────────────────
-
-/**
- * Full public directory — every visible artist.
- */
 export async function getAllArtists(): Promise<Artist[]> {
   return await db
     .select()
@@ -22,11 +18,6 @@ export async function getAllArtists(): Promise<Artist[]> {
     .orderBy(asc(artists.displayOrder), asc(artists.name));
 }
 
-/**
- * Curated "Popular Artists" surface — visible AND featured, and never the
- * house artist. Talk Canvas is the gallery's own collection, a category of
- * its own, not one of the artists it represents.
- */
 export async function getFeaturedArtists(): Promise<Artist[]> {
   return await db
     .select()
@@ -41,32 +32,28 @@ export async function getFeaturedArtists(): Promise<Artist[]> {
     .orderBy(asc(artists.displayOrder), asc(artists.name));
 }
 
-/**
- * Artist detail page: the artist plus their visible works for sale.
- * Returns undefined if the slug doesn't resolve to a visible artist.
- */
-export async function getArtistBySlug(
-  slug: string,
-): Promise<{ artist: Artist; works: Original[] } | undefined> {
-  const [artist] = await db
-    .select()
-    .from(artists)
-    .where(and(eq(artists.slug, slug), eq(artists.isVisible, true)))
-    .limit(1);
-  if (!artist) return undefined;
+export const getArtistBySlug = cache(
+  async (
+    slug: string,
+  ): Promise<{ artist: Artist; works: Original[] } | undefined> => {
+    const [artist] = await db
+      .select()
+      .from(artists)
+      .where(and(eq(artists.slug, slug), eq(artists.isVisible, true)))
+      .limit(1);
+    if (!artist) return undefined;
 
-  const works = await db
-    .select()
-    .from(originals)
-    .where(
-      and(eq(originals.artistId, artist.id), eq(originals.isVisible, true)),
-    )
-    .orderBy(asc(originals.displayOrder), asc(originals.id));
+    const works = await db
+      .select()
+      .from(originals)
+      .where(
+        and(eq(originals.artistId, artist.id), eq(originals.isVisible, true)),
+      )
+      .orderBy(asc(originals.displayOrder), asc(originals.id));
 
-  return { artist, works };
-}
-
-// ── ADMIN QUERIES (all artists, including hidden) ────────────────
+    return { artist, works };
+  },
+);
 
 export async function getAllArtistsForAdmin(): Promise<Artist[]> {
   return await db
@@ -84,9 +71,6 @@ export async function getArtistById(id: number): Promise<Artist | undefined> {
   return artist;
 }
 
-/**
- * Lightweight { id, name } list for the artist <select> on OriginalForm.
- */
 export async function getArtistOptions(): Promise<
   { id: number; name: string }[]
 > {
@@ -113,10 +97,6 @@ export async function updateArtist(
   return updated;
 }
 
-/**
- * Delete an artist. Because originals.artistId is onDelete "set null",
- * their works survive and fall back to the `artist` text byline.
- */
 export async function deleteArtist(id: number): Promise<void> {
   await db.delete(artists).where(eq(artists.id, id));
 }

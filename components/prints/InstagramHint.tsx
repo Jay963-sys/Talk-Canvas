@@ -22,11 +22,6 @@ function InstagramIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-/**
- * Tells customers they aren't limited to the archive: any image on the
- * gallery's Instagram can be screenshotted and uploaded as their design.
- * Used on the prints page and the upload step.
- */
 export default function InstagramHint({
   className = "",
 }: {

@@ -13,6 +13,7 @@ import { LAGOS_DISTANCE_ZONE_ID, TIER_LABELS } from "@/data/distanceRates";
 import { VEHICLE_LABELS } from "@/lib/deliveryCalc";
 import { formatNaira } from "@/lib/store";
 import Image from "next/image";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 function formatDateTime(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
@@ -143,7 +144,7 @@ export default async function OrderDetailPage({
                   >
                     <div className="w-[60px] relative aspect-[4/5] bg-line overflow-hidden shrink-0">
                       <Image
-                        src={item.imageUrl}
+                        src={thumb(item.imageUrl)}
                         alt="Order thumbnail"
                         fill
                         sizes="60px"

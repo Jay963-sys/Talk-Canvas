@@ -5,6 +5,7 @@ import DeleteButton from "@/components/admin/DeleteButton";
 import VisibilityToggle from "@/components/admin/VisibilityToggle";
 import { formatNaira } from "@/lib/store";
 import Image from "next/image";
+import { thumb } from "@/lib/cloudinaryLoader";
 
 export default async function AdminDashboard() {
   const originals = await getAllOriginalsForAdmin();
@@ -51,7 +52,7 @@ export default async function AdminDashboard() {
               <div className="w-[60px] relative aspect-[4/5] bg-line overflow-hidden">
                 {/* Fixed Image Tag */}
                 <Image
-                  src={o.imageUrl}
+                  src={thumb(o.imageUrl)}
                   alt={o.title}
                   fill
                   sizes="60px"
