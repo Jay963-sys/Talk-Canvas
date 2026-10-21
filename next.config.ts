@@ -10,6 +10,19 @@ const nextConfig: NextConfig = {
     loader: "custom",
     loaderFile: "./lib/cloudinaryLoader.ts",
   },
+  async headers() {
+    return [
+      {
+        source: "/:all*(svg|jpg|jpeg|png|webp|avif|ico|woff2)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=2592000, immutable",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
