@@ -120,6 +120,18 @@ export default async function OrderDetailPage({
         />
       )}
 
+      {order.installationRequested && (
+        <div className="mb-8 border-l-2 border-sky-600 bg-sky-50 px-5 py-4">
+          <p className="text-xs uppercase tracking-[0.15em] text-sky-800 mb-1">
+            Installation requested
+          </p>
+          <p className="text-sm text-ink">
+            The customer wants their frames installed. Call{" "}
+            {order.customerPhone} to agree a date and the fee.
+          </p>
+        </div>
+      )}
+
       {/* The total grew after payment (delivery quote), or a balance is owed. */}
       {!order.deliveryQuotePending &&
         balanceDue > 0 &&

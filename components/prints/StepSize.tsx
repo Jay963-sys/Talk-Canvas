@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import {
   SIZES,
+  isCustomSize,
   SIZE_CATEGORIES,
   formatInches,
   formatCm,
@@ -9,9 +11,26 @@ import {
 } from "@/data/sizes";
 import { useConfigurator, formatNaira } from "@/lib/store";
 import { getPrice } from "@/data/pricing";
+import CustomSizeFields, {
+  resolveCustomSize,
+  CUSTOM_SIZE_ERRORS,
+  type SizeUnit,
+} from "./CustomSizeFields";
+
+/** `/prints?size=32x48` (from the custom-order page) prefills the custom size. */
+function sizeFromUrl(): { w: string; h: string } {
+  if (typeof window === "undefined") return { w: "", h: "" };
+  const m = /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/.exec(
+    new URLSearchParams(window.location.search).get("size") ?? "",
+  );
+  return m ? { w: m[1], h: m[2] } : { w: "", h: "" };
+}
 
 export default function StepSize() {
   const { image, frame, glass, size, setSize, setGlass } = useConfigurator();
+  const [customW, setCustomW] = useState(() => sizeFromUrl().w);
+  const [customH, setCustomH] = useState(() => sizeFromUrl().h);
+  const [customUnit, setCustomUnit] = useState<SizeUnit>("inches");
 
   if (!frame)
     return <p className="text-ink-soft">Please pick a frame first.</p>;
@@ -117,6 +136,99 @@ export default function StepSize() {
           </div>
         </section>
       ))}
+
+      <CustomSizeSection
+        width={customW}
+        height={customH}
+        unit={customUnit}
+        onWidth={setCustomW}
+        onHeight={setCustomH}
+        onUnit={setCustomUnit}
+      />
     </div>
+  );
+}
+
+/**
+ * Any size not on the list, priced the gallery's way (see buildCustomSize).
+ * Picking it puts a normal size into the configurator, so crop, AR, cart and
+ * checkout all work unchanged.
+ */
+function CustomSizeSection(props: {
+  width: string;
+  height: string;
+  unit: SizeUnit;
+  onWidth: (v: string) => void;
+  onHeight: (v: string) => void;
+  onUnit: (u: SizeUnit) => void;
+}) {
+  const { image, frame, glass, size, setSize, setGlass } = useConfigurator();
+  if (!frame) return null;
+
+  const orientation = orientationOf(image);
+  const result = resolveCustomSize(props.width, props.height, props.unit);
+  const custom = result?.ok ? result.size : null;
+  const price = custom ? getPrice(frame, glass, custom) : null;
+  const priceNoGlass = custom && glass ? getPrice(frame, false, custom) : null;
+  const selected =
+    !!custom && size?.id === custom.id;
+
+  const choose = () => {
+    if (!custom) return;
+    if (price === null && priceNoGlass !== null) setGlass(false);
+    setSize(custom);
+  };
+
+  return (
+    <section className="mb-10 border-t border-line pt-10">
+      <p className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-3">
+        Custom size
+      </p>
+      <p className="text-[13px] text-ink-soft mb-6 leading-relaxed">
+        Need a size that isn&apos;t listed? Enter it below and we&apos;ll price
+        it against the closest size on our list.
+      </p>
+
+      <CustomSizeFields {...props} />
+
+      {result && !result.ok && (
+        <p className="text-[13px] text-ink-soft mt-4">
+          {CUSTOM_SIZE_ERRORS[result.reason]}
+        </p>
+      )}
+
+      {custom && result?.ok && (
+        <button
+          type="button"
+          onClick={choose}
+          disabled={price === null && priceNoGlass === null}
+          className={`mt-6 w-full sm:w-auto p-5 border text-left transition-all ${
+            selected ? "border-ink bg-paper" : "border-line hover:border-ink/50"
+          } disabled:opacity-30 disabled:cursor-not-allowed`}
+        >
+          <p className="display text-lg mb-1">
+            {formatInches(custom, orientation)}
+          </p>
+          <p className="text-[12px] text-ink-soft mb-4">
+            {formatCm(custom, orientation)}
+            {isCustomSize(custom) && (
+              <> · priced as {formatInches(result.matched, orientation)}</>
+            )}
+          </p>
+          {price !== null ? (
+            <p className="text-[13px] font-medium">{formatNaira(price)}</p>
+          ) : priceNoGlass !== null ? (
+            <p className="text-[13px] font-medium text-ink-soft">
+              {formatNaira(priceNoGlass)}{" "}
+              <span className="font-normal">without glass — select to remove it</span>
+            </p>
+          ) : (
+            <p className="text-[13px] font-medium">
+              Not available with this frame
+            </p>
+          )}
+        </button>
+      )}
+    </section>
   );
 }

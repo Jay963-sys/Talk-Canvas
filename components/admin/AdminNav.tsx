@@ -10,6 +10,7 @@ const links = [
   { href: "/admin/artists", label: "Artists" },
   { href: "/admin/archive-prints", label: "Archive" },
   { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/inspections", label: "Inspections" },
   { href: "/admin/affiliates", label: "Affiliates" },
   { href: "/admin/testimonials", label: "Reviews" },
 ];

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import CustomOrderForm from "@/components/prints/CustomOrderForm";
+import CustomSizeQuote from "@/components/prints/CustomSizeQuote";
 
 export const metadata = {
   title: "Request a custom order — Talk Canvas Gallery",
@@ -35,6 +36,27 @@ export default function CustomOrderPage() {
             be in touch shortly to discuss the details and arrange pricing.
           </p>
         </div>
+
+        {/* Instant pricing for sizes not on the list */}
+        <div className="bg-paper p-8 md:p-12 rounded-2xl shadow-sm border border-line/40 mb-10">
+          <CustomSizeQuote />
+        </div>
+
+        <p className="text-center text-[14px] text-ink-soft mb-10">
+          In Lagos and not sure what size suits your wall?{" "}
+          <Link
+            href="/inspection"
+            prefetch={false}
+            className="text-ink underline underline-offset-4"
+          >
+            Book a space inspection
+          </Link>
+          .
+        </p>
+
+        <p className="text-center text-[13px] uppercase tracking-widest text-ink-soft mb-6">
+          Something else in mind? Send us a request
+        </p>
 
         {/* Form Container - Wrapped in a soft paper card for contrast */}
         <div className="bg-paper p-8 md:p-12 rounded-2xl shadow-sm border border-line/40">

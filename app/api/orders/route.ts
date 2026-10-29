@@ -85,6 +85,8 @@ interface OrderBody {
   deliveryZone?: string;
   /** Google place id of the chosen address. Required when deliveryMethod is "delivery". */
   deliveryPlaceId?: string;
+  /** Customer ticked "install my frames". Only honoured inside Lagos. */
+  installationRequested?: boolean;
   fbp?: string | null;
   fbc?: string | null;
 }
@@ -357,6 +359,7 @@ export async function POST(req: NextRequest) {
     let deliveryVehicle: string | null = null;
     let deliveryQuotePending = false;
     let deliveryZone: string | null = null;
+    let installationRequested = false;
 
     if (deliveryMethod === "delivery") {
       if (!isPlaceId(body.deliveryPlaceId)) {
@@ -392,6 +395,10 @@ export async function POST(req: NextRequest) {
         dest.inLagos === false ? OUTSIDE_LAGOS_ID : LAGOS_DISTANCE_ZONE_ID;
       deliveryVehicle = quote.tier; // "small" | "large" | "outsourced" | "gig_<tier>"
       deliveryQuotePending = quote.quoteOnRequest;
+      // Installation is a Lagos-only service — decided from the measured
+      // address, never from the client's word.
+      installationRequested =
+        body.installationRequested === true && dest.inLagos === true;
     }
 
     const computedTotal = computedSubtotal - discountAmount + computedShipping;
@@ -422,6 +429,7 @@ export async function POST(req: NextRequest) {
         deliveryZone,
         deliveryVehicle,
         deliveryQuotePending,
+        installationRequested,
         affiliateId,
         affiliateCode,
         discountPercent,

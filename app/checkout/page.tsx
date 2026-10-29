@@ -52,6 +52,9 @@ export default function CheckoutPage() {
     country: "Nigeria",
   });
   const [notes, setNotes] = useState("");
+  // Installation is a Lagos-only service, priced by staff when they call.
+  const [wantsInstallation, setWantsInstallation] = useState(false);
+  const installationOffered = destination?.inLagos === true;
 
   // Affiliate / discount code
   const [codeInput, setCodeInput] = useState("");
@@ -300,6 +303,7 @@ export default function CheckoutPage() {
           deliveryPlaceId: destination?.placeId,
           affiliateCode: applied?.code,
           notes: notes.trim() !== "" ? notes : undefined,
+          installationRequested: installationOffered && wantsInstallation,
           fbp,
           fbc,
         }),
@@ -571,6 +575,35 @@ export default function CheckoutPage() {
                 </p>
               )}
             </section>
+
+            {/* Installation (Lagos only) */}
+            {installationOffered && (
+              <section>
+                <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6 flex items-center gap-2">
+                  Installation
+                  <span className="text-ink-soft lowercase tracking-normal font-normal">
+                    (optional)
+                  </span>
+                </h2>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={wantsInstallation}
+                    onChange={(e) => setWantsInstallation(e.target.checked)}
+                    className="mt-1 h-4 w-4 accent-ink"
+                  />
+                  <span className="text-[14px] text-ink leading-relaxed">
+                    I&apos;d like Talk Canvas to install my frames.
+                    <span className="block text-[13px] text-ink-soft mt-1">
+                      Available within Lagos. We&apos;ll contact you after your
+                      order to agree a date and the installation fee, which
+                      depends on your location and the number and size of
+                      frames. It isn&apos;t charged now.
+                    </span>
+                  </span>
+                </label>
+              </section>
+            )}
 
             {/* Order Notes */}
             <section>

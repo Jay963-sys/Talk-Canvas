@@ -153,6 +153,12 @@ export const orders = pgTable("orders", {
     .default(false)
     .notNull(),
 
+  // Customer asked for installation at checkout (Lagos only). Priced and
+  // scheduled by staff after the order, so it never touches the total.
+  installationRequested: boolean("installation_requested")
+    .default(false)
+    .notNull(),
+
   // Affiliate/discount snapshot. Frozen at order time so editing a code's rate
   // later never rewrites historical orders. discountAmount is the naira taken
   // off; it only ever applies to prints + recreatable Talk Canvas designs.
@@ -327,3 +333,25 @@ export const testimonials = pgTable("testimonials", {
 
 export type Testimonial = typeof testimonials.$inferSelect;
 export type NewTestimonial = typeof testimonials.$inferInsert;
+
+// ── INSPECTION REQUESTS ─────────────────────────────────────────
+// A customer asks the gallery to visit (Lagos only), measure their space and
+// advise on sizes before ordering. Priced and scheduled by staff on the phone,
+// so nothing here is money — it's a call list.
+export const inspectionRequests = pgTable("inspection_requests", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  address: text("address").notNull(),
+  area: varchar("area", { length: 100 }),
+  preferredDate: varchar("preferred_date", { length: 20 }),
+  message: text("message"),
+  status: varchar("status", { length: 20 }).default("new").notNull(),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type InspectionRequest = typeof inspectionRequests.$inferSelect;
+export type NewInspectionRequest = typeof inspectionRequests.$inferInsert;

@@ -224,7 +224,125 @@ export const SIZES: PrintSize[] = [
 ];
 
 export function getSize(id: string): PrintSize | undefined {
+  if (id.startsWith(CUSTOM_SIZE_PREFIX)) return parseCustomSizeId(id) ?? undefined;
   return SIZES.find((s) => s.id === id);
+}
+
+// ── CUSTOM SIZES ─────────────────────────────────────────────────
+// The gallery prices a size that isn't on the list by matching it to a listed
+// size with the same width + height, rounded to the nearest 10 inches. That is
+// why 20×40 and 24×36 (both 60) cost the same, and why a 32×48 (80) is charged
+// as a 30×50. Custom sizes follow exactly that rule, so the website quotes what
+// staff would have quoted by hand.
+
+export const CUSTOM_SIZE_PREFIX = "custom-";
+
+/** Smallest and largest side we'll quote online, in inches. */
+export const CUSTOM_MIN_SIDE = 8;
+export const CUSTOM_MAX_SIDE = 96;
+
+const CM_PER_INCH = 2.54;
+
+/** Half-inch precision is as fine as anyone measures a wall. */
+const toHalfInch = (n: number) => Math.round(n * 2) / 2;
+
+export function cmToInches(cm: number): number {
+  return toHalfInch(cm / CM_PER_INCH);
+}
+
+const roundedSum = (w: number, h: number) =>
+  Math.floor((w + h + 5) / 10) * 10;
+
+/**
+ * The listed size a custom size is priced as.
+ *
+ * 1. Same rounded total (width + height). Where several listed sizes share a
+ *    total but cost different amounts (e.g. 40×80 and 60×60 are both 120), the
+ *    one closest in shape wins — a near-square 58×62 is priced like the 60×60,
+ *    a long 42×78 like the 40×80. Ties go to the higher price.
+ * 2. No listed size at that total → the next total up (never undercharge).
+ * 3. Bigger than anything listed → null; those are still quoted by hand.
+ */
+export function matchListedSize(w: number, h: number): PrintSize | null {
+  const short = Math.min(w, h);
+  const long = Math.max(w, h);
+
+  const exact = SIZES.find((s) => s.inches.w === short && s.inches.h === long);
+  if (exact) return exact;
+
+  const totals = [...new Set(SIZES.map((s) => roundedSum(s.inches.w, s.inches.h)))]
+    .sort((a, b) => a - b);
+  const wanted = roundedSum(short, long);
+  const target = totals.find((t) => t >= wanted);
+  if (target === undefined) return null;
+
+  const candidates = SIZES.filter(
+    (s) => roundedSum(s.inches.w, s.inches.h) === target,
+  );
+  return candidates.reduce((best, s) => {
+    const d = Math.abs(s.inches.w - short);
+    const bestD = Math.abs(best.inches.w - short);
+    if (d !== bestD) return d < bestD ? s : best;
+    return s.prices.regular > best.prices.regular ? s : best;
+  });
+}
+
+export function customSizeId(w: number, h: number): string {
+  const short = Math.min(w, h);
+  const long = Math.max(w, h);
+  return `${CUSTOM_SIZE_PREFIX}${short}x${long}`;
+}
+
+export type CustomSizeResult =
+  | { ok: true; size: PrintSize; matched: PrintSize }
+  | { ok: false; reason: "invalid" | "too_small" | "too_large" };
+
+/** Build a priced size from the customer's own measurements (inches). */
+export function buildCustomSize(wIn: number, hIn: number): CustomSizeResult {
+  if (!Number.isFinite(wIn) || !Number.isFinite(hIn) || wIn <= 0 || hIn <= 0) {
+    return { ok: false, reason: "invalid" };
+  }
+  const w = toHalfInch(wIn);
+  const h = toHalfInch(hIn);
+  const short = Math.min(w, h);
+  const long = Math.max(w, h);
+  if (short < CUSTOM_MIN_SIDE) return { ok: false, reason: "too_small" };
+  if (long > CUSTOM_MAX_SIDE) return { ok: false, reason: "too_large" };
+
+  const matched = matchListedSize(short, long);
+  if (!matched) return { ok: false, reason: "too_large" };
+
+  // A size that is already on the list is just that size.
+  if (matched.inches.w === short && matched.inches.h === long) {
+    return { ok: true, size: matched, matched };
+  }
+
+  return {
+    ok: true,
+    matched,
+    size: {
+      id: customSizeId(short, long),
+      inches: { w: short, h: long },
+      cm: {
+        w: Math.round(short * CM_PER_INCH),
+        h: Math.round(long * CM_PER_INCH),
+      },
+      category: matched.category,
+      prices: { ...matched.prices },
+    },
+  };
+}
+
+export function isCustomSize(s: PrintSize): boolean {
+  return s.id.startsWith(CUSTOM_SIZE_PREFIX);
+}
+
+/** Server and cart both resolve custom ids here — the price is never trusted from the client. */
+function parseCustomSizeId(id: string): PrintSize | null {
+  const m = /^custom-(\d+(?:\.5)?)x(\d+(?:\.5)?)$/.exec(id);
+  if (!m) return null;
+  const r = buildCustomSize(Number(m[1]), Number(m[2]));
+  return r.ok && isCustomSize(r.size) ? r.size : null;
 }
 
 // ── ORIENTATION ──────────────────────────────────────────────────

@@ -187,6 +187,7 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
           deliveryQuotePending,
           shippingAddress: shippingAddressForEmail,
           notes: order.notes,
+          installationRequested: order.installationRequested,
         }),
         replyTo: order.customerEmail,
       }),

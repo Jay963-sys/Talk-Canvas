@@ -143,6 +143,13 @@ export default function Footer() {
                 Custom Artwork
               </Link>
               <Link
+                href="/inspection"
+                prefetch={false}
+                className="hover:text-ink transition-colors w-fit"
+              >
+                Space Inspection
+              </Link>
+              <Link
                 href="/artists"
                 prefetch={false}
                 className="hover:text-ink transition-colors w-fit"

@@ -70,6 +70,7 @@ interface Props {
   total: number;
   deliveryMethod: "pickup" | "delivery";
   notes?: string | null;
+  installationRequested?: boolean;
   discountAmount?: number;
   affiliateCode?: string | null;
   discountPercent?: number | null;
@@ -98,6 +99,7 @@ export default function OrderNotification({
   deliveryMethod,
   shippingAddress,
   notes,
+  installationRequested,
   discountAmount,
   affiliateCode,
   discountPercent,
@@ -219,6 +221,16 @@ export default function OrderNotification({
           <Text style={styles.infoText}>{customer.name}</Text>
           <Text style={styles.infoText}>{customer.email}</Text>
           <Text style={styles.infoText}>{customer.phone}</Text>
+
+          {installationRequested && (
+            <>
+              <Text style={styles.sectionLabel}>Installation</Text>
+              <Text style={styles.infoText}>
+                Customer wants installation. Contact them to agree a date and
+                fee.
+              </Text>
+            </>
+          )}
 
           {notes && (
             <>

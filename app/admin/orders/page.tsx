@@ -266,6 +266,11 @@ export default async function OrdersPage({
                         Quote needed
                       </span>
                     )}
+                    {order.installationRequested && (
+                      <span className="block mt-1.5 w-fit px-2 py-0.5 bg-sky-100 text-sky-800 text-[9px] uppercase tracking-widest">
+                        Installation
+                      </span>
+                    )}
                   </td>
 
                   <td className="px-4 py-4 text-xs text-muted whitespace-nowrap align-top">
