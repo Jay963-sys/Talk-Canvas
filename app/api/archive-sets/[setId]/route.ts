@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { getArchiveSet } from "@/lib/db/queries/archivePrints";
+
+const getCachedArchiveSet = unstable_cache(
+  (setId: number) => getArchiveSet(setId),
+  ["archive-set"],
+  { revalidate: 86400, tags: ["archive"] },
+);
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +27,7 @@ export async function GET(
     return NextResponse.json({ error: "Invalid set id" }, { status: 400 });
   }
 
-  const pieces = await getArchiveSet(numId);
+  const pieces = await getCachedArchiveSet(numId);
 
   // A single-panel or partly hidden set isn't sellable under the gallery's
   // all-or-nothing rule, so it reads as gone rather than as a set of one.

@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache, revalidateTag } from "next/cache";
 import { getArModel, upsertArModel } from "@/lib/db/queries/arModels";
 
 export const dynamic = "force-dynamic";
+
+const getCachedArModel = unstable_cache(
+  (key: string) => getArModel(key),
+  ["ar-model"],
+  { revalidate: 86400, tags: ["ar-model"] },
+);
 
 // Models are uploaded to Cloudinary's raw/upload endpoint. Only allow caching
 // URLs that match that shape, so a malicious client can't poison the cache
@@ -18,7 +25,7 @@ export async function GET(req: NextRequest) {
   if (!key) {
     return NextResponse.json({ error: "key required" }, { status: 400 });
   }
-  const row = await getArModel(key);
+  const row = await getCachedArModel(key);
   return NextResponse.json(row); // null on miss
 }
 
@@ -37,5 +44,6 @@ export async function POST(req: NextRequest) {
   }
 
   await upsertArModel({ cacheKey, glbUrl, usdzUrl: usdzUrl ?? null });
+  revalidateTag("ar-model", { expire: 0 });
   return NextResponse.json({ ok: true });
 }

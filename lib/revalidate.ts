@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 /**
  * Public pages are cached for a day (`revalidate = 86400`) to stay inside
@@ -14,6 +14,9 @@ import { revalidatePath } from "next/cache";
 export function revalidateStorefront(): void {
   try {
     revalidatePath("/", "layout");
+    // Cached DB reads used outside ISR pages (search, API routes).
+    revalidateTag("storefront", { expire: 0 });
+    revalidateTag("archive", { expire: 0 });
   } catch (err) {
     console.error("revalidateStorefront failed", err);
   }
