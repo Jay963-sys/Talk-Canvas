@@ -12,6 +12,7 @@ import {
 import AdminLightbox from "./AdminLightbox";
 import { thumb } from "@/lib/cloudinaryLoader";
 
+
 export interface AdminArchiveItem {
   id: number;
   imageUrl: string;

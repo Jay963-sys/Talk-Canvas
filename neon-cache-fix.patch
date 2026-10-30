@@ -1,0 +1,117 @@
+diff --git a/app/api/ar-model/route.ts b/app/api/ar-model/route.ts
+index c66f45e..543a1f7 100644
+--- a/app/api/ar-model/route.ts
++++ b/app/api/ar-model/route.ts
+@@ -1,8 +1,15 @@
+ import { NextRequest, NextResponse } from "next/server";
++import { unstable_cache, revalidateTag } from "next/cache";
+ import { getArModel, upsertArModel } from "@/lib/db/queries/arModels";
+ 
+ export const dynamic = "force-dynamic";
+ 
++const getCachedArModel = unstable_cache(
++  (key: string) => getArModel(key),
++  ["ar-model"],
++  { revalidate: 86400, tags: ["ar-model"] },
++);
++
+ // Models are uploaded to Cloudinary's raw/upload endpoint. Only allow caching
+ // URLs that match that shape, so a malicious client can't poison the cache
+ // with arbitrary third-party URLs that other shoppers would then load.
+@@ -18,7 +25,7 @@ export async function GET(req: NextRequest) {
+   if (!key) {
+     return NextResponse.json({ error: "key required" }, { status: 400 });
+   }
+-  const row = await getArModel(key);
++  const row = await getCachedArModel(key);
+   return NextResponse.json(row); // null on miss
+ }
+ 
+@@ -37,5 +44,6 @@ export async function POST(req: NextRequest) {
+   }
+ 
+   await upsertArModel({ cacheKey, glbUrl, usdzUrl: usdzUrl ?? null });
++  revalidateTag("ar-model", { expire: 0 });
+   return NextResponse.json({ ok: true });
+ }
+diff --git a/app/api/archive-sets/[setId]/route.ts b/app/api/archive-sets/[setId]/route.ts
+index b4f2d49..b3c1ce4 100644
+--- a/app/api/archive-sets/[setId]/route.ts
++++ b/app/api/archive-sets/[setId]/route.ts
+@@ -1,6 +1,13 @@
+ import { NextRequest, NextResponse } from "next/server";
++import { unstable_cache } from "next/cache";
+ import { getArchiveSet } from "@/lib/db/queries/archivePrints";
+ 
++const getCachedArchiveSet = unstable_cache(
++  (setId: number) => getArchiveSet(setId),
++  ["archive-set"],
++  { revalidate: 86400, tags: ["archive"] },
++);
++
+ export const dynamic = "force-dynamic";
+ 
+ /**
+@@ -20,7 +27,7 @@ export async function GET(
+     return NextResponse.json({ error: "Invalid set id" }, { status: 400 });
+   }
+ 
+-  const pieces = await getArchiveSet(numId);
++  const pieces = await getCachedArchiveSet(numId);
+ 
+   // A single-panel or partly hidden set isn't sellable under the gallery's
+   // all-or-nothing rule, so it reads as gone rather than as a set of one.
+diff --git a/app/search/page.tsx b/app/search/page.tsx
+index 9cd3a7d..a9a491c 100644
+--- a/app/search/page.tsx
++++ b/app/search/page.tsx
+@@ -1,11 +1,20 @@
+ import Link from "next/link";
+ import { ArrowLeft, SearchX } from "lucide-react";
+ import WorkCard from "@/components/WorkCard";
++import { unstable_cache } from "next/cache";
+ import { getAllOriginals } from "@/lib/db/queries/originals";
+ // import { getArchivePage } from "@/lib/db/queries/archivePrints";
+ 
+ export const dynamic = "force-dynamic";
+ 
++// Search filters in memory, so every query (and every bot hitting /search)
++// can share one cached copy of the catalogue instead of waking Neon.
++const getCachedOriginals = unstable_cache(
++  () => getAllOriginals(),
++  ["search-all-originals"],
++  { revalidate: 86400, tags: ["storefront"] },
++);
++
+ export const metadata = {
+   title: "Search | Talk Canvas Gallery",
+   description: "Search the Talk Canvas Gallery collection.",
+@@ -24,7 +33,7 @@ export default async function SearchPage({
+   const decodedQuery = decodeURIComponent(query).trim();
+ 
+   // Fetch data
+-  const allOriginals = await getAllOriginals();
++  const allOriginals = await getCachedOriginals();
+ 
+   // Filter logic
+   const searchResults = decodedQuery
+diff --git a/lib/revalidate.ts b/lib/revalidate.ts
+index b37e11c..2fb6e6a 100644
+--- a/lib/revalidate.ts
++++ b/lib/revalidate.ts
+@@ -1,4 +1,4 @@
+-import { revalidatePath } from "next/cache";
++import { revalidatePath, revalidateTag } from "next/cache";
+ 
+ /**
+  * Public pages are cached for a day (`revalidate = 86400`) to stay inside
+@@ -14,6 +14,9 @@ import { revalidatePath } from "next/cache";
+ export function revalidateStorefront(): void {
+   try {
+     revalidatePath("/", "layout");
++    // Cached DB reads used outside ISR pages (search, API routes).
++    revalidateTag("storefront", { expire: 0 });
++    revalidateTag("archive", { expire: 0 });
+   } catch (err) {
+     console.error("revalidateStorefront failed", err);
+   }

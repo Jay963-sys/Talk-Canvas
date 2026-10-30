@@ -1,0 +1,2812 @@
+From 391f33a8db4f03c446f8e288caf80ba2ba42d459 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 29 Oct 2026 19:36:17 +0100
+Subject: [PATCH] Custom-size pricing, installation option and inspection
+ requests
+
+- Custom sizes are priced from the price list the gallery's way (width +
+  height rounded to 10) and can be ordered online; server re-prices them.
+- Lagos-only installation checkbox at checkout, stored on the order and
+  flagged in admin and the gallery email.
+- Inspection request page (/inspection), saved to a new table, emailed to
+  the gallery and listed under Admin -> Inspections.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_015ZfuwBjiBepEqknzKYF5QU
+---
+ app/admin/inspections/page.tsx                |   96 ++
+ app/admin/orders/[id]/page.tsx                |   12 +
+ app/admin/orders/page.tsx                     |    5 +
+ app/api/admin/inspections/[id]/route.ts       |   43 +
+ app/api/inspection/route.ts                   |   85 ++
+ app/api/orders/route.ts                       |    8 +
+ app/checkout/page.tsx                         |   33 +
+ app/inspection/page.tsx                       |   43 +
+ app/prints/custom/page.tsx                    |   22 +
+ components/Footer.tsx                         |    7 +
+ components/admin/AdminNav.tsx                 |    1 +
+ components/admin/InspectionStatusControl.tsx  |   78 ++
+ components/inspection/InspectionForm.tsx      |  168 +++
+ components/prints/CustomSizeFields.tsx        |   95 ++
+ components/prints/CustomSizeQuote.tsx         |   96 ++
+ components/prints/StepSize.tsx                |  112 ++
+ data/sizes.ts                                 |  118 ++
+ drizzle/0016_young_overlord.sql               |   16 +
+ drizzle/meta/0016_snapshot.json               | 1230 +++++++++++++++++
+ drizzle/meta/_journal.json                    |    7 +
+ lib/db/queries/inspections.ts                 |   34 +
+ lib/db/schema.ts                              |   28 +
+ .../InspectionRequestNotification.tsx         |   80 ++
+ lib/email/templates/OrderNotification.tsx     |   12 +
+ lib/inspections.ts                            |   17 +
+ lib/orders/fulfillment.ts                     |    1 +
+ 26 files changed, 2447 insertions(+)
+ create mode 100644 app/admin/inspections/page.tsx
+ create mode 100644 app/api/admin/inspections/[id]/route.ts
+ create mode 100644 app/api/inspection/route.ts
+ create mode 100644 app/inspection/page.tsx
+ create mode 100644 components/admin/InspectionStatusControl.tsx
+ create mode 100644 components/inspection/InspectionForm.tsx
+ create mode 100644 components/prints/CustomSizeFields.tsx
+ create mode 100644 components/prints/CustomSizeQuote.tsx
+ create mode 100644 drizzle/0016_young_overlord.sql
+ create mode 100644 drizzle/meta/0016_snapshot.json
+ create mode 100644 lib/db/queries/inspections.ts
+ create mode 100644 lib/email/templates/InspectionRequestNotification.tsx
+ create mode 100644 lib/inspections.ts
+
+diff --git a/app/admin/inspections/page.tsx b/app/admin/inspections/page.tsx
+new file mode 100644
+index 0000000..34cf577
+--- /dev/null
++++ b/app/admin/inspections/page.tsx
+@@ -0,0 +1,96 @@
++import { getAllInspectionRequests } from "@/lib/db/queries/inspections";
++import InspectionStatusControl from "@/components/admin/InspectionStatusControl";
++
++export const dynamic = "force-dynamic";
++
++function formatDateTime(d: Date | string): string {
++  const date = typeof d === "string" ? new Date(d) : d;
++  return date.toLocaleString("en-GB", {
++    day: "numeric",
++    month: "short",
++    year: "numeric",
++    hour: "2-digit",
++    minute: "2-digit",
++    timeZone: "Africa/Lagos",
++  });
++}
++
++function formatDay(day: string): string {
++  return new Date(`${day}T12:00:00`).toLocaleDateString("en-GB", {
++    weekday: "short",
++    day: "numeric",
++    month: "short",
++  });
++}
++
++export default async function AdminInspectionsPage() {
++  const items = await getAllInspectionRequests();
++  const open = items.filter((i) => i.status === "new").length;
++
++  return (
++    <div>
++      <div className="mb-8">
++        <h1 className="display text-3xl font-normal">Inspections</h1>
++        <p className="text-sm text-ink-soft mt-1">
++          {items.length} total · {open} new
++        </p>
++      </div>
++
++      {items.length === 0 ? (
++        <div className="border border-dashed border-line p-16 text-center">
++          <p className="text-sm text-ink-soft">
++            No inspection requests yet. Customers book them at /inspection.
++          </p>
++        </div>
++      ) : (
++        <div className="border border-line divide-y divide-line bg-white">
++          {items.map((r) => (
++            <div key={r.id} className="p-5 grid md:grid-cols-[1fr_240px] gap-5">
++              <div className="min-w-0">
++                <div className="flex items-center gap-2 mb-1 flex-wrap">
++                  <p className="text-[15px] text-ink font-medium">{r.name}</p>
++                  {r.status === "new" && (
++                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[9px] uppercase tracking-widest">
++                      New
++                    </span>
++                  )}
++                </div>
++                <p className="text-xs text-muted mb-3">
++                  Requested {formatDateTime(r.createdAt)}
++                  {r.preferredDate && <> · prefers {formatDay(r.preferredDate)}</>}
++                </p>
++                <p className="text-sm">
++                  <a href={`tel:${r.phone}`} className="hover:underline">
++                    {r.phone}
++                  </a>
++                  {r.email && (
++                    <>
++                      {" · "}
++                      <a href={`mailto:${r.email}`} className="hover:underline break-all">
++                        {r.email}
++                      </a>
++                    </>
++                  )}
++                </p>
++                <p className="text-sm text-ink-soft mt-1 whitespace-pre-wrap">
++                  {r.address}
++                  {r.area && <> — {r.area}</>}
++                </p>
++                {r.message && (
++                  <p className="text-sm text-ink mt-3 whitespace-pre-wrap border-l-2 border-line pl-3">
++                    {r.message}
++                  </p>
++                )}
++              </div>
++              <InspectionStatusControl
++                id={r.id}
++                status={r.status}
++                adminNotes={r.adminNotes}
++              />
++            </div>
++          ))}
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/app/admin/orders/[id]/page.tsx b/app/admin/orders/[id]/page.tsx
+index d4701b1..86bdcdf 100644
+--- a/app/admin/orders/[id]/page.tsx
++++ b/app/admin/orders/[id]/page.tsx
+@@ -120,6 +120,18 @@ export default async function OrderDetailPage({
+         />
+       )}
+ 
++      {order.installationRequested && (
++        <div className="mb-8 border-l-2 border-sky-600 bg-sky-50 px-5 py-4">
++          <p className="text-xs uppercase tracking-[0.15em] text-sky-800 mb-1">
++            Installation requested
++          </p>
++          <p className="text-sm text-ink">
++            The customer wants their frames installed. Call{" "}
++            {order.customerPhone} to agree a date and the fee.
++          </p>
++        </div>
++      )}
++
+       {/* The total grew after payment (delivery quote), or a balance is owed. */}
+       {!order.deliveryQuotePending &&
+         balanceDue > 0 &&
+diff --git a/app/admin/orders/page.tsx b/app/admin/orders/page.tsx
+index a5737c4..a7a1844 100644
+--- a/app/admin/orders/page.tsx
++++ b/app/admin/orders/page.tsx
+@@ -266,6 +266,11 @@ export default async function OrdersPage({
+                         Quote needed
+                       </span>
+                     )}
++                    {order.installationRequested && (
++                      <span className="block mt-1.5 w-fit px-2 py-0.5 bg-sky-100 text-sky-800 text-[9px] uppercase tracking-widest">
++                        Installation
++                      </span>
++                    )}
+                   </td>
+ 
+                   <td className="px-4 py-4 text-xs text-muted whitespace-nowrap align-top">
+diff --git a/app/api/admin/inspections/[id]/route.ts b/app/api/admin/inspections/[id]/route.ts
+new file mode 100644
+index 0000000..637424d
+--- /dev/null
++++ b/app/api/admin/inspections/[id]/route.ts
+@@ -0,0 +1,43 @@
++import { NextRequest, NextResponse } from "next/server";
++import { revalidatePath } from "next/cache";
++import { requireSession } from "@/lib/auth-server";
++import { updateInspectionRequest } from "@/lib/db/queries/inspections";
++import { INSPECTION_STATUSES, type InspectionStatus } from "@/lib/inspections";
++
++export async function PATCH(
++  req: NextRequest,
++  { params }: { params: Promise<{ id: string }> },
++) {
++  try {
++    await requireSession();
++  } catch {
++    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
++  }
++
++  const { id } = await params;
++  const numId = Number(id);
++  if (!Number.isInteger(numId)) {
++    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
++  }
++
++  const body = await req.json().catch(() => null);
++  const update: { status?: InspectionStatus; adminNotes?: string | null } = {};
++  if (body?.status !== undefined) {
++    if (!INSPECTION_STATUSES.includes(body.status)) {
++      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
++    }
++    update.status = body.status;
++  }
++  if (body?.adminNotes !== undefined) {
++    update.adminNotes =
++      typeof body.adminNotes === "string" && body.adminNotes.trim()
++        ? body.adminNotes.trim().slice(0, 2000)
++        : null;
++  }
++
++  const row = await updateInspectionRequest(numId, update);
++  if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
++
++  revalidatePath("/admin/inspections");
++  return NextResponse.json(row);
++}
+diff --git a/app/api/inspection/route.ts b/app/api/inspection/route.ts
+new file mode 100644
+index 0000000..4adef44
+--- /dev/null
++++ b/app/api/inspection/route.ts
+@@ -0,0 +1,85 @@
++import { NextRequest, NextResponse } from "next/server";
++import { sendEmail } from "@/lib/email";
++import { createInspectionRequest } from "@/lib/db/queries/inspections";
++import InspectionRequestNotification from "@/lib/email/templates/InspectionRequestNotification";
++
++const clean = (v: unknown, max: number): string | null => {
++  if (typeof v !== "string") return null;
++  const t = v.trim().slice(0, max);
++  return t === "" ? null : t;
++};
++
++export async function POST(req: NextRequest) {
++  try {
++    const body = await req.json().catch(() => null);
++
++    // Honeypot: real people never fill the hidden "company" field.
++    if (body && typeof body.company === "string" && body.company.trim()) {
++      return NextResponse.json({ ok: true });
++    }
++
++    const name = clean(body?.name, 255);
++    const phone = clean(body?.phone, 50);
++    const address = clean(body?.address, 1000);
++    const email = clean(body?.email, 255);
++    const area = clean(body?.area, 100);
++    const message = clean(body?.message, 2000);
++    const rawDate = clean(body?.preferredDate, 20);
++    const preferredDate =
++      rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : null;
++
++    if (!name || !phone || !address) {
++      return NextResponse.json(
++        { error: "Please give your name, phone number and address." },
++        { status: 400 },
++      );
++    }
++    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
++      return NextResponse.json(
++        { error: "That email address doesn't look right." },
++        { status: 400 },
++      );
++    }
++
++    await createInspectionRequest({
++      name,
++      phone,
++      email,
++      address,
++      area,
++      preferredDate,
++      message,
++    });
++
++    const galleryEmail = process.env.GALLERY_EMAIL;
++    if (galleryEmail) {
++      try {
++        await sendEmail({
++          to: galleryEmail,
++          subject: `Inspection request from ${name}`,
++          react: InspectionRequestNotification({
++            name,
++            phone,
++            email,
++            address,
++            area,
++            preferredDate,
++            message,
++          }),
++          ...(email ? { replyTo: email } : {}),
++        });
++      } catch (err) {
++        // The request is saved in admin either way.
++        console.error("Inspection email failed:", err);
++      }
++    }
++
++    return NextResponse.json({ ok: true }, { status: 201 });
++  } catch (err) {
++    console.error("Inspection request error:", err);
++    return NextResponse.json(
++      { error: "Could not send your request. Please try again." },
++      { status: 500 },
++    );
++  }
++}
+diff --git a/app/api/orders/route.ts b/app/api/orders/route.ts
+index 50d0b77..747a44f 100644
+--- a/app/api/orders/route.ts
++++ b/app/api/orders/route.ts
+@@ -85,6 +85,8 @@ interface OrderBody {
+   deliveryZone?: string;
+   /** Google place id of the chosen address. Required when deliveryMethod is "delivery". */
+   deliveryPlaceId?: string;
++  /** Customer ticked "install my frames". Only honoured inside Lagos. */
++  installationRequested?: boolean;
+   fbp?: string | null;
+   fbc?: string | null;
+ }
+@@ -357,6 +359,7 @@ export async function POST(req: NextRequest) {
+     let deliveryVehicle: string | null = null;
+     let deliveryQuotePending = false;
+     let deliveryZone: string | null = null;
++    let installationRequested = false;
+ 
+     if (deliveryMethod === "delivery") {
+       if (!isPlaceId(body.deliveryPlaceId)) {
+@@ -392,6 +395,10 @@ export async function POST(req: NextRequest) {
+         dest.inLagos === false ? OUTSIDE_LAGOS_ID : LAGOS_DISTANCE_ZONE_ID;
+       deliveryVehicle = quote.tier; // "small" | "large" | "outsourced" | "gig_<tier>"
+       deliveryQuotePending = quote.quoteOnRequest;
++      // Installation is a Lagos-only service — decided from the measured
++      // address, never from the client's word.
++      installationRequested =
++        body.installationRequested === true && dest.inLagos === true;
+     }
+ 
+     const computedTotal = computedSubtotal - discountAmount + computedShipping;
+@@ -422,6 +429,7 @@ export async function POST(req: NextRequest) {
+         deliveryZone,
+         deliveryVehicle,
+         deliveryQuotePending,
++        installationRequested,
+         affiliateId,
+         affiliateCode,
+         discountPercent,
+diff --git a/app/checkout/page.tsx b/app/checkout/page.tsx
+index 8b041f9..a0a1896 100644
+--- a/app/checkout/page.tsx
++++ b/app/checkout/page.tsx
+@@ -52,6 +52,9 @@ export default function CheckoutPage() {
+     country: "Nigeria",
+   });
+   const [notes, setNotes] = useState("");
++  // Installation is a Lagos-only service, priced by staff when they call.
++  const [wantsInstallation, setWantsInstallation] = useState(false);
++  const installationOffered = destination?.inLagos === true;
+ 
+   // Affiliate / discount code
+   const [codeInput, setCodeInput] = useState("");
+@@ -300,6 +303,7 @@ export default function CheckoutPage() {
+           deliveryPlaceId: destination?.placeId,
+           affiliateCode: applied?.code,
+           notes: notes.trim() !== "" ? notes : undefined,
++          installationRequested: installationOffered && wantsInstallation,
+           fbp,
+           fbc,
+         }),
+@@ -572,6 +576,35 @@ export default function CheckoutPage() {
+               )}
+             </section>
+ 
++            {/* Installation (Lagos only) */}
++            {installationOffered && (
++              <section>
++                <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6 flex items-center gap-2">
++                  Installation
++                  <span className="text-ink-soft lowercase tracking-normal font-normal">
++                    (optional)
++                  </span>
++                </h2>
++                <label className="flex items-start gap-3 cursor-pointer">
++                  <input
++                    type="checkbox"
++                    checked={wantsInstallation}
++                    onChange={(e) => setWantsInstallation(e.target.checked)}
++                    className="mt-1 h-4 w-4 accent-ink"
++                  />
++                  <span className="text-[14px] text-ink leading-relaxed">
++                    I&apos;d like Talk Canvas to install my frames.
++                    <span className="block text-[13px] text-ink-soft mt-1">
++                      Available within Lagos. We&apos;ll contact you after your
++                      order to agree a date and the installation fee, which
++                      depends on your location and the number and size of
++                      frames. It isn&apos;t charged now.
++                    </span>
++                  </span>
++                </label>
++              </section>
++            )}
++
+             {/* Order Notes */}
+             <section>
+               <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6 flex items-center gap-2">
+diff --git a/app/inspection/page.tsx b/app/inspection/page.tsx
+new file mode 100644
+index 0000000..62576f9
+--- /dev/null
++++ b/app/inspection/page.tsx
+@@ -0,0 +1,43 @@
++import Link from "next/link";
++import { ArrowLeft } from "lucide-react";
++import InspectionForm from "@/components/inspection/InspectionForm";
++
++export const metadata = {
++  title: "Book a space inspection",
++  description:
++    "Not sure which size suits your wall? We'll visit, measure your space and recommend sizes. Available within Lagos.",
++};
++
++export default function InspectionPage() {
++  return (
++    <div className="fade-in bg-cream min-h-screen">
++      <div className="max-w-3xl mx-auto px-6 md:px-10 py-16 md:py-24">
++        <div className="flex flex-col items-center text-center mb-12 md:mb-16">
++          <Link
++            href="/prints"
++            prefetch={false}
++            className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink transition-colors mb-12"
++          >
++            <ArrowLeft size={14} strokeWidth={1.5} />
++            Back to prints
++          </Link>
++          <p className="text-[11px] uppercase tracking-widest text-ink-soft font-semibold mb-4">
++            Lagos only
++          </p>
++          <h1 className="display text-4xl md:text-5xl lg:text-6xl font-normal leading-tight mb-6">
++            Book a Space Inspection
++          </h1>
++          <p className="text-[15px] text-ink-soft leading-relaxed max-w-xl mx-auto">
++            Not sure what size will work? We&apos;ll visit, measure your space
++            and recommend the right sizes before you order. We&apos;ll call you
++            to confirm a date and the fee, which depends on your location.
++          </p>
++        </div>
++
++        <div className="bg-paper p-8 md:p-12 rounded-2xl shadow-sm border border-line/40">
++          <InspectionForm />
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/app/prints/custom/page.tsx b/app/prints/custom/page.tsx
+index c521242..6a5785f 100644
+--- a/app/prints/custom/page.tsx
++++ b/app/prints/custom/page.tsx
+@@ -1,6 +1,7 @@
+ import Link from "next/link";
+ import { ArrowLeft } from "lucide-react";
+ import CustomOrderForm from "@/components/prints/CustomOrderForm";
++import CustomSizeQuote from "@/components/prints/CustomSizeQuote";
+ 
+ export const metadata = {
+   title: "Request a custom order — Talk Canvas Gallery",
+@@ -36,6 +37,27 @@ export default function CustomOrderPage() {
+           </p>
+         </div>
+ 
++        {/* Instant pricing for sizes not on the list */}
++        <div className="bg-paper p-8 md:p-12 rounded-2xl shadow-sm border border-line/40 mb-10">
++          <CustomSizeQuote />
++        </div>
++
++        <p className="text-center text-[14px] text-ink-soft mb-10">
++          In Lagos and not sure what size suits your wall?{" "}
++          <Link
++            href="/inspection"
++            prefetch={false}
++            className="text-ink underline underline-offset-4"
++          >
++            Book a space inspection
++          </Link>
++          .
++        </p>
++
++        <p className="text-center text-[13px] uppercase tracking-widest text-ink-soft mb-6">
++          Something else in mind? Send us a request
++        </p>
++
+         {/* Form Container - Wrapped in a soft paper card for contrast */}
+         <div className="bg-paper p-8 md:p-12 rounded-2xl shadow-sm border border-line/40">
+           <CustomOrderForm />
+diff --git a/components/Footer.tsx b/components/Footer.tsx
+index d9e996e..dd73930 100644
+--- a/components/Footer.tsx
++++ b/components/Footer.tsx
+@@ -142,6 +142,13 @@ export default function Footer() {
+               >
+                 Custom Artwork
+               </Link>
++              <Link
++                href="/inspection"
++                prefetch={false}
++                className="hover:text-ink transition-colors w-fit"
++              >
++                Space Inspection
++              </Link>
+               <Link
+                 href="/artists"
+                 prefetch={false}
+diff --git a/components/admin/AdminNav.tsx b/components/admin/AdminNav.tsx
+index 226faf8..6a91f5f 100644
+--- a/components/admin/AdminNav.tsx
++++ b/components/admin/AdminNav.tsx
+@@ -10,6 +10,7 @@ const links = [
+   { href: "/admin/artists", label: "Artists" },
+   { href: "/admin/archive-prints", label: "Archive" },
+   { href: "/admin/orders", label: "Orders" },
++  { href: "/admin/inspections", label: "Inspections" },
+   { href: "/admin/affiliates", label: "Affiliates" },
+   { href: "/admin/testimonials", label: "Reviews" },
+ ];
+diff --git a/components/admin/InspectionStatusControl.tsx b/components/admin/InspectionStatusControl.tsx
+new file mode 100644
+index 0000000..7607b0f
+--- /dev/null
++++ b/components/admin/InspectionStatusControl.tsx
+@@ -0,0 +1,78 @@
++"use client";
++
++import { useState } from "react";
++import { useRouter } from "next/navigation";
++import {
++  INSPECTION_STATUSES,
++  INSPECTION_STATUS_LABELS as LABELS,
++} from "@/lib/inspections";
++
++export default function InspectionStatusControl({
++  id,
++  status,
++  adminNotes,
++}: {
++  id: number;
++  status: string;
++  adminNotes: string | null;
++}) {
++  const router = useRouter();
++  const [value, setValue] = useState(status);
++  const [notes, setNotes] = useState(adminNotes ?? "");
++  const [saving, setSaving] = useState(false);
++  const [error, setError] = useState<string | null>(null);
++  const dirty = value !== status || notes !== (adminNotes ?? "");
++
++  const save = async () => {
++    setSaving(true);
++    setError(null);
++    try {
++      const res = await fetch(`/api/admin/inspections/${id}`, {
++        method: "PATCH",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify({ status: value, adminNotes: notes }),
++      });
++      if (!res.ok) throw new Error("Could not save");
++      router.refresh();
++    } catch {
++      setError("Could not save. Try again.");
++    } finally {
++      setSaving(false);
++    }
++  };
++
++  return (
++    <div className="space-y-2">
++      <select
++        value={value}
++        onChange={(e) => setValue(e.target.value)}
++        className="w-full px-3 py-2 border border-line bg-white text-sm"
++      >
++        {INSPECTION_STATUSES.map((s) => (
++          <option key={s} value={s}>
++            {LABELS[s]}
++          </option>
++        ))}
++      </select>
++      <textarea
++        rows={2}
++        value={notes}
++        onChange={(e) => setNotes(e.target.value)}
++        maxLength={2000}
++        placeholder="Internal notes (date agreed, fee...)"
++        className="w-full px-3 py-2 border border-line bg-white text-sm resize-none"
++      />
++      {dirty && (
++        <button
++          type="button"
++          onClick={save}
++          disabled={saving}
++          className="px-4 py-2 bg-ink text-cream text-[11px] uppercase tracking-widest disabled:opacity-60"
++        >
++          {saving ? "Saving..." : "Save"}
++        </button>
++      )}
++      {error && <p className="text-xs text-red-700">{error}</p>}
++    </div>
++  );
++}
+diff --git a/components/inspection/InspectionForm.tsx b/components/inspection/InspectionForm.tsx
+new file mode 100644
+index 0000000..b1b64ad
+--- /dev/null
++++ b/components/inspection/InspectionForm.tsx
+@@ -0,0 +1,168 @@
++"use client";
++
++import { useState } from "react";
++import { Check } from "lucide-react";
++
++const inputClass =
++  "w-full px-4 py-3 border border-line bg-cream focus:border-ink outline-none";
++
++/** Earliest bookable day: tomorrow, as YYYY-MM-DD in local time. */
++function tomorrow(): string {
++  const d = new Date();
++  d.setDate(d.getDate() + 1);
++  const pad = (n: number) => String(n).padStart(2, "0");
++  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
++}
++
++export default function InspectionForm() {
++  const [submitted, setSubmitted] = useState(false);
++  const [submitting, setSubmitting] = useState(false);
++  const [error, setError] = useState<string | null>(null);
++  const [form, setForm] = useState({
++    name: "",
++    phone: "",
++    email: "",
++    address: "",
++    area: "",
++    preferredDate: "",
++    message: "",
++    company: "", // honeypot
++  });
++
++  const set =
++    (key: keyof typeof form) =>
++    (
++      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
++    ) =>
++      setForm((f) => ({ ...f, [key]: e.target.value }));
++
++  const handleSubmit = async (e: React.FormEvent) => {
++    e.preventDefault();
++    setSubmitting(true);
++    setError(null);
++    try {
++      const res = await fetch("/api/inspection", {
++        method: "POST",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify(form),
++      });
++      if (!res.ok) {
++        const data = await res.json().catch(() => ({}));
++        throw new Error(data.error || "Could not send your request");
++      }
++      setSubmitted(true);
++    } catch (err) {
++      setError(err instanceof Error ? err.message : "Could not send your request");
++    } finally {
++      setSubmitting(false);
++    }
++  };
++
++  if (submitted) {
++    return (
++      <div className="text-center py-12">
++        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-accent/10 mb-4">
++          <Check size={24} strokeWidth={1.5} className="text-accent" />
++        </div>
++        <h3 className="display text-2xl font-normal">Request received.</h3>
++        <p className="text-sm text-ink-soft mt-3 max-w-sm mx-auto leading-relaxed">
++          We&apos;ll call you shortly to confirm a date and the inspection fee.
++        </p>
++      </div>
++    );
++  }
++
++  return (
++    <form onSubmit={handleSubmit} className="space-y-5">
++      <div className="grid sm:grid-cols-2 gap-5">
++        <div>
++          <label className="block text-sm text-ink-soft mb-2">Name</label>
++          <input required type="text" value={form.name} onChange={set("name")} className={inputClass} />
++        </div>
++        <div>
++          <label className="block text-sm text-ink-soft mb-2">Phone</label>
++          <input required type="tel" value={form.phone} onChange={set("phone")} className={inputClass} />
++        </div>
++      </div>
++
++      <div>
++        <label className="block text-sm text-ink-soft mb-2">
++          Email <span className="text-muted">(optional)</span>
++        </label>
++        <input type="email" value={form.email} onChange={set("email")} className={inputClass} />
++      </div>
++
++      <div>
++        <label className="block text-sm text-ink-soft mb-2">Address in Lagos</label>
++        <textarea
++          required
++          rows={2}
++          value={form.address}
++          onChange={set("address")}
++          maxLength={1000}
++          className={`${inputClass} resize-none`}
++        />
++      </div>
++
++      <div className="grid sm:grid-cols-2 gap-5">
++        <div>
++          <label className="block text-sm text-ink-soft mb-2">
++            Area <span className="text-muted">(e.g. Lekki, Ikeja)</span>
++          </label>
++          <input type="text" value={form.area} onChange={set("area")} maxLength={100} className={inputClass} />
++        </div>
++        <div>
++          <label className="block text-sm text-ink-soft mb-2">
++            Preferred date <span className="text-muted">(optional)</span>
++          </label>
++          <input
++            type="date"
++            min={tomorrow()}
++            value={form.preferredDate}
++            onChange={set("preferredDate")}
++            className={inputClass}
++          />
++        </div>
++      </div>
++
++      <div>
++        <label className="block text-sm text-ink-soft mb-2">
++          Anything we should know? <span className="text-muted">(optional)</span>
++        </label>
++        <textarea
++          rows={4}
++          value={form.message}
++          onChange={set("message")}
++          maxLength={2000}
++          placeholder="Which rooms or walls, the look you're going for..."
++          className={`${inputClass} resize-none`}
++        />
++      </div>
++
++      {/* Honeypot — hidden from people, irresistible to bots. */}
++      <input
++        type="text"
++        tabIndex={-1}
++        autoComplete="off"
++        value={form.company}
++        onChange={set("company")}
++        className="hidden"
++        aria-hidden="true"
++      />
++
++      {error && (
++        <div className="p-3 bg-red-50 border border-red-200 text-sm text-red-700">
++          {error}
++        </div>
++      )}
++
++      <button
++        type="submit"
++        disabled={submitting}
++        className="w-full px-8 py-4 bg-ink text-cream uppercase text-xs tracking-[0.15em] hover:bg-ink-soft transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
++      >
++        {submitting ? "Sending..." : "Request an inspection"}
++      </button>
++    </form>
++  );
++}
+diff --git a/components/prints/CustomSizeFields.tsx b/components/prints/CustomSizeFields.tsx
+new file mode 100644
+index 0000000..e3fa274
+--- /dev/null
++++ b/components/prints/CustomSizeFields.tsx
+@@ -0,0 +1,95 @@
++"use client";
++
++import { buildCustomSize, cmToInches, type CustomSizeResult } from "@/data/sizes";
++
++export type SizeUnit = "inches" | "cm";
++
++/** Customer's typed width/height in either unit → a priced custom size. */
++export function resolveCustomSize(
++  width: string,
++  height: string,
++  unit: SizeUnit,
++): CustomSizeResult | null {
++  const w = Number(width);
++  const h = Number(height);
++  if (!width || !height || !Number.isFinite(w) || !Number.isFinite(h)) {
++    return null;
++  }
++  return unit === "cm"
++    ? buildCustomSize(cmToInches(w), cmToInches(h))
++    : buildCustomSize(w, h);
++}
++
++export const CUSTOM_SIZE_ERRORS: Record<
++  Exclude<CustomSizeResult, { ok: true }>["reason"],
++  string
++> = {
++  invalid: "Enter a width and height.",
++  too_small: "That's smaller than we frame — the shortest side must be at least 8 in (20 cm).",
++  too_large:
++    "That's larger than our price list covers. Send us a custom request below and we'll quote it by hand.",
++};
++
++const inputClass =
++  "w-28 px-4 py-3 border border-line bg-cream focus:border-ink outline-none";
++
++/** Width × height inputs with an inches / cm toggle. Purely presentational. */
++export default function CustomSizeFields({
++  width,
++  height,
++  unit,
++  onWidth,
++  onHeight,
++  onUnit,
++}: {
++  width: string;
++  height: string;
++  unit: SizeUnit;
++  onWidth: (v: string) => void;
++  onHeight: (v: string) => void;
++  onUnit: (u: SizeUnit) => void;
++}) {
++  return (
++    <div className="flex items-end gap-3 flex-wrap">
++      <div>
++        <label className="block text-sm text-ink-soft mb-2">Width</label>
++        <input
++          type="number"
++          inputMode="decimal"
++          step="0.5"
++          min="0"
++          value={width}
++          onChange={(e) => onWidth(e.target.value)}
++          className={inputClass}
++        />
++      </div>
++      <span className="text-muted pb-3 text-lg">×</span>
++      <div>
++        <label className="block text-sm text-ink-soft mb-2">Height</label>
++        <input
++          type="number"
++          inputMode="decimal"
++          step="0.5"
++          min="0"
++          value={height}
++          onChange={(e) => onHeight(e.target.value)}
++          className={inputClass}
++        />
++      </div>
++      <div className="flex border border-line bg-cream">
++        {(["inches", "cm"] as const).map((u) => (
++          <button
++            key={u}
++            type="button"
++            onClick={() => onUnit(u)}
++            className={`px-4 py-3 text-sm transition-colors ${
++              unit === u ? "bg-ink text-cream" : "text-ink-soft hover:bg-paper"
++            }`}
++          >
++            {u}
++          </button>
++        ))}
++      </div>
++    </div>
++  );
++}
+diff --git a/components/prints/CustomSizeQuote.tsx b/components/prints/CustomSizeQuote.tsx
+new file mode 100644
+index 0000000..a5b3c0f
+--- /dev/null
++++ b/components/prints/CustomSizeQuote.tsx
+@@ -0,0 +1,96 @@
++"use client";
++
++import { useState } from "react";
++import Link from "next/link";
++import { formatInches, formatCm, isCustomSize } from "@/data/sizes";
++import { formatNaira } from "@/lib/store";
++import CustomSizeFields, {
++  resolveCustomSize,
++  CUSTOM_SIZE_ERRORS,
++  type SizeUnit,
++} from "./CustomSizeFields";
++
++/**
++ * Instant price for a size that isn't on the list. Customers used to email for
++ * this; now the site quotes it the gallery's way and sends them straight into
++ * the print studio with the size filled in.
++ */
++export default function CustomSizeQuote() {
++  const [width, setWidth] = useState("");
++  const [height, setHeight] = useState("");
++  const [unit, setUnit] = useState<SizeUnit>("inches");
++
++  const result = resolveCustomSize(width, height, unit);
++  const size = result?.ok ? result.size : null;
++
++  const rows = size
++    ? ([
++        ["Regular frame", size.prices.regular],
++        ["Box frame with glass", size.prices.regularGlass],
++        ["Antique frame", size.prices.antique],
++      ] as const)
++    : [];
++
++  return (
++    <div>
++      <h2 className="text-xs uppercase tracking-[0.15em] text-muted mb-2">
++        Price a custom size
++      </h2>
++      <p className="text-[14px] text-ink-soft mb-6 leading-relaxed">
++        Enter the size you want and see the price instantly — no need to wait
++        for a quote.
++      </p>
++
++      <CustomSizeFields
++        width={width}
++        height={height}
++        unit={unit}
++        onWidth={setWidth}
++        onHeight={setHeight}
++        onUnit={setUnit}
++      />
++
++      {result && !result.ok && (
++        <p className="text-[13px] text-ink-soft mt-4">
++          {CUSTOM_SIZE_ERRORS[result.reason]}
++        </p>
++      )}
++
++      {size && result?.ok && (
++        <div className="mt-6 border border-line bg-cream p-6">
++          <p className="display text-xl">{formatInches(size)}</p>
++          <p className="text-[12px] text-ink-soft mb-5">
++            {formatCm(size)}
++            {isCustomSize(size) && (
++              <> · priced as {formatInches(result.matched)}</>
++            )}
++          </p>
++          <ul className="space-y-2 mb-6">
++            {rows.map(([label, price]) => (
++              <li
++                key={label}
++                className="flex justify-between text-[14px] border-b border-line/60 pb-2"
++              >
++                <span className="text-ink-soft">{label}</span>
++                <span className="font-medium">
++                  {price === null ? "Not available" : `from ${formatNaira(price)}`}
++                </span>
++              </li>
++            ))}
++          </ul>
++          <Link
++            href={`/prints?size=${size.inches.w}x${size.inches.h}`}
++            prefetch={false}
++            className="inline-block bg-ink text-cream px-6 py-3 text-[12px] uppercase tracking-widest hover:opacity-90"
++          >
++            Order this size
++          </Link>
++          <p className="text-[12px] text-ink-soft mt-3">
++            Upload your design and pick a frame — this size will be waiting on
++            the size step.
++          </p>
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/components/prints/StepSize.tsx b/components/prints/StepSize.tsx
+index 4f1af25..59c60c0 100644
+--- a/components/prints/StepSize.tsx
++++ b/components/prints/StepSize.tsx
+@@ -1,7 +1,9 @@
+ "use client";
+ 
++import { useState } from "react";
+ import {
+   SIZES,
++  isCustomSize,
+   SIZE_CATEGORIES,
+   formatInches,
+   formatCm,
+@@ -9,9 +11,26 @@ import {
+ } from "@/data/sizes";
+ import { useConfigurator, formatNaira } from "@/lib/store";
+ import { getPrice } from "@/data/pricing";
++import CustomSizeFields, {
++  resolveCustomSize,
++  CUSTOM_SIZE_ERRORS,
++  type SizeUnit,
++} from "./CustomSizeFields";
++
++/** `/prints?size=32x48` (from the custom-order page) prefills the custom size. */
++function sizeFromUrl(): { w: string; h: string } {
++  if (typeof window === "undefined") return { w: "", h: "" };
++  const m = /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/.exec(
++    new URLSearchParams(window.location.search).get("size") ?? "",
++  );
++  return m ? { w: m[1], h: m[2] } : { w: "", h: "" };
++}
+ 
+ export default function StepSize() {
+   const { image, frame, glass, size, setSize, setGlass } = useConfigurator();
++  const [customW, setCustomW] = useState(() => sizeFromUrl().w);
++  const [customH, setCustomH] = useState(() => sizeFromUrl().h);
++  const [customUnit, setCustomUnit] = useState<SizeUnit>("inches");
+ 
+   if (!frame)
+     return <p className="text-ink-soft">Please pick a frame first.</p>;
+@@ -117,6 +136,99 @@ export default function StepSize() {
+           </div>
+         </section>
+       ))}
++
++      <CustomSizeSection
++        width={customW}
++        height={customH}
++        unit={customUnit}
++        onWidth={setCustomW}
++        onHeight={setCustomH}
++        onUnit={setCustomUnit}
++      />
+     </div>
+   );
+ }
++
++/**
++ * Any size not on the list, priced the gallery's way (see buildCustomSize).
++ * Picking it puts a normal size into the configurator, so crop, AR, cart and
++ * checkout all work unchanged.
++ */
++function CustomSizeSection(props: {
++  width: string;
++  height: string;
++  unit: SizeUnit;
++  onWidth: (v: string) => void;
++  onHeight: (v: string) => void;
++  onUnit: (u: SizeUnit) => void;
++}) {
++  const { image, frame, glass, size, setSize, setGlass } = useConfigurator();
++  if (!frame) return null;
++
++  const orientation = orientationOf(image);
++  const result = resolveCustomSize(props.width, props.height, props.unit);
++  const custom = result?.ok ? result.size : null;
++  const price = custom ? getPrice(frame, glass, custom) : null;
++  const priceNoGlass = custom && glass ? getPrice(frame, false, custom) : null;
++  const selected =
++    !!custom && size?.id === custom.id;
++
++  const choose = () => {
++    if (!custom) return;
++    if (price === null && priceNoGlass !== null) setGlass(false);
++    setSize(custom);
++  };
++
++  return (
++    <section className="mb-10 border-t border-line pt-10">
++      <p className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-3">
++        Custom size
++      </p>
++      <p className="text-[13px] text-ink-soft mb-6 leading-relaxed">
++        Need a size that isn&apos;t listed? Enter it below and we&apos;ll price
++        it against the closest size on our list.
++      </p>
++
++      <CustomSizeFields {...props} />
++
++      {result && !result.ok && (
++        <p className="text-[13px] text-ink-soft mt-4">
++          {CUSTOM_SIZE_ERRORS[result.reason]}
++        </p>
++      )}
++
++      {custom && result?.ok && (
++        <button
++          type="button"
++          onClick={choose}
++          disabled={price === null && priceNoGlass === null}
++          className={`mt-6 w-full sm:w-auto p-5 border text-left transition-all ${
++            selected ? "border-ink bg-paper" : "border-line hover:border-ink/50"
++          } disabled:opacity-30 disabled:cursor-not-allowed`}
++        >
++          <p className="display text-lg mb-1">
++            {formatInches(custom, orientation)}
++          </p>
++          <p className="text-[12px] text-ink-soft mb-4">
++            {formatCm(custom, orientation)}
++            {isCustomSize(custom) && (
++              <> · priced as {formatInches(result.matched, orientation)}</>
++            )}
++          </p>
++          {price !== null ? (
++            <p className="text-[13px] font-medium">{formatNaira(price)}</p>
++          ) : priceNoGlass !== null ? (
++            <p className="text-[13px] font-medium text-ink-soft">
++              {formatNaira(priceNoGlass)}{" "}
++              <span className="font-normal">without glass — select to remove it</span>
++            </p>
++          ) : (
++            <p className="text-[13px] font-medium">
++              Not available with this frame
++            </p>
++          )}
++        </button>
++      )}
++    </section>
++  );
++}
+diff --git a/data/sizes.ts b/data/sizes.ts
+index 1f4d758..5253dbe 100644
+--- a/data/sizes.ts
++++ b/data/sizes.ts
+@@ -224,9 +224,127 @@ export const SIZES: PrintSize[] = [
+ ];
+ 
+ export function getSize(id: string): PrintSize | undefined {
++  if (id.startsWith(CUSTOM_SIZE_PREFIX)) return parseCustomSizeId(id) ?? undefined;
+   return SIZES.find((s) => s.id === id);
+ }
+ 
++// ── CUSTOM SIZES ─────────────────────────────────────────────────
++// The gallery prices a size that isn't on the list by matching it to a listed
++// size with the same width + height, rounded to the nearest 10 inches. That is
++// why 20×40 and 24×36 (both 60) cost the same, and why a 32×48 (80) is charged
++// as a 30×50. Custom sizes follow exactly that rule, so the website quotes what
++// staff would have quoted by hand.
++
++export const CUSTOM_SIZE_PREFIX = "custom-";
++
++/** Smallest and largest side we'll quote online, in inches. */
++export const CUSTOM_MIN_SIDE = 8;
++export const CUSTOM_MAX_SIDE = 96;
++
++const CM_PER_INCH = 2.54;
++
++/** Half-inch precision is as fine as anyone measures a wall. */
++const toHalfInch = (n: number) => Math.round(n * 2) / 2;
++
++export function cmToInches(cm: number): number {
++  return toHalfInch(cm / CM_PER_INCH);
++}
++
++const roundedSum = (w: number, h: number) =>
++  Math.floor((w + h + 5) / 10) * 10;
++
++/**
++ * The listed size a custom size is priced as.
++ *
++ * 1. Same rounded total (width + height). Where several listed sizes share a
++ *    total but cost different amounts (e.g. 40×80 and 60×60 are both 120), the
++ *    one closest in shape wins — a near-square 58×62 is priced like the 60×60,
++ *    a long 42×78 like the 40×80. Ties go to the higher price.
++ * 2. No listed size at that total → the next total up (never undercharge).
++ * 3. Bigger than anything listed → null; those are still quoted by hand.
++ */
++export function matchListedSize(w: number, h: number): PrintSize | null {
++  const short = Math.min(w, h);
++  const long = Math.max(w, h);
++
++  const exact = SIZES.find((s) => s.inches.w === short && s.inches.h === long);
++  if (exact) return exact;
++
++  const totals = [...new Set(SIZES.map((s) => roundedSum(s.inches.w, s.inches.h)))]
++    .sort((a, b) => a - b);
++  const wanted = roundedSum(short, long);
++  const target = totals.find((t) => t >= wanted);
++  if (target === undefined) return null;
++
++  const candidates = SIZES.filter(
++    (s) => roundedSum(s.inches.w, s.inches.h) === target,
++  );
++  return candidates.reduce((best, s) => {
++    const d = Math.abs(s.inches.w - short);
++    const bestD = Math.abs(best.inches.w - short);
++    if (d !== bestD) return d < bestD ? s : best;
++    return s.prices.regular > best.prices.regular ? s : best;
++  });
++}
++
++export function customSizeId(w: number, h: number): string {
++  const short = Math.min(w, h);
++  const long = Math.max(w, h);
++  return `${CUSTOM_SIZE_PREFIX}${short}x${long}`;
++}
++
++export type CustomSizeResult =
++  | { ok: true; size: PrintSize; matched: PrintSize }
++  | { ok: false; reason: "invalid" | "too_small" | "too_large" };
++
++/** Build a priced size from the customer's own measurements (inches). */
++export function buildCustomSize(wIn: number, hIn: number): CustomSizeResult {
++  if (!Number.isFinite(wIn) || !Number.isFinite(hIn) || wIn <= 0 || hIn <= 0) {
++    return { ok: false, reason: "invalid" };
++  }
++  const w = toHalfInch(wIn);
++  const h = toHalfInch(hIn);
++  const short = Math.min(w, h);
++  const long = Math.max(w, h);
++  if (short < CUSTOM_MIN_SIDE) return { ok: false, reason: "too_small" };
++  if (long > CUSTOM_MAX_SIDE) return { ok: false, reason: "too_large" };
++
++  const matched = matchListedSize(short, long);
++  if (!matched) return { ok: false, reason: "too_large" };
++
++  // A size that is already on the list is just that size.
++  if (matched.inches.w === short && matched.inches.h === long) {
++    return { ok: true, size: matched, matched };
++  }
++
++  return {
++    ok: true,
++    matched,
++    size: {
++      id: customSizeId(short, long),
++      inches: { w: short, h: long },
++      cm: {
++        w: Math.round(short * CM_PER_INCH),
++        h: Math.round(long * CM_PER_INCH),
++      },
++      category: matched.category,
++      prices: { ...matched.prices },
++    },
++  };
++}
++
++export function isCustomSize(s: PrintSize): boolean {
++  return s.id.startsWith(CUSTOM_SIZE_PREFIX);
++}
++
++/** Server and cart both resolve custom ids here — the price is never trusted from the client. */
++function parseCustomSizeId(id: string): PrintSize | null {
++  const m = /^custom-(\d+(?:\.5)?)x(\d+(?:\.5)?)$/.exec(id);
++  if (!m) return null;
++  const r = buildCustomSize(Number(m[1]), Number(m[2]));
++  return r.ok && isCustomSize(r.size) ? r.size : null;
++}
++
+ // ── ORIENTATION ──────────────────────────────────────────────────
+ 
+ /** Derived from the artwork's own pixel dimensions — never a manual tag. */
+diff --git a/drizzle/0016_young_overlord.sql b/drizzle/0016_young_overlord.sql
+new file mode 100644
+index 0000000..28bee12
+--- /dev/null
++++ b/drizzle/0016_young_overlord.sql
+@@ -0,0 +1,16 @@
++CREATE TABLE "inspection_requests" (
++	"id" serial PRIMARY KEY NOT NULL,
++	"name" varchar(255) NOT NULL,
++	"phone" varchar(50) NOT NULL,
++	"email" varchar(255),
++	"address" text NOT NULL,
++	"area" varchar(100),
++	"preferred_date" varchar(20),
++	"message" text,
++	"status" varchar(20) DEFAULT 'new' NOT NULL,
++	"admin_notes" text,
++	"created_at" timestamp DEFAULT now() NOT NULL,
++	"updated_at" timestamp DEFAULT now() NOT NULL
++);
++--> statement-breakpoint
++ALTER TABLE "orders" ADD COLUMN "installation_requested" boolean DEFAULT false NOT NULL;
+\ No newline at end of file
+diff --git a/drizzle/meta/0016_snapshot.json b/drizzle/meta/0016_snapshot.json
+new file mode 100644
+index 0000000..b0ae572
+--- /dev/null
++++ b/drizzle/meta/0016_snapshot.json
+@@ -0,0 +1,1230 @@
++{
++  "id": "a040058d-33ec-466a-97ec-07f73cc10544",
++  "prevId": "a88ed6de-0da9-4f5f-b45e-a6dd3ce2a288",
++  "version": "7",
++  "dialect": "postgresql",
++  "tables": {
++    "public.affiliates": {
++      "name": "affiliates",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "code": {
++          "name": "code",
++          "type": "varchar(50)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "name": {
++          "name": "name",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "email": {
++          "name": "email",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "phone": {
++          "name": "phone",
++          "type": "varchar(50)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "notes": {
++          "name": "notes",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "kind": {
++          "name": "kind",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'affiliate'"
++        },
++        "stats_token": {
++          "name": "stats_token",
++          "type": "varchar(64)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "discount_percent": {
++          "name": "discount_percent",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "expires_at": {
++          "name": "expires_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "is_active": {
++          "name": "is_active",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "affiliates_code_unique": {
++          "name": "affiliates_code_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "code"
++          ]
++        },
++        "affiliates_stats_token_unique": {
++          "name": "affiliates_stats_token_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "stats_token"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.ar_models": {
++      "name": "ar_models",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "cache_key": {
++          "name": "cache_key",
++          "type": "varchar(512)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "glb_url": {
++          "name": "glb_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "usdz_url": {
++          "name": "usdz_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "ar_models_cache_key_unique": {
++          "name": "ar_models_cache_key_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "cache_key"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.archive_prints": {
++      "name": "archive_prints",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "image_url": {
++          "name": "image_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "image_public_id": {
++          "name": "image_public_id",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "width": {
++          "name": "width",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "height": {
++          "name": "height",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "set_id": {
++          "name": "set_id",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "set_position": {
++          "name": "set_position",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "set_size": {
++          "name": "set_size",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "orientation": {
++          "name": "orientation",
++          "type": "varchar(10)",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'portrait'"
++        },
++        "collection": {
++          "name": "collection",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "display_order": {
++          "name": "display_order",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 0
++        },
++        "is_visible": {
++          "name": "is_visible",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.artists": {
++      "name": "artists",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "name": {
++          "name": "name",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "slug": {
++          "name": "slug",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "bio": {
++          "name": "bio",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "portrait_url": {
++          "name": "portrait_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "portrait_public_id": {
++          "name": "portrait_public_id",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "location": {
++          "name": "location",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "instagram": {
++          "name": "instagram",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "website": {
++          "name": "website",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "featured": {
++          "name": "featured",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "display_order": {
++          "name": "display_order",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 0
++        },
++        "is_visible": {
++          "name": "is_visible",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "artists_slug_unique": {
++          "name": "artists_slug_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "slug"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.inspection_requests": {
++      "name": "inspection_requests",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "name": {
++          "name": "name",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "phone": {
++          "name": "phone",
++          "type": "varchar(50)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "email": {
++          "name": "email",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "address": {
++          "name": "address",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "area": {
++          "name": "area",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "preferred_date": {
++          "name": "preferred_date",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "message": {
++          "name": "message",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "status": {
++          "name": "status",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'new'"
++        },
++        "admin_notes": {
++          "name": "admin_notes",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.order_items": {
++      "name": "order_items",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "order_id": {
++          "name": "order_id",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "type": {
++          "name": "type",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'print'"
++        },
++        "image_url": {
++          "name": "image_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "image_public_id": {
++          "name": "image_public_id",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "price": {
++          "name": "price",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "set_id": {
++          "name": "set_id",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "set_position": {
++          "name": "set_position",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "quantity": {
++          "name": "quantity",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        },
++        "frame_name": {
++          "name": "frame_name",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "glass": {
++          "name": "glass",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "size_label": {
++          "name": "size_label",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "frame_id": {
++          "name": "frame_id",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "size_id": {
++          "name": "size_id",
++          "type": "varchar(50)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "original_id": {
++          "name": "original_id",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "title": {
++          "name": "title",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "artist": {
++          "name": "artist",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "year": {
++          "name": "year",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {
++        "order_items_order_id_orders_id_fk": {
++          "name": "order_items_order_id_orders_id_fk",
++          "tableFrom": "order_items",
++          "tableTo": "orders",
++          "columnsFrom": [
++            "order_id"
++          ],
++          "columnsTo": [
++            "id"
++          ],
++          "onDelete": "cascade",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.orders": {
++      "name": "orders",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "customer_name": {
++          "name": "customer_name",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "customer_email": {
++          "name": "customer_email",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "customer_phone": {
++          "name": "customer_phone",
++          "type": "varchar(50)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "delivery_method": {
++          "name": "delivery_method",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "address_line1": {
++          "name": "address_line1",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "address_line2": {
++          "name": "address_line2",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "city": {
++          "name": "city",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "state": {
++          "name": "state",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "postal_code": {
++          "name": "postal_code",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "country": {
++          "name": "country",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "subtotal": {
++          "name": "subtotal",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "shipping": {
++          "name": "shipping",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "delivery_zone": {
++          "name": "delivery_zone",
++          "type": "varchar(50)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "delivery_vehicle": {
++          "name": "delivery_vehicle",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "delivery_quote_pending": {
++          "name": "delivery_quote_pending",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "installation_requested": {
++          "name": "installation_requested",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "affiliate_id": {
++          "name": "affiliate_id",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "affiliate_code": {
++          "name": "affiliate_code",
++          "type": "varchar(50)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "discount_percent": {
++          "name": "discount_percent",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "discount_amount": {
++          "name": "discount_amount",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 0
++        },
++        "total": {
++          "name": "total",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "notes": {
++          "name": "notes",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "status": {
++          "name": "status",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'pending'"
++        },
++        "payment_status": {
++          "name": "payment_status",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'unpaid'"
++        },
++        "payment_reference": {
++          "name": "payment_reference",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "amount_paid": {
++          "name": "amount_paid",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 0
++        },
++        "fbp": {
++          "name": "fbp",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "fbc": {
++          "name": "fbc",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {
++        "orders_affiliate_id_affiliates_id_fk": {
++          "name": "orders_affiliate_id_affiliates_id_fk",
++          "tableFrom": "orders",
++          "tableTo": "affiliates",
++          "columnsFrom": [
++            "affiliate_id"
++          ],
++          "columnsTo": [
++            "id"
++          ],
++          "onDelete": "set null",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.originals": {
++      "name": "originals",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "slug": {
++          "name": "slug",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "title": {
++          "name": "title",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "artist": {
++          "name": "artist",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "artist_id": {
++          "name": "artist_id",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "year": {
++          "name": "year",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "medium": {
++          "name": "medium",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "width_inches": {
++          "name": "width_inches",
++          "type": "real",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "height_inches": {
++          "name": "height_inches",
++          "type": "real",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "price": {
++          "name": "price",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "image_url": {
++          "name": "image_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "image_public_id": {
++          "name": "image_public_id",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "description": {
++          "name": "description",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "frame_style": {
++          "name": "frame_style",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "frame_shape": {
++          "name": "frame_shape",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "frame_color": {
++          "name": "frame_color",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "glass": {
++          "name": "glass",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "sold_at": {
++          "name": "sold_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "one_of_one": {
++          "name": "one_of_one",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "display_order": {
++          "name": "display_order",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 0
++        },
++        "is_visible": {
++          "name": "is_visible",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {
++        "originals_artist_id_artists_id_fk": {
++          "name": "originals_artist_id_artists_id_fk",
++          "tableFrom": "originals",
++          "tableTo": "artists",
++          "columnsFrom": [
++            "artist_id"
++          ],
++          "columnsTo": [
++            "id"
++          ],
++          "onDelete": "set null",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "originals_slug_unique": {
++          "name": "originals_slug_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "slug"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.payment_events": {
++      "name": "payment_events",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "source": {
++          "name": "source",
++          "type": "varchar(20)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "event": {
++          "name": "event",
++          "type": "varchar(50)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "reference": {
++          "name": "reference",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "amount": {
++          "name": "amount",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "outcome": {
++          "name": "outcome",
++          "type": "varchar(30)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.testimonials": {
++      "name": "testimonials",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "quote": {
++          "name": "quote",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "name": {
++          "name": "name",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "location": {
++          "name": "location",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "rating": {
++          "name": "rating",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 5
++        },
++        "image_url": {
++          "name": "image_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "image_public_id": {
++          "name": "image_public_id",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "video_url": {
++          "name": "video_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "video_public_id": {
++          "name": "video_public_id",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "video_loop": {
++          "name": "video_loop",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "display_order": {
++          "name": "display_order",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 0
++        },
++        "is_visible": {
++          "name": "is_visible",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.users": {
++      "name": "users",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "serial",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "email": {
++          "name": "email",
++          "type": "varchar(255)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "password_hash": {
++          "name": "password_hash",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "name": {
++          "name": "name",
++          "type": "varchar(100)",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "users_email_unique": {
++          "name": "users_email_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "email"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    }
++  },
++  "enums": {},
++  "schemas": {},
++  "sequences": {},
++  "roles": {},
++  "policies": {},
++  "views": {},
++  "_meta": {
++    "columns": {},
++    "schemas": {},
++    "tables": {}
++  }
++}
+\ No newline at end of file
+diff --git a/drizzle/meta/_journal.json b/drizzle/meta/_journal.json
+index 53cbf5a..e1dcf07 100644
+--- a/drizzle/meta/_journal.json
++++ b/drizzle/meta/_journal.json
+@@ -113,6 +113,13 @@
+       "when": 1791525505718,
+       "tag": "0015_slippery_prodigy",
+       "breakpoints": true
++    },
++    {
++      "idx": 16,
++      "version": "7",
++      "when": 1793298772553,
++      "tag": "0016_young_overlord",
++      "breakpoints": true
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/lib/db/queries/inspections.ts b/lib/db/queries/inspections.ts
+new file mode 100644
+index 0000000..618ee50
+--- /dev/null
++++ b/lib/db/queries/inspections.ts
+@@ -0,0 +1,34 @@
++import { desc, eq } from "drizzle-orm";
++import { db } from "@/lib/db";
++import {
++  inspectionRequests,
++  type InspectionRequest,
++  type NewInspectionRequest,
++} from "@/lib/db/schema";
++import type { InspectionStatus } from "@/lib/inspections";
++
++export async function createInspectionRequest(
++  data: NewInspectionRequest,
++): Promise<InspectionRequest> {
++  const [row] = await db.insert(inspectionRequests).values(data).returning();
++  return row;
++}
++
++export async function getAllInspectionRequests(): Promise<InspectionRequest[]> {
++  return db
++    .select()
++    .from(inspectionRequests)
++    .orderBy(desc(inspectionRequests.createdAt));
++}
++
++export async function updateInspectionRequest(
++  id: number,
++  data: { status?: InspectionStatus; adminNotes?: string | null },
++): Promise<InspectionRequest | undefined> {
++  const [row] = await db
++    .update(inspectionRequests)
++    .set({ ...data, updatedAt: new Date() })
++    .where(eq(inspectionRequests.id, id))
++    .returning();
++  return row;
++}
+diff --git a/lib/db/schema.ts b/lib/db/schema.ts
+index 1f8e105..0b6ed05 100644
+--- a/lib/db/schema.ts
++++ b/lib/db/schema.ts
+@@ -153,6 +153,12 @@ export const orders = pgTable("orders", {
+     .default(false)
+     .notNull(),
+ 
++  // Customer asked for installation at checkout (Lagos only). Priced and
++  // scheduled by staff after the order, so it never touches the total.
++  installationRequested: boolean("installation_requested")
++    .default(false)
++    .notNull(),
++
+   // Affiliate/discount snapshot. Frozen at order time so editing a code's rate
+   // later never rewrites historical orders. discountAmount is the naira taken
+   // off; it only ever applies to prints + recreatable Talk Canvas designs.
+@@ -327,3 +333,25 @@ export const testimonials = pgTable("testimonials", {
+ 
+ export type Testimonial = typeof testimonials.$inferSelect;
+ export type NewTestimonial = typeof testimonials.$inferInsert;
++
++// ── INSPECTION REQUESTS ─────────────────────────────────────────
++// A customer asks the gallery to visit (Lagos only), measure their space and
++// advise on sizes before ordering. Priced and scheduled by staff on the phone,
++// so nothing here is money — it's a call list.
++export const inspectionRequests = pgTable("inspection_requests", {
++  id: serial("id").primaryKey(),
++  name: varchar("name", { length: 255 }).notNull(),
++  phone: varchar("phone", { length: 50 }).notNull(),
++  email: varchar("email", { length: 255 }),
++  address: text("address").notNull(),
++  area: varchar("area", { length: 100 }),
++  preferredDate: varchar("preferred_date", { length: 20 }),
++  message: text("message"),
++  status: varchar("status", { length: 20 }).default("new").notNull(),
++  adminNotes: text("admin_notes"),
++  createdAt: timestamp("created_at").defaultNow().notNull(),
++  updatedAt: timestamp("updated_at").defaultNow().notNull(),
++});
++
++export type InspectionRequest = typeof inspectionRequests.$inferSelect;
++export type NewInspectionRequest = typeof inspectionRequests.$inferInsert;
+diff --git a/lib/email/templates/InspectionRequestNotification.tsx b/lib/email/templates/InspectionRequestNotification.tsx
+new file mode 100644
+index 0000000..658427c
+--- /dev/null
++++ b/lib/email/templates/InspectionRequestNotification.tsx
+@@ -0,0 +1,80 @@
++import {
++  Html,
++  Head,
++  Body,
++  Container,
++  Heading,
++  Text,
++  Hr,
++  Preview,
++} from "@react-email/components";
++import { styles } from "../styles";
++
++interface Props {
++  name: string;
++  phone: string;
++  email: string | null;
++  address: string;
++  area: string | null;
++  preferredDate: string | null;
++  message: string | null;
++}
++
++export default function InspectionRequestNotification({
++  name,
++  phone,
++  email,
++  address,
++  area,
++  preferredDate,
++  message,
++}: Props) {
++  return (
++    <Html>
++      <Head />
++      <Preview>Inspection request from {name}</Preview>
++      <Body style={styles.main}>
++        <Container style={styles.container}>
++          <Text style={styles.brand}>Inspection request</Text>
++          <Heading style={styles.heading}>
++            <span style={styles.italic}>{name}</span> wants a space inspection
++          </Heading>
++
++          <Hr style={styles.divider} />
++
++          <Text style={styles.sectionLabel}>Contact</Text>
++          <Text style={styles.infoText}>{name}</Text>
++          <Text style={styles.infoText}>{phone}</Text>
++          {email && <Text style={styles.infoText}>{email}</Text>}
++
++          <Text style={styles.sectionLabel}>Address</Text>
++          <Text style={{ ...styles.infoText, whiteSpace: "pre-wrap" }}>
++            {address}
++            {area ? `\n${area}` : ""}
++          </Text>
++
++          {preferredDate && (
++            <>
++              <Text style={styles.sectionLabel}>Preferred date</Text>
++              <Text style={styles.infoText}>{preferredDate}</Text>
++            </>
++          )}
++
++          {message && (
++            <>
++              <Text style={styles.sectionLabel}>Notes</Text>
++              <Text style={{ ...styles.infoText, whiteSpace: "pre-wrap" }}>
++                {message}
++              </Text>
++            </>
++          )}
++
++          <Text style={styles.footer}>
++            Also listed under Admin → Inspections. Call {name.split(" ")[0]} to
++            agree a date and the fee.
++          </Text>
++        </Container>
++      </Body>
++    </Html>
++  );
++}
+diff --git a/lib/email/templates/OrderNotification.tsx b/lib/email/templates/OrderNotification.tsx
+index c540062..390fe17 100644
+--- a/lib/email/templates/OrderNotification.tsx
++++ b/lib/email/templates/OrderNotification.tsx
+@@ -70,6 +70,7 @@ interface Props {
+   total: number;
+   deliveryMethod: "pickup" | "delivery";
+   notes?: string | null;
++  installationRequested?: boolean;
+   discountAmount?: number;
+   affiliateCode?: string | null;
+   discountPercent?: number | null;
+@@ -98,6 +99,7 @@ export default function OrderNotification({
+   deliveryMethod,
+   shippingAddress,
+   notes,
++  installationRequested,
+   discountAmount,
+   affiliateCode,
+   discountPercent,
+@@ -220,6 +222,16 @@ export default function OrderNotification({
+           <Text style={styles.infoText}>{customer.email}</Text>
+           <Text style={styles.infoText}>{customer.phone}</Text>
+ 
++          {installationRequested && (
++            <>
++              <Text style={styles.sectionLabel}>Installation</Text>
++              <Text style={styles.infoText}>
++                Customer wants installation. Contact them to agree a date and
++                fee.
++              </Text>
++            </>
++          )}
++
+           {notes && (
+             <>
+               <Text style={styles.sectionLabel}>Notes from customer</Text>
+diff --git a/lib/inspections.ts b/lib/inspections.ts
+new file mode 100644
+index 0000000..89a41f5
+--- /dev/null
++++ b/lib/inspections.ts
+@@ -0,0 +1,17 @@
++/** Kept free of DB imports so client components can use it. */
++export const INSPECTION_STATUSES = [
++  "new",
++  "contacted",
++  "scheduled",
++  "done",
++  "cancelled",
++] as const;
++export type InspectionStatus = (typeof INSPECTION_STATUSES)[number];
++
++export const INSPECTION_STATUS_LABELS: Record<InspectionStatus, string> = {
++  new: "New",
++  contacted: "Contacted",
++  scheduled: "Scheduled",
++  done: "Done",
++  cancelled: "Cancelled",
++};
+diff --git a/lib/orders/fulfillment.ts b/lib/orders/fulfillment.ts
+index 38f4138..898b757 100644
+--- a/lib/orders/fulfillment.ts
++++ b/lib/orders/fulfillment.ts
+@@ -187,6 +187,7 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
+           deliveryQuotePending,
+           shippingAddress: shippingAddressForEmail,
+           notes: order.notes,
++          installationRequested: order.installationRequested,
+         }),
+         replyTo: order.customerEmail,
+       }),
+-- 
+2.43.0
+
