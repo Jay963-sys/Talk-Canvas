@@ -1,29 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import {
-  getArchivePage,
-  withSetPanels,
+  getArchiveCatalogue,
+  pageFromCatalogue,
   type ArchiveOrientation,
 } from "@/lib/db/queries/archivePrints";
 import { isArchiveCategory, type ArchiveCategory } from "@/data/collections";
 
-const getCachedArchiveFeed = unstable_cache(
-  async (
-    cursor?: number,
-    category?: ArchiveCategory,
-    orientation?: ArchiveOrientation,
-    setsOnly?: boolean,
-  ) => {
-    const page = await getArchivePage(
-      cursor,
-      undefined,
-      category,
-      orientation,
-      setsOnly,
-    );
-    return withSetPanels(page);
-  },
-  ["archive-feed-api"],
+// ONE cache entry for the whole archive, paged in memory below. Keying the
+// cache by cursor/filter meant every new page a shopper scrolled to was a
+// cache miss that woke Neon.
+const getCachedCatalogue = unstable_cache(
+  () => getArchiveCatalogue(),
+  ["archive-catalogue"],
   { revalidate: 86400, tags: ["archive"] },
 );
 
@@ -46,8 +35,11 @@ export async function GET(req: NextRequest) {
 
   const setsOnly = req.nextUrl.searchParams.get("setsOnly") === "1";
 
-  const data = await getCachedArchiveFeed(
+  const catalogue = await getCachedCatalogue();
+  const data = pageFromCatalogue(
+    catalogue,
     cursor,
+    undefined,
     category,
     orientation,
     setsOnly,

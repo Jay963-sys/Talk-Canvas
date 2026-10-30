@@ -11,12 +11,15 @@ import { revalidatePath, revalidateTag } from "next/cache";
  * are rare, so this costs a handful of ISR writes per edit instead of one per
  * page per minute. Never throws: a failed refresh must not fail the edit.
  */
-export function revalidateStorefront(): void {
+export function revalidateStorefront(
+  /** False when nothing in the print archive changed (e.g. an original sold). */
+  { archive = true }: { archive?: boolean } = {},
+): void {
   try {
     revalidatePath("/", "layout");
     // Cached DB reads used outside ISR pages (search, API routes).
     revalidateTag("storefront", { expire: 0 });
-    revalidateTag("archive", { expire: 0 });
+    if (archive) revalidateTag("archive", { expire: 0 });
   } catch (err) {
     console.error("revalidateStorefront failed", err);
   }

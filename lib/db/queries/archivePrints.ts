@@ -381,3 +381,76 @@ export async function dissolveArchiveSet(setId: number) {
     })
     .where(eq(archivePrints.setId, setId));
 }
+
+// ── IN-MEMORY FEED ───────────────────────────────────────────────
+// The public feed is paged by cursor, and every cursor × category ×
+// orientation combination used to be its own cache entry — so each new page a
+// shopper scrolled to woke the database. Instead, cache the whole visible
+// archive once (one query) and page it in memory. See /api/archive-prints.
+
+/** Every visible row, newest first — feed rows and set panels alike. */
+export async function getArchiveCatalogue(): Promise<ArchiveRow[]> {
+  return db
+    .select()
+    .from(archivePrints)
+    .where(eq(archivePrints.isVisible, true))
+    .orderBy(desc(archivePrints.id));
+}
+
+/**
+ * Same result as withSetPanels(getArchivePage(...)), computed from the
+ * catalogue instead of the database.
+ */
+export function pageFromCatalogue(
+  catalogue: ArchiveRow[],
+  cursor?: number,
+  pageSize = PAGE_SIZE,
+  category?: ArchiveCategory,
+  orientation?: ArchiveOrientation,
+  setsOnly?: boolean,
+): ArchivePage {
+  const matches: ArchiveRow[] = [];
+  for (const r of catalogue) {
+    if (r.setId !== null && r.setPosition !== 1) continue; // canonical panel only
+    if (cursor && r.id >= cursor) continue;
+    if (category && r.collection !== category) continue;
+    if (orientation && r.orientation !== orientation) continue;
+    if (setsOnly && r.setId === null) continue;
+    matches.push(r);
+    if (matches.length > pageSize) break;
+  }
+
+  const hasMore = matches.length > pageSize;
+  const items = hasMore ? matches.slice(0, pageSize) : matches;
+  const nextCursor = hasMore ? items[items.length - 1].id : null;
+
+  const setIds = new Set(
+    items.map((i) => i.setId).filter((id): id is number => id !== null),
+  );
+  if (setIds.size === 0) return { items, nextCursor };
+
+  const bySet = new Map<number, ArchiveSetPanel[]>();
+  for (const r of catalogue) {
+    if (r.setId === null || !setIds.has(r.setId)) continue;
+    const list = bySet.get(r.setId) ?? [];
+    list.push({
+      id: r.id,
+      imageUrl: r.imageUrl,
+      imagePublicId: r.imagePublicId,
+      width: r.width,
+      height: r.height,
+      setPosition: r.setPosition ?? 0,
+    });
+    bySet.set(r.setId, list);
+  }
+  for (const list of bySet.values()) {
+    list.sort((a, b) => a.setPosition - b.setPosition);
+  }
+
+  return {
+    items: items.map((item) =>
+      item.setId ? { ...item, panels: bySet.get(item.setId) ?? [] } : item,
+    ),
+    nextCursor,
+  };
+}

@@ -51,7 +51,7 @@ export async function fulfillOrder(order: OrderWithItems): Promise<void> {
       await Promise.allSettled(soldIds.map((id) => markOriginalSold(id)));
       // Pages are cached for a day — without this, a sold one-of-one would
       // keep showing as available.
-      revalidateStorefront();
+      revalidateStorefront({ archive: false });
     }
   }
 
