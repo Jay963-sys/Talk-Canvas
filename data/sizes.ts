@@ -241,6 +241,30 @@ export const CUSTOM_SIZE_PREFIX = "custom-";
 export const CUSTOM_MIN_SIDE = 8;
 export const CUSTOM_MAX_SIDE = 96;
 
+/**
+ * The gallery can't make anything bigger than its largest listed frames, so a
+ * custom size must fit inside some listed size (either way round): 84×90 fits
+ * neither 84×84 nor 72×96, so it's refused even though its total is in range.
+ */
+export function fitsListedSize(w: number, h: number): boolean {
+  const short = Math.min(w, h);
+  const long = Math.max(w, h);
+  return SIZES.some((s) => short <= s.inches.w && long <= s.inches.h);
+}
+
+/** "84 × 84 in or 72 × 96 in" — the listed sizes no other listed size fits inside. */
+export const LARGEST_SIZES_LABEL = SIZES.filter(
+  (s) =>
+    !SIZES.some(
+      (o) =>
+        o !== s &&
+        s.inches.w <= o.inches.w &&
+        s.inches.h <= o.inches.h,
+    ),
+)
+  .map((s) => `${s.inches.w} × ${s.inches.h} in`)
+  .join(" or ");
+
 const CM_PER_INCH = 2.54;
 
 /** Half-inch precision is as fine as anyone measures a wall. */
@@ -307,7 +331,9 @@ export function buildCustomSize(wIn: number, hIn: number): CustomSizeResult {
   const short = Math.min(w, h);
   const long = Math.max(w, h);
   if (short < CUSTOM_MIN_SIDE) return { ok: false, reason: "too_small" };
-  if (long > CUSTOM_MAX_SIDE) return { ok: false, reason: "too_large" };
+  if (long > CUSTOM_MAX_SIDE || !fitsListedSize(short, long)) {
+    return { ok: false, reason: "too_large" };
+  }
 
   const matched = matchListedSize(short, long);
   if (!matched) return { ok: false, reason: "too_large" };

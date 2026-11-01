@@ -37,7 +37,15 @@ const GROUPS: FaqGroup[] = [
       },
       {
         q: "What if I want a custom size or style outside your standard catalog?",
-        a: "You can submit a custom order request and our team will work with you directly on sizing or style requests outside the standard options.",
+        a: "Enter any size on the size step of the print studio (or on our custom order page) and you'll see its price straight away, in inches or cm. We can make anything up to our largest frames (84 × 84 in or 72 × 96 in). For anything else, send us a custom order request.",
+      },
+      {
+        q: "Can someone help me choose the right size for my wall?",
+        a: "Yes. Within Lagos, we can visit, measure your space and recommend sizes before you order. Book a space inspection at talkcanvas.com/inspection and we'll call to agree a date and the fee.",
+      },
+      {
+        q: "Do you install the frames?",
+        a: "Yes, within Lagos. Tick the installation box at checkout and we'll contact you after your order to agree a date and the installation fee, which depends on your location and the number and size of frames.",
       },
     ],
   },

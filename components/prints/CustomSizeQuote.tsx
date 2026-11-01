@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatInches, formatCm, isCustomSize } from "@/data/sizes";
 import { formatNaira } from "@/lib/store";
 import CustomSizeFields, {
+  CustomSizeLimitNote,
   resolveCustomSize,
   CUSTOM_SIZE_ERRORS,
   type SizeUnit,
@@ -49,6 +50,7 @@ export default function CustomSizeQuote() {
         onHeight={setHeight}
         onUnit={setUnit}
       />
+      <CustomSizeLimitNote />
 
       {result && !result.ok && (
         <p className="text-[13px] text-ink-soft mt-4">

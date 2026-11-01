@@ -9,6 +9,7 @@ import {
 import { SHIPPING_CONFIG } from "@/data/shipping";
 import { CONTACT, SHOWROOM_OPEN } from "@/data/contact";
 import ContactForm from "@/components/contact/ContactForm";
+import InspectionLink from "@/components/InspectionLink";
 
 function Instagram({
   size = 24,
@@ -182,6 +183,8 @@ export default function ContactPage() {
                 {CONTACT.instagram.handle}
               </a>
             </section>
+
+            <InspectionLink variant="card" />
           </div>
 
           {/* Form Column - Wrapped in a card */}

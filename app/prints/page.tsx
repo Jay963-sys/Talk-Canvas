@@ -6,6 +6,7 @@ import {
   Eye,
   PackageCheck,
 } from "lucide-react";
+import InspectionLink from "@/components/InspectionLink";
 import Configurator from "@/components/prints/Configurator";
 import RoomGallery from "@/components/prints/RoomGallery";
 import InstagramHint from "@/components/prints/InstagramHint";
@@ -67,6 +68,7 @@ export default async function PrintsPage() {
       {/* Main Configurator Component */}
       <div className="max-w-7xl mx-auto px-6 md:px-10 -mt-6 mb-10">
         <InstagramHint className="justify-center text-center" />
+        <InspectionLink className="text-center mt-3" />
       </div>
       <div className="mb-24">
         <Configurator />

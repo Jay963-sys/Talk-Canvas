@@ -1,6 +1,11 @@
 "use client";
 
-import { buildCustomSize, cmToInches, type CustomSizeResult } from "@/data/sizes";
+import {
+  buildCustomSize,
+  cmToInches,
+  LARGEST_SIZES_LABEL,
+  type CustomSizeResult,
+} from "@/data/sizes";
 
 export type SizeUnit = "inches" | "cm";
 
@@ -26,9 +31,17 @@ export const CUSTOM_SIZE_ERRORS: Record<
 > = {
   invalid: "Enter a width and height.",
   too_small: "That's smaller than we frame — the shortest side must be at least 8 in (20 cm).",
-  too_large:
-    "That's larger than our price list covers. Send us a custom request below and we'll quote it by hand.",
+  too_large: `That's bigger than we can make. Our largest frames are ${LARGEST_SIZES_LABEL}.`,
 };
+
+/** Always-visible note under the size inputs. */
+export function CustomSizeLimitNote() {
+  return (
+    <p className="text-[12px] text-ink-soft mt-3">
+      Largest we make: {LARGEST_SIZES_LABEL}. Sizes in cm are converted for you.
+    </p>
+  );
+}
 
 const inputClass =
   "w-28 px-4 py-3 border border-line bg-cream focus:border-ink outline-none";

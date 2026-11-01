@@ -11,7 +11,9 @@ import {
 } from "@/data/sizes";
 import { useConfigurator, formatNaira } from "@/lib/store";
 import { getPrice } from "@/data/pricing";
+import InspectionLink from "@/components/InspectionLink";
 import CustomSizeFields, {
+  CustomSizeLimitNote,
   resolveCustomSize,
   CUSTOM_SIZE_ERRORS,
   type SizeUnit,
@@ -54,6 +56,8 @@ export default function StepSize() {
           {orientation} design
         </span>
       </div>
+
+      <InspectionLink variant="card" className="mb-8" />
 
       {orientation === "landscape" && (
         <p className="text-[13px] text-ink-soft mb-8 -mt-2 leading-relaxed">
@@ -190,6 +194,7 @@ function CustomSizeSection(props: {
       </p>
 
       <CustomSizeFields {...props} />
+      <CustomSizeLimitNote />
 
       {result && !result.ok && (
         <p className="text-[13px] text-ink-soft mt-4">
