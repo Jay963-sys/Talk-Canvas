@@ -11,7 +11,7 @@ import Configurator from "@/components/prints/Configurator";
 import RoomGallery from "@/components/prints/RoomGallery";
 import InstagramHint from "@/components/prints/InstagramHint";
 import Testimonials from "@/components/Testimonials";
-import { getArchivePage } from "@/lib/db/queries/archivePrints";
+import { getPublicArchivePage } from "@/lib/db/publicCache";
 import { thumb } from "@/lib/cloudinaryLoader";
 
 export const metadata = {
@@ -49,7 +49,7 @@ const STEPS = [
 ];
 
 export default async function PrintsPage() {
-  const { items: archivePreview } = await getArchivePage(undefined, 4);
+  const { items: archivePreview } = await getPublicArchivePage(undefined, 4);
 
   return (
     <div className="fade-in bg-cream">

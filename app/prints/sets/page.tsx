@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getArchivePage, withSetPanels } from "@/lib/db/queries/archivePrints";
+import { getPublicArchivePage } from "@/lib/db/publicCache";
 import ArchiveGrid, { type ArchiveItem } from "@/components/prints/ArchiveGrid";
 import Testimonials from "@/components/Testimonials";
 
@@ -14,8 +14,12 @@ export const metadata = {
 export const revalidate = 86400;
 
 export default async function SetsPage() {
-  const { items, nextCursor } = await withSetPanels(
-    await getArchivePage(undefined, undefined, undefined, undefined, true),
+  const { items, nextCursor } = await getPublicArchivePage(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    true,
   );
 
   const initialItems: ArchiveItem[] = items.map((i) => ({

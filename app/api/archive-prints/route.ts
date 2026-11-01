@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { unstable_cache } from "next/cache";
 import {
-  getArchiveCatalogue,
   pageFromCatalogue,
   type ArchiveOrientation,
 } from "@/lib/db/queries/archivePrints";
+import { getCachedArchiveCatalogue } from "@/lib/db/publicCache";
 import { isArchiveCategory, type ArchiveCategory } from "@/data/collections";
 
-// ONE cache entry for the whole archive, paged in memory below. Keying the
-// cache by cursor/filter meant every new page a shopper scrolled to was a
-// cache miss that woke Neon.
-const getCachedCatalogue = unstable_cache(
-  () => getArchiveCatalogue(),
-  ["archive-catalogue"],
-  { revalidate: 86400, tags: ["archive"] },
-);
+// ONE cache entry for the whole archive (shared with the archive pages), paged
+// in memory below. Keying the cache by cursor/filter meant every new page a
+// shopper scrolled to was a cache miss that woke Neon.
 
 export async function GET(req: NextRequest) {
   const cursorParam = req.nextUrl.searchParams.get("cursor");
@@ -35,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   const setsOnly = req.nextUrl.searchParams.get("setsOnly") === "1";
 
-  const catalogue = await getCachedCatalogue();
+  const catalogue = await getCachedArchiveCatalogue();
   const data = pageFromCatalogue(
     catalogue,
     cursor,

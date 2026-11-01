@@ -1,19 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft, SearchX } from "lucide-react";
 import WorkCard from "@/components/WorkCard";
-import { unstable_cache } from "next/cache";
-import { getAllOriginals } from "@/lib/db/queries/originals";
+import { getPublicOriginals } from "@/lib/db/publicCache";
 // import { getArchivePage } from "@/lib/db/queries/archivePrints";
 
 export const dynamic = "force-dynamic";
 
-// Search filters in memory, so every query (and every bot hitting /search)
-// can share one cached copy of the catalogue instead of waking Neon.
-const getCachedOriginals = unstable_cache(
-  () => getAllOriginals(),
-  ["search-all-originals"],
-  { revalidate: 86400, tags: ["storefront"] },
-);
 
 export const metadata = {
   title: "Search | Talk Canvas Gallery",
@@ -33,7 +25,7 @@ export default async function SearchPage({
   const decodedQuery = decodeURIComponent(query).trim();
 
   // Fetch data
-  const allOriginals = await getCachedOriginals();
+  const allOriginals = await getPublicOriginals();
 
   // Filter logic
   const searchResults = decodedQuery

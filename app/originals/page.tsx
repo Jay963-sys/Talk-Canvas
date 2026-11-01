@@ -1,4 +1,4 @@
-import { getAllOriginalsWithArtist } from "@/lib/db/queries/originals";
+import { getPublicOriginalsWithArtist } from "@/lib/db/publicCache";
 import Link from "next/link";
 import {
   Eye as EyeIcon,
@@ -47,7 +47,7 @@ const ACQUISITION_STEPS = [
 ];
 
 export default async function OriginalsPage() {
-  const all = await getAllOriginalsWithArtist();
+  const all = await getPublicOriginalsWithArtist();
 
   // Talk Canvas Originals only: house-artist works, plus any unlinked legacy
   // rows. One-of-one works by represented artists are excluded — they belong

@@ -37,7 +37,7 @@ export default async function AdminTestimonialsPage() {
       ) : (
         <div className="border border-line divide-y divide-line">
           {items.map((t) => (
-            <Link
+            <Link prefetch={false}
               key={t.id}
               href={`/admin/testimonials/${t.id}`}
               className="flex items-center gap-4 p-4 hover:bg-paper transition-colors"

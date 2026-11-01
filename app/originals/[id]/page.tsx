@@ -1,9 +1,8 @@
 import { cache } from "react";
 import {
-  getAllOriginals,
-  getOriginalBySlug,
-  getOriginalBySlugWithArtist,
-} from "@/lib/db/queries/originals";
+  getPublicOriginals as getAllOriginals,
+  getPublicOriginalBySlug as getOriginalBySlugWithArtist,
+} from "@/lib/db/publicCache";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";

@@ -33,7 +33,7 @@ export default function AdminNav() {
       */}
       <div className="hidden md:flex items-center gap-6 text-sm">
         {links.map((link) => (
-          <Link
+          <Link prefetch={false}
             key={link.href}
             href={link.href}
             className={`transition-colors ${
@@ -106,7 +106,7 @@ export default function AdminNav() {
       {isMobileMenuOpen && (
         <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 shadow-lg rounded-md flex flex-col p-4 gap-4 md:hidden z-50 text-sm">
           {links.map((link) => (
-            <Link
+            <Link prefetch={false}
               key={link.href}
               href={link.href}
               onClick={() => setIsMobileMenuOpen(false)} // Auto-close on click

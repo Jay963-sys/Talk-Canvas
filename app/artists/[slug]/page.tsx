@@ -2,7 +2,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Globe } from "lucide-react";
 import { Metadata } from "next";
-import { getArtistBySlug, getAllArtists } from "@/lib/db/queries/artists";
+import {
+  getPublicArtistBySlug as getArtistBySlug,
+  getPublicArtists as getAllArtists,
+} from "@/lib/db/publicCache";
 import WorkCard from "@/components/WorkCard";
 import { thumb } from "@/lib/cloudinaryLoader";
 

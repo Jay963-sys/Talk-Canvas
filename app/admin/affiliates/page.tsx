@@ -42,7 +42,7 @@ export default async function AdminAffiliatesPage() {
           {affiliates.map((a) => {
             const expired = isExpired(a.expiresAt);
             return (
-              <Link
+              <Link prefetch={false}
                 key={a.id}
                 href={`/admin/affiliates/${a.id}`}
                 className="flex items-center gap-4 p-4 hover:bg-paper transition-colors"

@@ -69,7 +69,7 @@ export default async function EditAffiliatePage({
         ) : (
           <div className="border border-line divide-y divide-line">
             {orders.map((o) => (
-              <Link
+              <Link prefetch={false}
                 key={o.id}
                 href={`/admin/orders/${o.id}`}
                 className="flex items-center gap-4 p-4 hover:bg-paper transition-colors"

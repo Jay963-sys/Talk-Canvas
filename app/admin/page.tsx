@@ -80,7 +80,7 @@ export default async function AdminDashboard() {
               <div className="text-xs text-muted">Order: {o.displayOrder}</div>
               <div className="flex items-center gap-1">
                 <VisibilityToggle id={o.id} isVisible={o.isVisible} />
-                <Link
+                <Link prefetch={false}
                   href={`/admin/originals/${o.id}`}
                   className="p-2 text-muted hover:text-ink transition-colors"
                   aria-label="Edit"

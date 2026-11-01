@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { HOUSE_ARTIST_NAME, HOUSE_ARTIST_SLUG } from "@/lib/constants";
-import { getFeaturedArtists } from "@/lib/db/queries/artists";
+import { getPublicFeaturedArtists } from "@/lib/db/publicCache";
 import Testimonials from "@/components/Testimonials";
 import ArtistCard from "@/components/artists/ArtistCard";
 
@@ -14,7 +14,7 @@ export const metadata = {
 export const revalidate = 86400;
 
 export default async function ArtistsPage() {
-  const artists = await getFeaturedArtists();
+  const artists = await getPublicFeaturedArtists();
 
   return (
     <div className="fade-in bg-cream min-h-screen">

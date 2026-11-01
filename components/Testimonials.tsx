@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Star } from "lucide-react";
-import { getTestimonials } from "@/lib/db/queries/testimonials";
+import { getPublicTestimonials } from "@/lib/db/publicCache";
 import type { Testimonial } from "@/lib/db/schema";
 import { videoPoster, videoSrc } from "@/lib/media";
 import LoopVideo from "@/components/LoopVideo";
@@ -136,7 +136,7 @@ export default async function Testimonials({
   title?: ReactNode;
 }) {
   // Defaults to the DB, so the gallery manages these from the admin.
-  const all = items ?? (await getTestimonials());
+  const all = items ?? (await getPublicTestimonials());
   if (all.length === 0) return null;
 
   // Photos and videos lead — they're the strongest proof — then text-only quotes.

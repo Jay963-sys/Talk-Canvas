@@ -177,7 +177,7 @@ export default async function AdminArchivePage({
           {setsOnly && category ? (
             <>
               No sets filed under this category yet.{" "}
-              <Link href={href({ category: null })} className="underline">
+              <Link prefetch={false} href={href({ category: null })} className="underline">
                 Show all sets
               </Link>
               .
@@ -185,7 +185,7 @@ export default async function AdminArchivePage({
           ) : setsOnly ? (
             <>
               No sets yet — group two or more pieces from{" "}
-              <Link href={href({ sets: false })} className="underline">
+              <Link prefetch={false} href={href({ sets: false })} className="underline">
                 the full archive
               </Link>
               .
@@ -193,7 +193,7 @@ export default async function AdminArchivePage({
           ) : category ? (
             <>
               Nothing filed under this category yet.{" "}
-              <Link href={href({ category: null })} className="underline">
+              <Link prefetch={false} href={href({ category: null })} className="underline">
                 Show all
               </Link>
               .

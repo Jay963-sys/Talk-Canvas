@@ -37,7 +37,7 @@ export default async function AdminArtistsPage() {
       ) : (
         <div className="border border-line divide-y divide-line">
           {artists.map((artist) => (
-            <Link
+            <Link prefetch={false}
               key={artist.id}
               href={`/admin/artists/${artist.id}`}
               className="flex items-center gap-4 p-4 hover:bg-paper transition-colors"

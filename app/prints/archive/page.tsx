@@ -2,10 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import {
-  getArchivePage,
-  getArchiveCategoryCounts,
-  withSetPanels,
-} from "@/lib/db/queries/archivePrints";
+  getPublicArchivePage,
+  getPublicArchiveCategoryCounts,
+} from "@/lib/db/publicCache";
 import ArchiveGrid, {
   type ArchiveItem,
   type CountsByOrientation,
@@ -23,13 +22,14 @@ export const revalidate = 86400;
 export default async function ArchivePage() {
   const [pageData, countsAll, countsPortrait, countsLandscape] =
     await Promise.all([
-      getArchivePage(undefined, undefined, undefined, undefined),
-      getArchiveCategoryCounts(undefined),
-      getArchiveCategoryCounts("portrait"),
-      getArchiveCategoryCounts("landscape"),
+      getPublicArchivePage(),
+      getPublicArchiveCategoryCounts(undefined),
+      getPublicArchiveCategoryCounts("portrait"),
+      getPublicArchiveCategoryCounts("landscape"),
     ]);
 
-  const { items, nextCursor } = await withSetPanels(pageData);
+  // Panels are already attached by the in-memory pager.
+  const { items, nextCursor } = pageData;
 
   const initialItems: ArchiveItem[] = items.map((i) => ({
     id: i.id,
