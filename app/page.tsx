@@ -13,7 +13,7 @@ import {
   getPublicArchivePage,
 } from "@/lib/db/publicCache";
 import { Metadata } from "next";
-import { thumb } from "@/lib/cloudinaryLoader";
+import { thumb, CARD_WIDTH } from "@/lib/cloudinaryLoader";
 
 export const revalidate = 86400;
 
@@ -120,7 +120,7 @@ export default async function Home() {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={thumb(item.imageUrl, 600)}
+                      src={thumb(item.imageUrl, CARD_WIDTH)}
                       alt=""
                       loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"

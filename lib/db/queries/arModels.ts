@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { arModels } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 
 export async function getArModel(cacheKey: string) {
   const [row] = await db
@@ -25,4 +25,17 @@ export async function upsertArModel(input: {
       target: arModels.cacheKey,
       set: { glbUrl: input.glbUrl, usdzUrl: input.usdzUrl },
     });
+}
+
+/**
+ * Forget cached models created before `before`. Run BEFORE their files are
+ * deleted from Cloudinary, so the cache never points at a missing file — the
+ * next AR view of that piece simply generates a fresh model.
+ */
+export async function deleteArModelsCreatedBefore(before: Date): Promise<number> {
+  const rows = await db
+    .delete(arModels)
+    .where(lt(arModels.createdAt, before))
+    .returning({ id: arModels.id });
+  return rows.length;
 }

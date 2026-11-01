@@ -12,7 +12,7 @@ import RoomGallery from "@/components/prints/RoomGallery";
 import InstagramHint from "@/components/prints/InstagramHint";
 import Testimonials from "@/components/Testimonials";
 import { getPublicArchivePage } from "@/lib/db/publicCache";
-import { thumb } from "@/lib/cloudinaryLoader";
+import { thumb, CARD_WIDTH } from "@/lib/cloudinaryLoader";
 
 export const metadata = {
   title: "Prints — Talk Canvas Gallery",
@@ -107,7 +107,7 @@ export default async function PrintsPage() {
                 <div className="relative aspect-[4/5] w-full">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={thumb(item.imageUrl)}
+                    src={thumb(item.imageUrl, CARD_WIDTH)}
                     alt=""
                     loading="lazy"
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"

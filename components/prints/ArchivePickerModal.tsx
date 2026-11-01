@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2 } from "lucide-react";
 import { ARCHIVE_CATEGORIES, type ArchiveCategory } from "@/data/collections";
-import { thumb } from "@/lib/cloudinaryLoader";
+import { thumb, CARD_WIDTH } from "@/lib/cloudinaryLoader";
 
 type Orientation = "portrait" | "landscape";
 
@@ -300,7 +300,7 @@ export default function ArchivePickerModal({ onSelect, onClose }: Props) {
                     style={{ aspectRatio: `${item.width}/${item.height}` }}
                   >
                     <img
-                      src={thumb(item.imageUrl)}
+                      src={thumb(item.imageUrl, CARD_WIDTH)}
                       alt=""
                       loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"

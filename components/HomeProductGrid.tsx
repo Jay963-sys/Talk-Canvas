@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import WorkCard from "@/components/WorkCard";
-import { thumb } from "@/lib/cloudinaryLoader";
+import { thumb, CARD_WIDTH } from "@/lib/cloudinaryLoader";
 
 export default function HomeProductGrid({
   originals,
@@ -59,7 +59,7 @@ export default function HomeProductGrid({
                 style={{ aspectRatio: `4/5` }}
               >
                 <img
-                  src={thumb(item.imageUrl)}
+                  src={thumb(item.imageUrl, CARD_WIDTH)}
                   alt="Archive Print Preview"
                   loading="lazy"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"

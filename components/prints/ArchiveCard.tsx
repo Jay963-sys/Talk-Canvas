@@ -7,7 +7,7 @@ import { useConfigurator, type ConfiguratorSet } from "@/lib/store";
 import { fetchArchiveSet } from "@/lib/archiveSet";
 import SetLightbox, { type LightboxPanel } from "./SetLightbox";
 import type { ArchiveDensity, ArchiveItem } from "./ArchiveGrid";
-import { thumb } from "@/lib/cloudinaryLoader";
+import { thumb, CARD_WIDTH } from "@/lib/cloudinaryLoader";
 
 const CONFIGURATOR_ROUTE = "/prints";
 
@@ -138,7 +138,7 @@ export default function ArchiveCard({
         style={{ aspectRatio: `${item.width} / ${item.height}` }}
       >
         <img
-          src={thumb(item.imageUrl, compact ? 200 : 600)}
+          src={thumb(item.imageUrl, compact ? 200 : CARD_WIDTH)}
           alt=""
           loading="lazy"
           width={item.width}

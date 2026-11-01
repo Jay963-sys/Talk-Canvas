@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Artist } from "@/lib/db/schema";
-import { thumb } from "@/lib/cloudinaryLoader";
+import { thumb, CARD_WIDTH } from "@/lib/cloudinaryLoader";
 
 export default function ArtistCard({ artist }: { artist: Artist }) {
   return (
@@ -12,7 +12,7 @@ export default function ArtistCard({ artist }: { artist: Artist }) {
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-paper">
         {artist.portraitUrl ? (
           <img
-            src={thumb(artist.portraitUrl)}
+            src={thumb(artist.portraitUrl, CARD_WIDTH)}
             alt={artist.name}
             loading="lazy"
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"

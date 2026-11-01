@@ -80,7 +80,7 @@ function VideoCard({ t }: { t: Testimonial }) {
         {t.videoLoop ? (
           // Short clip: plays itself, muted, on a loop, while on screen.
           <LoopVideo
-            src={videoSrc(t.videoUrl!, { width: 720 })}
+            src={videoSrc(t.videoUrl!, { width: 480, quality: "eco" })}
             poster={t.imageUrl ? thumb(t.imageUrl) : videoPoster(t.videoUrl!)}
             label={`Video review from ${t.name}`}
             className="absolute inset-0 w-full h-full object-contain"

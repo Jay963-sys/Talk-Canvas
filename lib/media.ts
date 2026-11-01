@@ -14,12 +14,16 @@ const swapExt = (url: string, ext: string) =>
  * Web-friendly mp4, quality picked automatically. 960px wide by default;
  * pass a smaller width for clips that autoplay, to save the visitor's data.
  */
-export function videoSrc(url: string, opts: { width?: number } = {}): string {
+export function videoSrc(
+  url: string,
+  opts: { width?: number; quality?: "good" | "eco" } = {},
+): string {
   const width = opts.width ?? 960;
+  const quality = opts.quality ?? "good";
   return swapExt(
     url.replace(
       "/video/upload/",
-      `/video/upload/q_auto:good,w_${width},c_limit/`,
+      `/video/upload/q_auto:${quality},w_${width},c_limit/`,
     ),
     "mp4",
   );
