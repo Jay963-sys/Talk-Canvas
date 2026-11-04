@@ -132,3 +132,60 @@ export function getFbCookies(): { fbp: string | null; fbc: string | null } {
 
   return { fbp: read("_fbp"), fbc };
 }
+
+// ── Advanced Matching ────────────────────────────────────────────
+// Meta matches browser events to people using their email/phone. The pixel
+// only attaches that data to events fired AFTER it receives it, and the
+// Purchase event fires on /checkout/success — a fresh page load after the
+// Paystack redirect, where a plain re-init would already be lost. So the
+// values are hashed (SHA-256, Meta's spec), saved, and passed to fbq('init')
+// on every page load by <MetaPixel />. Raw email/phone never touch storage.
+
+export const ADVANCED_MATCHING_KEY = "tc_am";
+
+/** Same rule as the server (lib/meta/capi.ts): digits only, Nigerian 0… → 234… */
+export function normalizePhone(phone: string): string {
+  let digits = phone.replace(/[^\d]/g, "");
+  if (digits.startsWith("0")) digits = "234" + digits.slice(1);
+  return digits;
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const buf = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Call when a customer submits their details (checkout, contact, inspection).
+ * Never throws — tracking must not block a form.
+ */
+export async function setAdvancedMatching(
+  email?: string | null,
+  phone?: string | null,
+): Promise<void> {
+  try {
+    if (typeof window === "undefined" || !META_PIXEL_ID) return;
+    if (!window.crypto?.subtle) return;
+
+    const userData: Record<string, string> = {};
+    const em = email?.trim().toLowerCase();
+    if (em) userData.em = await sha256Hex(em);
+    const ph = phone ? normalizePhone(phone) : "";
+    if (ph) userData.ph = await sha256Hex(ph);
+    if (Object.keys(userData).length === 0) return;
+
+    try {
+      localStorage.setItem(ADVANCED_MATCHING_KEY, JSON.stringify(userData));
+    } catch {
+      // storage blocked (private mode) — this page still gets it below
+    }
+    window.fbq?.("init", META_PIXEL_ID, userData);
+  } catch {
+    // ignore
+  }
+}

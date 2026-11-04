@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { setAdvancedMatching } from "@/lib/meta/pixel";
 import { Check } from "lucide-react";
 
 export default function ContactForm() {
@@ -17,6 +18,7 @@ export default function ContactForm() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    void setAdvancedMatching(email, phone);
 
     try {
       const res = await fetch("/api/contact", {

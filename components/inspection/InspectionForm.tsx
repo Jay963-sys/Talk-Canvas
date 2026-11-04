@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { setAdvancedMatching } from "@/lib/meta/pixel";
 import { Check } from "lucide-react";
 
 const inputClass =
@@ -40,6 +41,7 @@ export default function InspectionForm() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    void setAdvancedMatching(form.email, form.phone);
     try {
       const res = await fetch("/api/inspection", {
         method: "POST",

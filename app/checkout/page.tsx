@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getFbCookies, initiateCheckout } from "@/lib/meta/pixel";
+import {
+  getFbCookies,
+  initiateCheckout,
+  setAdvancedMatching,
+} from "@/lib/meta/pixel";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, X, Check, Loader2 } from "lucide-react";
@@ -246,6 +250,8 @@ export default function CheckoutPage() {
     setSubmitting(true);
     setError(null);
     const { fbp, fbc } = getFbCookies();
+    // Before the Paystack redirect, so the Purchase on the success page carries it.
+    await setAdvancedMatching(form.email, form.phone);
     try {
       const res = await fetch("/api/orders", {
         method: "POST",

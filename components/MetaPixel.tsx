@@ -3,7 +3,11 @@
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
-import { META_PIXEL_ID, pageview } from "@/lib/meta/pixel";
+import {
+  ADVANCED_MATCHING_KEY,
+  META_PIXEL_ID,
+  pageview,
+} from "@/lib/meta/pixel";
 
 // App Router does client-side navigation, so the base pixel only fires the
 // first PageView. This component re-fires PageView on every route change.
@@ -33,7 +37,9 @@ export default function MetaPixel() {
           t.src=v;s=b.getElementsByTagName(e)[0];
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init', '${META_PIXEL_ID}');
+          var am;
+          try { am = JSON.parse(localStorage.getItem('${ADVANCED_MATCHING_KEY}') || 'null'); } catch (e) {}
+          if (am) { fbq('init', '${META_PIXEL_ID}', am); } else { fbq('init', '${META_PIXEL_ID}'); }
           fbq('track', 'PageView');
         `}
       </Script>
