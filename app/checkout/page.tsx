@@ -362,6 +362,40 @@ export default function CheckoutPage() {
         >
           {/* Left Column - Forms */}
           <div className="md:col-span-7 space-y-12">
+            {/* Contact */}
+            <section>
+              <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
+                Contact Information
+              </h2>
+              <div className="space-y-5">
+                <Field
+                  label="Full name"
+                  name="name"
+                  value={form.name}
+                  onChange={setField("name")}
+                  required
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <Field
+                    label="Email"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={setField("email")}
+                    required
+                  />
+                  <Field
+                    label="Phone"
+                    name="phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={setField("phone")}
+                    required
+                  />
+                </div>
+              </div>
+            </section>
+
             {/* Delivery Address */}
             <section>
               <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
@@ -421,47 +455,10 @@ export default function CheckoutPage() {
                   </div>
                 )}
               </div>
-            </section>
-
-            {/* Contact */}
-            <section>
-              <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
-                Contact Information
-              </h2>
-              <div className="space-y-5">
-                <Field
-                  label="Full name"
-                  name="name"
-                  value={form.name}
-                  onChange={setField("name")}
-                  required
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <Field
-                    label="Email"
-                    name="email"
-                    type="email"
-                    value={form.email}
-                    onChange={setField("email")}
-                    required
-                  />
-                  <Field
-                    label="Phone"
-                    name="phone"
-                    type="tel"
-                    value={form.phone}
-                    onChange={setField("phone")}
-                    required
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Shipping Address */}
-            <section>
-              <h2 className="text-[11px] uppercase tracking-widest text-ink font-semibold mb-6">
-                Shipping Address
-              </h2>
+              <div className="mt-8">
+                <p className="text-[10px] uppercase tracking-widest text-ink-soft font-semibold mb-5">
+                  Confirm your address details
+                </p>
               <div className="space-y-5">
                 <Field
                   label="Address"
@@ -508,7 +505,9 @@ export default function CheckoutPage() {
                   />
                 </div>
               </div>
+              </div>
             </section>
+
 
             {/* Discount code */}
             <section>
@@ -641,7 +640,7 @@ export default function CheckoutPage() {
                   : awaitingZone
                     ? destination
                       ? "Calculating delivery…"
-                      : "Enter a delivery address"
+                      : "Select your address from the list"
                     : `Pay ${formatNaira(total)}`}
               </button>
               {error && (
@@ -752,7 +751,7 @@ export default function CheckoutPage() {
                     : awaitingZone
                       ? destination
                         ? "Calculating delivery…"
-                        : "Enter a delivery address"
+                        : "Select your address from the list"
                       : `Pay ${formatNaira(total)}`}
                 </button>
                 {error && (
