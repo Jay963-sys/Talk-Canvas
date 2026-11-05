@@ -28,6 +28,8 @@ export default function AddressAutocomplete({
   const [active, setActive] = useState(-1);
   const [resolving, setResolving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState(false);
+  const [nonce, setNonce] = useState(0);
 
   const sessionToken = useRef(newToken());
   const skipNextSearch = useRef(false);
@@ -72,7 +74,7 @@ export default function AddressAutocomplete({
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [query]);
+  }, [query, nonce]);
 
   async function choose(s: Suggestion) {
     const label = [s.main, s.secondary].filter(Boolean).join(", ");
@@ -110,10 +112,37 @@ export default function AddressAutocomplete({
       });
     } finally {
       hasSelection.current = true;
+      setSelected(true);
       setResolving(false);
       sessionToken.current = newToken();
     }
   }
+
+  // Escape hatch: the address isn't in Google's list. Delivery is then
+  // quoted by hand (same path as when the resolve call fails), and the
+  // customer fills the address fields themselves.
+  function acceptTypedAddress() {
+    skipNextSearch.current = true;
+    setSuggestions([]);
+    hasSelection.current = true;
+    setSelected(true);
+    onChange({
+      placeId: "manual",
+      km: null,
+      inLagos: null,
+      minutes: null,
+      formattedAddress: null,
+      addressLine1: null,
+      city: null,
+      state: null,
+      postalCode: null,
+      label: query.trim(),
+      mainText: "", // keep whatever they type in the address field below
+    });
+  }
+
+  const typedButNotPicked =
+    !selected && !resolving && query.trim().length >= 3;
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!suggestions.length) return;
@@ -155,8 +184,14 @@ export default function AddressAutocomplete({
             setQuery(e.target.value);
             if (hasSelection.current) {
               hasSelection.current = false;
+              setSelected(false);
               onChange(null);
             }
+          }}
+          onFocus={() => {
+            // Suggestions are cleared on blur; bring them back on return.
+            if (!hasSelection.current && query.trim().length >= 3)
+              setNonce((n) => n + 1);
           }}
           onKeyDown={onKeyDown}
           onBlur={() => setTimeout(() => setSuggestions([]), 150)}
@@ -199,6 +234,23 @@ export default function AddressAutocomplete({
             </li>
           ))}
         </ul>
+      )}
+
+      {selected && !resolving && (
+        <p className="text-[13px] text-ink mt-3">✓ Address confirmed</p>
+      )}
+
+      {typedButNotPicked && suggestions.length === 0 && (
+        <p className="text-[13px] text-ink mt-3 leading-relaxed">
+          Almost there. Tap your address in the suggestions to continue.{" "}
+          <button
+            type="button"
+            onClick={acceptTypedAddress}
+            className="underline underline-offset-2 text-ink-soft hover:text-ink"
+          >
+            Can&apos;t find it? Use what I typed
+          </button>
+        </p>
       )}
 
       {error && <p className="text-[13px] text-red-600 mt-3">{error}</p>}
